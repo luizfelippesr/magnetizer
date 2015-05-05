@@ -1,0 +1,414 @@
+ 
+ Writing parameters to file param.out
+    t0 (kpc s/km)=  0.75000000000000000      h0 (kpc)=  0.50000000000000000      etat0 (cm2s)=    1.0285591933333333E+026
+ 
+ NUMERICS:
+ nvar=                3
+ dt=          1.7045202758999855E-003    n1=                420    n2=               20
+ dx=          1.6949152542372881E-002    nxphys=             60    nxghost=           3    nx=          66
+ minval(x)=  -5.0847457627118647E-002    maxval(x)=   1.0508474576271185     
+ 
+ MODULES:
+ Read_param=  T Dyn_quench= T Alg_quench=    F Damp=        F
+ Var_Uz=      F Var_l=      F Var_v=         F Var_n=       T
+ Flaring=     T Rand_seed=  F Alp_ceiling=   F Om_Brandt=   T
+ Alp_squared= T Krause=     T Shear=         T Advect=      T
+ Turb_dif=    T
+ 
+ INPUT PARAMETERS:
+ r_disk_kpc=    15.000000000000000      R_kappa=      1.0000000000000000     
+ l_sol_kpc=    0.10000000000000001      r_l_kpc=      9.8000000000000007      v_sol_kms=       10.000000000000000      r_v_kpc=       7.5000000000000000     
+ n_sol_cm3=    0.10000000000000001      r_n_kpc=      7.5000000000000000      Uz_sol_kms=      3.0000000000000000      r_Uz_kpc=      30.000000000000000     
+ h_sol_kpc=    0.50000000000000000      r_h_kpc=      9.8000000000000007      Uphi_sol_kms=    220.00000000000000      r_om_kpc=      2.0000000000000000     
+ 
+ OTHER FREE PARAMETERS:
+ r_in=    0.0000000000000000      r_disk_kpc=   15.000000000000000      r_sol_kpc=   8.0000000000000000      r1_kpc=   15.000000000000000     
+ ctau=    1.0000000000000000      nn=                   2 lambda=      3.3333333333333333E-002
+ C_alp=   1.0000000000000000      alpceil=     0.50000000000000000      Rm_inv=      0.0000000000000000     
+ 
+ IMPORTANT CALCULATED PARAMETERS
+ etat_sol_cm2s=   1.0285591933333333E+026 td_sol_Gyr=  0.73334416590615259      tau_sol_Gyr=   9.7779222120820356E-003
+ etat_sol=        1.0000000000000000      td_sol=       1.0000000000000000      tau_sol        1.3333333333333334E-002
+ 
+ INPUT/OUTPUT INFORMATION
+ Directory ending   =CE_004
+ home directory     =/Users/luke
+ 
+ 
+ Writing parameters to file param.out
+ 
+ Writing parameters to file param.out
+ 
+ Writing parameters to file param.out
+ 
+ Writing parameters to file param.out
+ 
+ Writing parameters to file param.out
+ 
+ Writing parameters to file param.out
+ 
+ Writing parameters to file param.out
+ Finished writing parameters to file param.out
+ Writing initial output to file init.out
+ 
+ Finished writing parameters to file param.out
+ Writing initial output to file init.out
+ 
+ Finished writing parameters to file param.out
+ Writing initial output to file init.out
+ 
+ Finished writing parameters to file param.out
+ Writing initial output to file init.out
+ 
+ Finished writing parameters to file param.out
+ Writing initial output to file init.out
+ 
+ Finished writing initial output to file init.out
+ Finished writing initial output to file init.out
+ Finished writing initial output to file init.out
+ Finished writing initial output to file init.out
+ Finished writing initial output to file init.out
+ Finished writing initial output to file init.out
+ Finished writing initial output to file init.out
+ it=          60 t=   2.0454243310800146      t(Gyr)=   1.5000000000000235      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.4659971647358430E-004 Bp(R/2)(mkG)=   2.0452218126381788E-003 |Bz(R/2)|(mkG)=   7.1483084799235715E-005
+ p_B(R/2)(deg)=  -9.6185102655063837     
+ cpu time in seconds:    3.9539000000000019E-002
+ Directory ending   =CE_004
+
+ it=          60 t=   2.0454243310800146      t(Gyr)=   1.5000000000000235      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)= -0.61433133889079639      Bp(R/2)(mkG)=   1.5092180576095102      |Bz(R/2)|(mkG)=  0.13162074780498675     
+ p_B(R/2)(deg)=  -22.149124638156923     
+ cpu time in seconds:    3.9585000000000009E-002
+ Directory ending   =CE_004
+
+ it=          60 t=   2.0454243310800146      t(Gyr)=   1.5000000000000235      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.4659971647358430E-004 Bp(R/2)(mkG)=   2.0452218126381788E-003 |Bz(R/2)|(mkG)=   7.1483084799235715E-005
+ p_B(R/2)(deg)=  -9.6185102655063837     
+ cpu time in seconds:    3.9805000000000007E-002
+ Directory ending   =CE_004
+
+ it=          60 t=   2.0454243310800146      t(Gyr)=   1.5000000000000235      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.4659971647358430E-004 Bp(R/2)(mkG)=   2.0452218126381788E-003 |Bz(R/2)|(mkG)=   7.1483084799235715E-005
+ p_B(R/2)(deg)=  -9.6185102655063837     
+ cpu time in seconds:    4.0637000000000006E-002
+ Directory ending   =CE_004
+
+ it=          60 t=   2.0454243310800146      t(Gyr)=   1.5000000000000235      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.4659971647358430E-004 Bp(R/2)(mkG)=   2.0452218126381788E-003 |Bz(R/2)|(mkG)=   7.1483084799235715E-005
+ p_B(R/2)(deg)=  -9.6185102655063837     
+ cpu time in seconds:    4.0036000000000016E-002
+ Directory ending   =CE_004
+
+ it=          60 t=   2.0454243310800146      t(Gyr)=   1.5000000000000235      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.4659971647358430E-004 Bp(R/2)(mkG)=   2.0452218126381788E-003 |Bz(R/2)|(mkG)=   7.1483084799235715E-005
+ p_B(R/2)(deg)=  -9.6185102655063837     
+ cpu time in seconds:    3.8360000000000005E-002
+ Directory ending   =CE_004
+
+ it=          60 t=   2.0454243310800146      t(Gyr)=   1.5000000000000235      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.4659971647358430E-004 Bp(R/2)(mkG)=   2.0452218126381788E-003 |Bz(R/2)|(mkG)=   7.1483084799235715E-005
+ p_B(R/2)(deg)=  -9.6185102655063837     
+ cpu time in seconds:    4.4851000000000002E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -2.8648658840395465E-004 Bp(R/2)(mkG)=   1.6818724557697427E-003 |Bz(R/2)|(mkG)=   1.5468564508983287E-004
+ p_B(R/2)(deg)=  -9.6669509846742550     
+ cpu time in seconds:    7.2921000000000014E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)= -0.70282007316809125      Bp(R/2)(mkG)=   1.8214169790667105      |Bz(R/2)|(mkG)=   6.3163212917640918E-002
+ p_B(R/2)(deg)=  -21.100028463399731     
+ cpu time in seconds:    7.4828000000000006E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -2.8648658840395465E-004 Bp(R/2)(mkG)=   1.6818724557697427E-003 |Bz(R/2)|(mkG)=   1.5468564508983287E-004
+ p_B(R/2)(deg)=  -9.6669509846742550     
+ cpu time in seconds:    7.5459999999999972E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -2.8648658840395465E-004 Bp(R/2)(mkG)=   1.6818724557697427E-003 |Bz(R/2)|(mkG)=   1.5468564508983287E-004
+ p_B(R/2)(deg)=  -9.6669509846742550     
+ cpu time in seconds:    7.4509999999999993E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -2.8648658840395465E-004 Bp(R/2)(mkG)=   1.6818724557697427E-003 |Bz(R/2)|(mkG)=   1.5468564508983287E-004
+ p_B(R/2)(deg)=  -9.6669509846742550     
+ cpu time in seconds:    7.6290999999999998E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -2.8648658840395465E-004 Bp(R/2)(mkG)=   1.6818724557697427E-003 |Bz(R/2)|(mkG)=   1.5468564508983287E-004
+ p_B(R/2)(deg)=  -9.6669509846742550     
+ cpu time in seconds:    7.1534999999999987E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -2.8648658840395465E-004 Bp(R/2)(mkG)=   1.6818724557697427E-003 |Bz(R/2)|(mkG)=   1.5468564508983287E-004
+ p_B(R/2)(deg)=  -9.6669509846742550     
+ cpu time in seconds:    7.5682000000000027E-002
+ Directory ending   =CE_004
+
+ it=         120 t=   4.0908486621598295      t(Gyr)=   2.9999999999999005      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -2.8648658840395465E-004 Bp(R/2)(mkG)=   1.6818724557697427E-003 |Bz(R/2)|(mkG)=   1.5468564508983287E-004
+ p_B(R/2)(deg)=  -9.6669509846742550     
+ cpu time in seconds:    7.9916999999999988E-002
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -1.1446582062274342E-003 Bp(R/2)(mkG)=   6.6707009881643150E-003 |Bz(R/2)|(mkG)=   1.1676398920645091E-003
+ p_B(R/2)(deg)=  -9.7369276797370006     
+ cpu time in seconds:   0.10743900000000001     
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -1.1446582062274342E-003 Bp(R/2)(mkG)=   6.6707009881643150E-003 |Bz(R/2)|(mkG)=   1.1676398920645091E-003
+ p_B(R/2)(deg)=  -9.7369276797370006     
+ cpu time in seconds:   0.11033799999999999     
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -1.1446582062274342E-003 Bp(R/2)(mkG)=   6.6707009881643150E-003 |Bz(R/2)|(mkG)=   1.1676398920645091E-003
+ p_B(R/2)(deg)=  -9.7369276797370006     
+ cpu time in seconds:   0.10989800000000000     
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -1.1446582062274342E-003 Bp(R/2)(mkG)=   6.6707009881643150E-003 |Bz(R/2)|(mkG)=   1.1676398920645091E-003
+ p_B(R/2)(deg)=  -9.7369276797370006     
+ cpu time in seconds:   0.10988600000000001     
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -1.1446582062274342E-003 Bp(R/2)(mkG)=   6.6707009881643150E-003 |Bz(R/2)|(mkG)=   1.1676398920645091E-003
+ p_B(R/2)(deg)=  -9.7369276797370006     
+ cpu time in seconds:   0.10559199999999999     
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)= -0.70392295592591558      Bp(R/2)(mkG)=   1.8260491899938742      |Bz(R/2)|(mkG)=   6.2003012443910481E-002
+ p_B(R/2)(deg)=  -21.081331207299741     
+ cpu time in seconds:   0.11121400000000004     
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -1.1446582062274342E-003 Bp(R/2)(mkG)=   6.6707009881643150E-003 |Bz(R/2)|(mkG)=   1.1676398920645091E-003
+ p_B(R/2)(deg)=  -9.7369276797370006     
+ cpu time in seconds:   0.11050399999999999     
+ Directory ending   =CE_004
+
+ it=         180 t=   6.1362729932396443      t(Gyr)=   4.4999999999997771      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -1.1446582062274342E-003 Bp(R/2)(mkG)=   6.6707009881643150E-003 |Bz(R/2)|(mkG)=   1.1676398920645091E-003
+ p_B(R/2)(deg)=  -9.7369276797370006     
+ cpu time in seconds:   0.11504099999999998     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.6653616576419073E-003 Bp(R/2)(mkG)=   2.1429082659781523E-002 |Bz(R/2)|(mkG)=   3.0416700983885900E-003
+ p_B(R/2)(deg)=  -9.7063822457135061     
+ cpu time in seconds:   0.14096399999999998     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.6653616576419073E-003 Bp(R/2)(mkG)=   2.1429082659781523E-002 |Bz(R/2)|(mkG)=   3.0416700983885900E-003
+ p_B(R/2)(deg)=  -9.7063822457135061     
+ cpu time in seconds:   0.14112199999999997     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.6653616576419073E-003 Bp(R/2)(mkG)=   2.1429082659781523E-002 |Bz(R/2)|(mkG)=   3.0416700983885900E-003
+ p_B(R/2)(deg)=  -9.7063822457135061     
+ cpu time in seconds:   0.14330799999999999     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.6653616576419073E-003 Bp(R/2)(mkG)=   2.1429082659781523E-002 |Bz(R/2)|(mkG)=   3.0416700983885900E-003
+ p_B(R/2)(deg)=  -9.7063822457135061     
+ cpu time in seconds:   0.14565300000000000     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.6653616576419073E-003 Bp(R/2)(mkG)=   2.1429082659781523E-002 |Bz(R/2)|(mkG)=   3.0416700983885900E-003
+ p_B(R/2)(deg)=  -9.7063822457135061     
+ cpu time in seconds:   0.14026000000000002     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.6653616576419073E-003 Bp(R/2)(mkG)=   2.1429082659781523E-002 |Bz(R/2)|(mkG)=   3.0416700983885900E-003
+ p_B(R/2)(deg)=  -9.7063822457135061     
+ cpu time in seconds:   0.14554200000000000     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)= -0.70399497786243048      Bp(R/2)(mkG)=   1.8263540116454555      |Bz(R/2)|(mkG)=   6.1922156438202043E-002
+ p_B(R/2)(deg)=  -21.080088894556070     
+ cpu time in seconds:   0.14678099999999999     
+ Directory ending   =CE_004
+
+ it=         240 t=   8.1816973243195541      t(Gyr)=   5.9999999999997238      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -3.6653616576419073E-003 Bp(R/2)(mkG)=   2.1429082659781523E-002 |Bz(R/2)|(mkG)=   3.0416700983885900E-003
+ p_B(R/2)(deg)=  -9.7063822457135061     
+ cpu time in seconds:   0.14928600000000000     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -5.9033699491119196E-003 Bp(R/2)(mkG)=   3.4601375414083785E-002 |Bz(R/2)|(mkG)=   4.0946386963599613E-003
+ p_B(R/2)(deg)=  -9.6821492797331583     
+ cpu time in seconds:   0.17154300000000000     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -5.9033699491119196E-003 Bp(R/2)(mkG)=   3.4601375414083785E-002 |Bz(R/2)|(mkG)=   4.0946386963599613E-003
+ p_B(R/2)(deg)=  -9.6821492797331583     
+ cpu time in seconds:   0.17587700000000001     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -5.9033699491119196E-003 Bp(R/2)(mkG)=   3.4601375414083785E-002 |Bz(R/2)|(mkG)=   4.0946386963599613E-003
+ p_B(R/2)(deg)=  -9.6821492797331583     
+ cpu time in seconds:   0.17603999999999997     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -5.9033699491119196E-003 Bp(R/2)(mkG)=   3.4601375414083785E-002 |Bz(R/2)|(mkG)=   4.0946386963599613E-003
+ p_B(R/2)(deg)=  -9.6821492797331583     
+ cpu time in seconds:   0.17801999999999998     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -5.9033699491119196E-003 Bp(R/2)(mkG)=   3.4601375414083785E-002 |Bz(R/2)|(mkG)=   4.0946386963599613E-003
+ p_B(R/2)(deg)=  -9.6821492797331583     
+ cpu time in seconds:   0.17499499999999998     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -5.9033699491119196E-003 Bp(R/2)(mkG)=   3.4601375414083785E-002 |Bz(R/2)|(mkG)=   4.0946386963599613E-003
+ p_B(R/2)(deg)=  -9.6821492797331583     
+ cpu time in seconds:   0.18000100000000002     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)= -0.70400402099668213      Bp(R/2)(mkG)=   1.8263923127327475      |Bz(R/2)|(mkG)=   6.1911795084267682E-002
+ p_B(R/2)(deg)=  -21.079932647812470     
+ cpu time in seconds:   0.18937599999999999     
+ Directory ending   =CE_004
+
+ it=         300 t=   10.227121655400435      t(Gyr)=   7.5000000000003819      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -5.9033699491119196E-003 Bp(R/2)(mkG)=   3.4601375414083785E-002 |Bz(R/2)|(mkG)=   4.0946386963599613E-003
+ p_B(R/2)(deg)=  -9.6821492797331583     
+ cpu time in seconds:   0.18232799999999996     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.1591252161274403E-003 Bp(R/2)(mkG)=   4.2018170168975903E-002 |Bz(R/2)|(mkG)=   4.4873315433498111E-003
+ p_B(R/2)(deg)=  -9.6693881878314372     
+ cpu time in seconds:   0.20741100000000001     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.1591252161274403E-003 Bp(R/2)(mkG)=   4.2018170168975903E-002 |Bz(R/2)|(mkG)=   4.4873315433498111E-003
+ p_B(R/2)(deg)=  -9.6693881878314372     
+ cpu time in seconds:   0.20769100000000001     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.1591252161274403E-003 Bp(R/2)(mkG)=   4.2018170168975903E-002 |Bz(R/2)|(mkG)=   4.4873315433498111E-003
+ p_B(R/2)(deg)=  -9.6693881878314372     
+ cpu time in seconds:   0.20880399999999999     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.1591252161274403E-003 Bp(R/2)(mkG)=   4.2018170168975903E-002 |Bz(R/2)|(mkG)=   4.4873315433498111E-003
+ p_B(R/2)(deg)=  -9.6693881878314372     
+ cpu time in seconds:   0.20873499999999998     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.1591252161274403E-003 Bp(R/2)(mkG)=   4.2018170168975903E-002 |Bz(R/2)|(mkG)=   4.4873315433498111E-003
+ p_B(R/2)(deg)=  -9.6693881878314372     
+ cpu time in seconds:   0.21327800000000000     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.1591252161274403E-003 Bp(R/2)(mkG)=   4.2018170168975903E-002 |Bz(R/2)|(mkG)=   4.4873315433498111E-003
+ p_B(R/2)(deg)=  -9.6693881878314372     
+ cpu time in seconds:   0.21368100000000001     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.1591252161274403E-003 Bp(R/2)(mkG)=   4.2018170168975903E-002 |Bz(R/2)|(mkG)=   4.4873315433498111E-003
+ p_B(R/2)(deg)=  -9.6693881878314372     
+ cpu time in seconds:   0.21607599999999996     
+ Directory ending   =CE_004
+
+ it=         360 t=   12.272545986481315      t(Gyr)=   9.0000000000010409      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)= -0.70400533796855058      Bp(R/2)(mkG)=   1.8263978912710890      |Bz(R/2)|(mkG)=   6.1910284061166519E-002
+ p_B(R/2)(deg)=  -21.079909886764334     
+ cpu time in seconds:   0.22488400000000003     
+ Directory ending   =CE_004
+
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.7586949030992135E-003 Bp(R/2)(mkG)=   4.5566610293921256E-002 |Bz(R/2)|(mkG)=   4.6202868281247922E-003
+ p_B(R/2)(deg)=  -9.6632546390718925     
+ cpu time in seconds:   0.23789900000000003     
+ Directory ending   =CE_004
+
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.7586949030992135E-003 Bp(R/2)(mkG)=   4.5566610293921256E-002 |Bz(R/2)|(mkG)=   4.6202868281247922E-003
+ p_B(R/2)(deg)=  -9.6632546390718925     
+ cpu time in seconds:   0.24035699999999993     
+ Directory ending   =CE_004
+
+ Writing output for final timestep to file run.out
+ Writing output for final timestep to file run.out
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.7586949030992135E-003 Bp(R/2)(mkG)=   4.5566610293921256E-002 |Bz(R/2)|(mkG)=   4.6202868281247922E-003
+ p_B(R/2)(deg)=  -9.6632546390718925     
+ cpu time in seconds:   0.24269299999999999     
+ Directory ending   =CE_004
+
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.7586949030992135E-003 Bp(R/2)(mkG)=   4.5566610293921256E-002 |Bz(R/2)|(mkG)=   4.6202868281247922E-003
+ p_B(R/2)(deg)=  -9.6632546390718925     
+ cpu time in seconds:   0.24203600000000000     
+ Directory ending   =CE_004
+
+ Writing output for final timestep to file run.out
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.7586949030992135E-003 Bp(R/2)(mkG)=   4.5566610293921256E-002 |Bz(R/2)|(mkG)=   4.6202868281247922E-003
+ p_B(R/2)(deg)=  -9.6632546390718925     
+ cpu time in seconds:   0.24807399999999999     
+ Directory ending   =CE_004
+
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.7586949030992135E-003 Bp(R/2)(mkG)=   4.5566610293921256E-002 |Bz(R/2)|(mkG)=   4.6202868281247922E-003
+ p_B(R/2)(deg)=  -9.6632546390718925     
+ cpu time in seconds:   0.24232100000000001     
+ Directory ending   =CE_004
+
+ Writing output for final timestep to file run.out
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)=  -7.7586949030992135E-003 Bp(R/2)(mkG)=   4.5566610293921256E-002 |Bz(R/2)|(mkG)=   4.6202868281247922E-003
+ p_B(R/2)(deg)=  -9.6632546390718925     
+ cpu time in seconds:   0.24872999999999998     
+ Directory ending   =CE_004
+
+ Writing output for final timestep to file run.out
+ it=         420 t=   14.317970317562196      t(Gyr)=   10.500000000001700      r(R/2)(kpc)=   7.6271186440677958     
+ Br(R/2)(mkG)= -0.70400552801736371      Bp(R/2)(mkG)=   1.8263986963170502      |Bz(R/2)|(mkG)=   6.1910066220636564E-002
+ p_B(R/2)(deg)=  -21.079906601960918     
+ cpu time in seconds:   0.25548100000000001     
+ Directory ending   =CE_004
+
+ Writing output for final timestep to file run.out
+ Writing output for final timestep to file run.out
+ Writing output for final timestep to file run.out
+ simulation time in seconds:   0.93630799999999992     
+ simulation time in seconds:   0.93932399999999994     
+ simulation time in seconds:   0.93881499999999996     
+ simulation time in seconds:   0.94543600000000005     

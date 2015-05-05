@@ -1,0 +1,72 @@
+10,11c10,11
+< f2py:> /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycallmodule.c
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7
+---
+> f2py:> /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycallmodule.c
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7
+3149,3155c3149,3155
+< 	Wrote C/API module "pycall" to file "/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycallmodule.c"
+< 	Fortran 90 wrappers are saved to "/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.f90"
+<   adding '/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/fortranobject.c' to sources.
+<   adding '/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7' to include_dirs.
+< copying /Applications/anaconda/lib/python2.7/site-packages/numpy/f2py/src/fortranobject.c -> /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7
+< copying /Applications/anaconda/lib/python2.7/site-packages/numpy/f2py/src/fortranobject.h -> /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7
+<   adding '/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.f90' to sources.
+---
+> 	Wrote C/API module "pycall" to file "/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycallmodule.c"
+> 	Fortran 90 wrappers are saved to "/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.f90"
+>   adding '/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/fortranobject.c' to sources.
+>   adding '/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7' to include_dirs.
+> copying /Applications/anaconda/lib/python2.7/site-packages/numpy/f2py/src/fortranobject.c -> /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7
+> copying /Applications/anaconda/lib/python2.7/site-packages/numpy/f2py/src/fortranobject.h -> /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7
+>   adding '/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.f90' to sources.
+3168,3178c3168,3178
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM
+< creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7
+< compile options: '-I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7 -I/Applications/anaconda/lib/python2.7/site-packages/numpy/core/include -I/Applications/anaconda/include/python2.7 -c'
+< gcc: /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycallmodule.c
+< In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycallmodule.c:17:
+< In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/fortranobject.h:13:
+---
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH
+> creating /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7
+> compile options: '-I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7 -I/Applications/anaconda/lib/python2.7/site-packages/numpy/core/include -I/Applications/anaconda/include/python2.7 -c'
+> gcc: /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycallmodule.c
+> In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycallmodule.c:17:
+> In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/fortranobject.h:13:
+3186,3188c3186,3188
+< gcc: /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/fortranobject.c
+< In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/fortranobject.c:2:
+< In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/fortranobject.h:13:
+---
+> gcc: /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/fortranobject.c
+> In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/fortranobject.c:2:
+> In file included from /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/fortranobject.h:13:
+3200,3201c3200,3201
+< compile options: '-I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7 -I/Applications/anaconda/lib/python2.7/site-packages/numpy/core/include -I/Applications/anaconda/include/python2.7 -c'
+< extra options: '-J/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/ -I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/'
+---
+> compile options: '-I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7 -I/Applications/anaconda/lib/python2.7/site-packages/numpy/core/include -I/Applications/anaconda/include/python2.7 -c'
+> extra options: '-J/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/ -I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/'
+3218,3222c3218,3222
+< compile options: '-I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7 -I/Applications/anaconda/lib/python2.7/site-packages/numpy/core/include -I/Applications/anaconda/include/python2.7 -c'
+< extra options: '-J/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/ -I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/'
+< gfortran:f90: /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.f90
+< /usr/local/bin/gfortran -Wall -g -m64 -Wall -g -undefined dynamic_lookup -bundle /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycallmodule.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/fortranobject.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/dynamo.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/gutsdynamo.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.o -L/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9/gcc/x86_64-apple-darwin13.4.0/4.9.2 -L/Applications/anaconda/lib -lgfortran -o ./pycall.so
+< Removing build directory /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmprfmkJM
+---
+> compile options: '-I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7 -I/Applications/anaconda/lib/python2.7/site-packages/numpy/core/include -I/Applications/anaconda/include/python2.7 -c'
+> extra options: '-J/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/ -I/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/'
+> gfortran:f90: /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.f90
+> /usr/local/bin/gfortran -Wall -g -m64 -Wall -g -undefined dynamic_lookup -bundle /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycallmodule.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/fortranobject.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/dynamo.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/gutsdynamo.o /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH/src.macosx-10.5-x86_64-2.7/pycall-f2pywrappers2.o -L/usr/local/Cellar/gcc/4.9.2_1/lib/gcc/4.9/gcc/x86_64-apple-darwin13.4.0/4.9.2 -L/Applications/anaconda/lib -lgfortran -o ./pycall.so
+> Removing build directory /var/folders/kc/j1bg70qx1c3_btnl4kvlnbz00000gn/T/tmpiiYBfH

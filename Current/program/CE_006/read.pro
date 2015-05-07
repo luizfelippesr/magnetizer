@@ -1,9 +1,9 @@
-s0='CE_004'
-s1='/Users/luke'
-s2=''
-datadirec=   strjoin([s1,'/fortran_pde/1D/telegraph/r_noz/data/'   ,s0])
-programdirec=strjoin([s1,'/fortran_pde/1D/telegraph/r_noz/program/',s0])
-cd,datadirec
+s0='CE_006'
+s1='/Users/luke/fortran_pde/1D/telegraph/r_noz/'
+s2='_00000001'
+simulationoutputdirec=   strjoin([s1,'output/'   ,s0])
+programdirec=strjoin([s1,'program/',s0])
+cd,simulationoutputdirec
 openr,10,strjoin(['param',s2,'.out'])
 openr,11,strjoin(['init' ,s2,'.out'])
 openr,12,strjoin(['run'  ,s2,'.out'])

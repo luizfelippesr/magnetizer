@@ -11,8 +11,7 @@ t2_Gyr=1.2
 t1=t1_Gyr/t0_Gyr
 t2=t2_Gyr/t0_Gyr
 ;
-plotdirec=strjoin([s1,'/fortran_pde/1D/telegraph/r_noz/plots/'  ,s0])
-progdirec=strjoin([s1,'/fortran_pde/1D/telegraph/r_noz/program/',s0])
+plotdirec=strjoin([s1,'plots/'  ,s0])
 ;
 r_kpc=r*r_disk_kpc
 ;

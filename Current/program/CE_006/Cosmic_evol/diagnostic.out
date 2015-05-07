@@ -1,0 +1,52 @@
+ UNITS
+ t0 (Gyr)=  0.73334416590615259      t0 (kpc s/km)=  0.75000000000000000      h0 (kpc)=  0.50000000000000000      etat0 (cm2s)=    1.0285591933333333E+026
+ 
+ NUMERICS:
+ nvar=                3
+ dt=          6.8180811035999421E-003    n1=                420    n2=                5
+ dx=          3.3333333333333333E-002    nxphys=             31    nxghost=           3    nx=          37
+ minval(x)= -0.10000000000000001         maxval(x)=   1.0999999999999999     
+ 
+ PHYSICAL GRID:
+ r_kpc=  -1.5000000000000000       -1.0000000000000002      -0.50000000000000011        0.0000000000000000       0.49999999999999989       0.99999999999999978        1.5000000000000000        2.0000000000000000        2.5000000000000000        2.9999999999999996        3.4999999999999996        3.9999999999999991        4.5000000000000009        5.0000000000000009        5.5000000000000000        6.0000000000000000        6.5000000000000000        7.0000000000000000        7.5000000000000000        8.0000000000000000        8.5000000000000000        9.0000000000000000        9.5000000000000000        10.000000000000000        10.500000000000002        11.000000000000000        11.500000000000000        12.000000000000000        12.500000000000000        13.000000000000000        13.500000000000000        13.999999999999998        14.500000000000000        15.000000000000000        15.499999999999998        16.000000000000000        16.499999999999996     
+ 
+ MODULES:
+ Read_param=  T Dyn_quench= T Alg_quench=    F Damp=        F
+ Var_Uz=      F Var_l=      F Var_v=         F Var_n=       T
+ Flaring=     T Rand_seed=  F Alp_ceiling=   F Om_Brandt=   T
+ Alp_squared= T Krause=     T Shear=         T Advect=      T
+ Turb_dif=    T
+ 
+ INPUT PARAMETERS:
+ r_disk_kpc=    15.000000000000000      R_kappa=      1.0000000000000000     
+ l_sol_kpc=    0.29999999999999999      r_l_kpc=      9.8000000000000007      v_sol_kms=       10.000000000000000      r_v_kpc=       7.5000000000000000     
+ n_sol_cm3=    0.10000000000000001      r_n_kpc=      7.5000000000000000      Uz_sol_kms=      3.0000000000000000      r_Uz_kpc=      30.000000000000000     
+ h_sol_kpc=    0.50000000000000000      r_h_kpc=      9.8000000000000007      Uphi_sol_kms=    220.00000000000000      r_om_kpc=      2.0000000000000000     
+ 
+ OTHER FREE PARAMETERS:
+ r_in=    0.0000000000000000      r_disk_kpc=   15.000000000000000      r_sol_kpc=   8.0000000000000000      r1_kpc=   15.000000000000000     
+ ctau=    1.0000000000000000      nn=                   2 lambda=      3.3333333333333333E-002
+ C_alp=   1.0000000000000000      alpceil=     0.50000000000000000      Rm_inv=      0.0000000000000000     
+ 
+ IMPORTANT CALCULATED PARAMETERS
+ etat_sol_cm2s=   3.0856775800000004E+026 td_sol_Gyr=  0.24444805530205080      tau_sol_Gyr=   2.9333766636246105E-002
+ etat_sol=        2.9999999999999996      td_sol=      0.33333333333333337      tau_sol        4.0000000000000001E-002
+ 
+ INPUT/OUTPUT INFORMATION
+ Directory ending   =CE_006
+ home directory     =/Users/luke/fortran_pde/1D/telegraph/r_noz
+ 
+ 
+ Writing parameters to file param00000002.out
+ Finished writing parameters to file param00000002.out
+ Writing initial output to file init00000002.out
+ 
+ Finished writing initial output to file init00000002.out
+ it=         420 t=   28.635940635118207      t(Gyr)=   20.999999999998863      r(R/2)(kpc)=   7.5000000000000000     
+ Br(R/2)(mkG)= -0.73271011497718708      Bp(R/2)(mkG)=   1.8856069816009595      |Bz(R/2)|(mkG)=   6.3225707034351555E-002
+ p(R/2)(deg)=  -21.235356757807249     
+ cpu time in seconds:   -2.9400000000001647E-004
+ Directory ending   =CE_006
+
+ Writing output for final timestep to file run00000002.out
+ simulation time in seconds:   0.26284800000000003     

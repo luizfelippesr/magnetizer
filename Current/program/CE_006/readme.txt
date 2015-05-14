@@ -28,8 +28,10 @@ In directory "program/CE_###/":
   mpirun                #runs mpi code
   mpidynamo.py		#top-level python code that calls "Cosmic_evol/pycall.so", which wraps fortran routines
   diagnostic.out        #diagnostic file containing info from run
-  read.pro		#idl routine that reads in simulation output
+  r.pro			#idl routine that reads in simulation output
   p.pro			#idl routine that plots simulation output
+  r.py			#python routine that reads in simulation output
+  p.py			#python routine that plots simulation output
 
 In directory "program/CE_###/Cosmic_evol/":
 

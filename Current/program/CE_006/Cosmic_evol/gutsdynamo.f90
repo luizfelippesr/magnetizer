@@ -663,16 +663,43 @@ module galaxy_model
     end subroutine construct_galaxy_model
 end module galaxy_model
 !*****************************************************
+module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
+  use constants
+  use calc_params
+  use var
+  use grid
+  use ts_params
+  use deriv
+  use profiles
+!
+  implicit none
+!
+  double precision, dimension(nx) :: Bzmod
+!
+  contains
+    subroutine estimate_Bzmod(f)
+!
+      double precision, dimension(nx,nvar), intent(in) :: f
+!
+      if (r(nxghost+1)==0.d0) then
+        Bzmod= lambda*h*abs(xder(f(:,1)))
+      else
+        Bzmod= lambda*h*abs(f(:,1)/r +xder(f(:,1)))
+      endif
+    end subroutine estimate_Bzmod
+end module bzcalc
+!*****************************************************
 module equ  !Contains the partial differential equations to be solved
   use galaxy_model
   use deriv
   use boundary_conditions
+  use bzcalc
 !  
   implicit none
 !
   double precision, dimension(nx) :: Br, Bp, Fr, Fp, Er, Ep, dBrdr, d2Brdr2, dBpdr, d2Bpdr2
   double precision, dimension(nx) :: alp_m, alp, dalp_mdr, d2alp_mdr2, dalpdr, detatdr
-  double precision, dimension(nx) :: Emag, DivVishniac, Dyn_gen
+  double precision, dimension(nx) :: Bsqtot, DivVishniac, Dyn_gen
 !
   contains
     subroutine pde(f,dfdt)
@@ -713,8 +740,11 @@ module equ  !Contains the partial differential equations to be solved
         d2alp_mdr2=xder2(alp_m)
       endif
 !
+!     CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
+      Bsqtot=Br**2 +Bp**2 +Bzmod**2
+!
       if (Alg_quench) then
-        alp= alp_k/(1.d0 +Emag/Beq**2)  !Formula for simple alpha quenching
+        alp= alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching
       elseif (Dyn_quench) then
         alp= alp_k +alp_m  !Total alpha is equal to the sum of kinetic and magnetic parts
       else
@@ -722,9 +752,6 @@ module equ  !Contains the partial differential equations to be solved
       endif
 !
       detatdr= 1.d0/3*l*dvdr+1.d0/3*v*dldr
-!
-!     CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
-      Emag=Br**2+Bp**2
 !
 !     CALCULATE DYNAMO NUMBER
       Dyn_gen=G*alp*h**3/etat**2
@@ -791,26 +818,6 @@ module equ  !Contains the partial differential equations to be solved
       endif
     end subroutine pde
 end module equ
-!*****************************************************
-module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
-  use constants
-  use calc_params
-  use var
-  use grid
-  use ts_params
-  use deriv
-  use equ
-!
-  implicit none
-!
-  double precision, dimension(nx) :: Bzmod
-!
-  contains
-    subroutine estimate_Bzmod
-  !
-      Bzmod= lambda*h*abs(Br/r +dBrdr)
-    end subroutine estimate_Bzmod
-end module bzcalc
 !*****************************************************
 module timestep  !Contains time-stepping routine
   use var
@@ -1093,7 +1100,7 @@ module start  !Contains initialization routine for simulation
       call init_seed(f)
 !  
 !     CALCULATE |Bz|
-      call estimate_Bzmod
+      call estimate_Bzmod(f)
 !
       if (.not.Turb_dif) then
         etat=0.d0
@@ -1189,6 +1196,11 @@ module output_dump
       write(13,*)ts_n
       write(13,*)ts_Beq
       close(13)
+print*,'ts_Br(1,1)'   ,ts_Br(1,1)
+print*,'ts_Br(1,37)'  ,ts_Br(1,37)
+print*,'ts_Br(421,1)' ,ts_Br(421,1)
+print*,'ts_Br(421,37)',ts_Br(421,37)
+print*,'ts_Br(100,10)',ts_Br(100,10)
     end subroutine write_final_output
 end module output_dump
 !*****************************************************

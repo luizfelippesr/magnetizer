@@ -6,7 +6,7 @@ program calldynamo
 !
   implicit none 
 !
-  integer :: info=2, igal=1, flag, ngal=2
+  integer :: info=2, igal=1, flag, ngal=1
 ! intent(in)
 !  info:   how much info to print during run
 !          options are 0=min, 1=standard, 2=max

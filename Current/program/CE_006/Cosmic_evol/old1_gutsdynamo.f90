@@ -8,7 +8,7 @@ module direc_names  !Specifies paths
   character (len=42), parameter :: s1= '/Users/luke/fortran_pde/1D/telegraph/r_noz'
 end module direc_names
 !*****************************************************
-module math_constants  !Contains math constants, unit conversions
+module constants  !Contains math constants, unit conversions
   implicit none
 ! CONSTANTS
   double precision, parameter :: pi=     3.14156295358d0
@@ -18,29 +18,7 @@ module math_constants  !Contains math constants, unit conversions
   double precision, parameter :: cm_km=  1.d5  !number of cm in 1 km
   double precision, parameter :: s_Gyr=  1.d9*365.25d0*24*3600  !number of s in 1 Gyr
   double precision, parameter :: mkG_G=  1.d6  !number of mkG in 1 G
-end module math_constants
-!*****************************************************
-module input_constants  !Contains math constants, unit conversions
-  use math_constants
-  implicit none
-!   TURBULENCE
-    double precision, parameter :: ctau= 1.d0 !Ratio of tau (eddy turnover time) to correlation time of the turbulence
-!   ADVECTION NO-z
-    double precision, parameter :: C_U=0.5d0!0.25d0  !No-z correction term for terms involving Uz*Br, Uz*Bp
-    double precision, parameter :: C_a=1.d0!0.3d0  !No-z correction term for terms involving Uz*alp_m
-!   SEED FIELD
-    double precision, parameter :: r1_kpc= 15.0d0 !Only relevant if Rand_seed=F
-!   DIFFUSIVE MAGNETIC HELICITY FLUX
-    double precision, parameter :: C_d= -pi**2  !No-z correction term for terms involving diffusive flux
-!   RESISTIVITY
-    double precision, parameter :: Rm_inv= 0.d0  !1.e-5 !Inverse magnetic Reynolds number
-!   ALPHA EFFECT
-    double precision, parameter :: C_alp=   1.0d0 !Factor determining strength of alpha effect
-    double precision, parameter :: alpceil= 0.5d0  !Relevant only if module Alp_ceiling=1; Limits maximum value of alpha to ceiling*v_kms
-!   SEED FIELD
-    double precision, parameter :: frac_seed=0.01d0 !Seed field amplitude as a fraction of equipartition magnetic field strength
-    integer, parameter :: nn=2 !Only relevant if Rand_seed=F
-end module input_constants
+end module constants
 !*****************************************************
 module modules  !Contains switches
   implicit none
@@ -71,7 +49,7 @@ module modules  !Contains switches
 ! BRANDT ROTATION CURVE
   logical :: Om_Brandt =   .true.  !Set to T to use a Brandt rotation curve
 ! ALPHA^2 EFFECT
-  logical :: Alp_squared=  .false.  !Set to T to include alpha^2 effect; set to F to use alpha-omega approximation equations
+  logical :: Alp_squared=  .true.  !Set to T to include alpha^2 effect; set to F to use alpha-omega approximation equations
 ! KRAUSE'S LAW
   logical :: Krause=       .true.  !Set to T for alpha effect to decrease in proportion to omega (Krause's formula)
 ! OMEGA EFFECT
@@ -83,7 +61,7 @@ module modules  !Contains switches
 end module modules
 !*****************************************************
 module units  !Specifies code units
-  use math_constants
+  use constants
 !
   implicit none
 !
@@ -109,8 +87,9 @@ module units  !Specifies code units
 end module units
 !*****************************************************
 module grid  !Contains grid parameters and subroutine for constructing grid
-  use math_constants
+  use constants
   use units
+!  use calc_params
 !
   implicit none
 !
@@ -137,7 +116,7 @@ end module grid
 !*****************************************************
 module input_params  !Contains default input parameters and a subroutine for reading input parameters from files
   use modules
-  use math_constants
+  use constants
   use direc_names
 !
   implicit none
@@ -214,17 +193,16 @@ end module input_params
 !*****************************************************
 module calc_params  !Contains parameters that are calculated from the input parameters
   use units
-  use math_constants
   use input_params
   use grid
-  use input_constants
 !
   implicit none
 !
   double precision :: etat_sol,etat_sol_kmskpc,etat_sol_cm2s,td_sol,td_sol_kpcskm,td_sol_Gyr,td_sol_s,om0_kmskpc, &
-                      Ur_sol_kms,r_sol,lambda,n_sol,r_n,h_sol,r_h,l_sol,r_l,v_sol,r_v,Uz_sol,r_Uz, &
-                      Ur_sol,Uphi_sol,om0,r_om,r1
+                      Ur_sol_kms,r1_kpc,r_sol,lambda,ctau,n_sol,r_n,h_sol,r_h,l_sol,r_l,v_sol,r_v,Uz_sol,r_Uz, &
+                      C_U,C_a,Ur_sol,Uphi_sol,om0,r_om,C_d,Rm_inv,C_alp,alpceil,frac_seed,r1
   double precision, dimension(nx) :: r_kpc
+  integer :: nn
 !
   contains
     subroutine set_calc_params
@@ -242,12 +220,16 @@ module calc_params  !Contains parameters that are calculated from the input para
 !     RADIAL FLOW
       Ur_sol_kms=   0.0d0  !Radial mean velocity at r=r_sol in km/s
 !
+!     SEED FIELD
+      r1_kpc=      15.0d0 !Only relevant if Rand_seed=F
+!
 !     DIMENSIONLESS PARAMETERS THAT CAN BE CALCULATED OR THAT ARE NOT NORMALLY VARIED:
 !     NUMERICAL
       r_sol=r_sol_kpc/r_disk_kpc !Chosen radius at which to specify param values (e.g. radius of solar neighbourhood)
       lambda=h0_kpc/r_disk_kpc  !Typical aspect ratio of disk
 !
 !     TURBULENCE
+      ctau= 1.d0 !Ratio of tau (eddy turnover time) to correlation time of the turbulence
       h_sol= h_sol_kpc/h0_kpc*h0  !Disk thickness at r=r_sol in units of h0
       r_h= r_h_kpc/r_disk_kpc*r_disk  !Exponential scale radius of disk scale height
       n_sol= n_sol_cm3/n0_cm3*n0  !Equipartition magnetic field at r=r_sol
@@ -262,6 +244,8 @@ module calc_params  !Contains parameters that are calculated from the input para
 !     VERTICAL WIND
       Uz_sol=Uz_sol_kms/h0_km*t0_s*h0/t0  !Vertical mean velocity
       r_Uz= r_Uz_kpc/r_disk_kpc*r_disk  !Exponential scale radius of vertical mean velocity
+      C_U=0.5d0!0.25d0  !No-z correction term for terms involving Uz*Br, Uz*Bp
+      C_a=1.d0!0.3d0  !No-z correction term for terms involving Uz*alp_m
 !
 !     RADIAL FLOW
       Ur_sol=Ur_sol_kms/h0_km*t0_s*h0/t0  !Radial mean velocity at r=r_sol
@@ -271,8 +255,20 @@ module calc_params  !Contains parameters that are calculated from the input para
       om0=om0_kmskpc/km_kpc*t0_s/t0  !om0 of Brandt profile
       r_om=r_om_kpc/r_disk_kpc*r_disk  !Characteristic radius of Brandt profile
 !
+!     DIFFUSIVE MAGNETIC HELICITY FLUX
+      C_d= -pi**2  !No-z correction term for terms involving diffusive flux
+!
+!     RESISTIVITY
+      Rm_inv= 0.d0  !1.e-5 !Inverse magnetic Reynolds number
+!
+!     ALPHA EFFECT
+      C_alp=   1.0d0 !Factor determining strength of alpha effect
+      alpceil= 0.5d0  !Relevant only if module Alp_ceiling=1; Limits maximum value of alpha to ceiling*v_kms
+!
 !     SEED FIELD
+      frac_seed=0.01d0 !Seed field amplitude as a fraction of equipartition magnetic field strength
       r1= r1_kpc/r_disk_kpc*r_disk !Only relevant if Rand_seed=F
+      nn=2 !Only relevant if Rand_seed=F
 !
 !     PHYSICAL GRID
       r_kpc=r*r_disk_kpc
@@ -280,8 +276,8 @@ module calc_params  !Contains parameters that are calculated from the input para
 end module calc_params
 !*****************************************************
 module ts_params  !Contains time-stepping parameters
-  use input_params
   use calc_params
+  use input_params
 !
   implicit none
 !
@@ -668,7 +664,7 @@ module galaxy_model
 end module galaxy_model
 !*****************************************************
 module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
-  use math_constants
+  use constants
   use calc_params
   use var
   use grid
@@ -874,7 +870,7 @@ end module timestep
 !*****************************************************
 module diagnostic  !Writes diagnostic information to screen, file
   use direc_names
-  use math_constants
+  use constants
   use units
   use input_params
   use calc_params
@@ -982,7 +978,7 @@ end module diagnostic
 !*****************************************************
 module initial_data_dump
   use direc_names
-  use math_constants
+  use constants
   use units
   use input_params
   use calc_params
@@ -1061,7 +1057,7 @@ end module initial_data_dump
 !*****************************************************
 module start  !Contains initialization routine for simulation
   use direc_names
-  use math_constants
+  use constants
   use units
   use input_params
   use calc_params

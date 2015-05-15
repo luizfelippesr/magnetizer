@@ -68,7 +68,7 @@ module dynamo
 !
         call impose_bc(f)  !Impose boundary conditions before writing output
 !
-        call estimate_Bzmod  !Estimate the value of |B_z| using Div B =0 condition
+        call estimate_Bzmod(f)  !Estimate the value of |B_z| using Div B =0 condition
 !
         call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,Uz,Ur,n,Beq)  !Store simulation output into arrays
 !

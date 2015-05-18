@@ -19,6 +19,13 @@ From the directory "program/CE_###/" type
 
 List of files
 
+In directory "program/":
+
+  readme.txt		#this file
+  rc.py			#generalizes program/CE_###/r.py to read output from multiple runs
+  pc.py			#generalizes program/CE_###/p.py to plot output from multiple runs for comparison purposes
+  CE_###/
+
 In directory "program/CE_###/":
 
   fcompile		#compiles serial code
@@ -32,6 +39,7 @@ In directory "program/CE_###/":
   p.pro			#idl routine that plots simulation output
   r.py			#python routine that reads in simulation output
   p.py			#python routine that plots simulation output
+  Cosmic_evol/
 
 In directory "program/CE_###/Cosmic_evol/":
 

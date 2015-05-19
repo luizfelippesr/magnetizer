@@ -41,6 +41,8 @@ In directory "program/CE_###/":
   p.pro			#idl routine that plots simulation output
   r.py			#python routine that reads in simulation output
   p.py			#python routine that plots simulation output
+  rm.py			#generalizes program/CE_###/r.py to read output from multiple galaxies
+  pm.py			#generalizes program/CE_###/p.py to plot output from multiple galaxies
   Cosmic_evol/
 
 In directory "program/CE_###/Cosmic_evol/":

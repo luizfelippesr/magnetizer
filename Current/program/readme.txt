@@ -24,6 +24,8 @@ In directory "program/":
   readme.txt		#this file
   rc.py			#generalizes program/CE_###/r.py to read output from multiple runs
   pc.py			#generalizes program/CE_###/p.py to plot output from multiple runs for comparison purposes
+  rcm.py		#generalizes program/rc.py to read output from multiple galaxies from each run
+  pcm.py		#generalizes program/pc.py to plot output from multiple galaxies from each run
   CE_###/
 
 In directory "program/CE_###/":

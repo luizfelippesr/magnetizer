@@ -14,10 +14,16 @@ or to remove '.mod' and '.o' files before compiling, type
 Using python to wrap fortran code (mpi using mpi4py)
 From the directory "program/CE_###/" type 
 
-  mpicompile
-  mpirun
+  bash mpicompile
+  bash mpirun
 
-List of files
+Using fortran with mpi
+From the directory "program/CE_###/" type 
+
+  bash fmpicompile
+  bash fmpirun
+
+List of files:
 
 In directory "program/":
 
@@ -33,8 +39,10 @@ In directory "program/CE_###/":
   fcompile		#compiles serial code
   frun                  #runs serial code
   fcompileclean         #compiles serial code with clean
-  mpicompile            #compiles mpi code
-  mpirun                #runs mpi code
+  mpicompile            #compiles python mpi code
+  fmpicompile           #compiles fortran mpi code
+  mpirun                #runs mpi code using python wrapper
+  fmpirun               #runs mpi code completely within fortran
   mpidynamo.py		#top-level python code that calls "Cosmic_evol/pycall.so", which wraps fortran routines
   diagnostic.out        #diagnostic file containing info from run
   r.pro			#idl routine that reads in simulation output
@@ -50,7 +58,8 @@ In directory "program/CE_###/Cosmic_evol/":
   __init__.py		#tells python to look in this directory
   __init__.pyc		#tells python to look in this directory
   fcall 		#executable created by 'fcompile' or 'fcompileclean'
-  calldynamo.f90	#top-level fortran code that calls simulation, looping over the galaxies (this file is not necessary for mpi4py runs)
+  calldynamo.f90	#top-level fortran code that calls simulation for serial runs without mpi
+  mpicalldynamo.f90	#top-level fortran code that calls simulation for mpi runs within fortran
   dynamo.f90		#middle-level fortran code that runs the simulation for a given galaxy
   gutsdynamo.f90	#bottom-level fortran code that contains most of the necessary subroutines for dynamo.f90
   pycall.so		#executable created by f2py fortran wrapper for running fortran routines

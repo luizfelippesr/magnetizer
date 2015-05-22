@@ -1,0 +1,4 @@
+cd Cosmic_evol
+gfortran -c random.f90 gutsdynamo.f90 dynamo.f90
+gfortran -o fcall random.o gutsdynamo.o dynamo.o calldynamo.f90
+

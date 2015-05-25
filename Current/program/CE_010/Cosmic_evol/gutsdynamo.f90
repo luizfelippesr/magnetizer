@@ -47,7 +47,7 @@ module modules  !Contains switches
   implicit none
 !
 ! PARAMETER INPUTS
-  logical, parameter :: Read_param=   .false.  !Set to T to read in parameters from file, set to F to use defaults
+  logical, parameter :: Read_param=   .true.  !Set to T to read in parameters from file, set to F to use defaults
 ! PARAMETER INPUTS
   logical, parameter :: Time_evol=    .true.  !Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
 ! ALPHA QUENCHING
@@ -289,18 +289,20 @@ module ts_params  !Contains time-stepping parameters
 !
   implicit none
 !
-  integer, parameter :: n1= 60!420   !Number of snapshots
+  integer, parameter :: n1= 100!420   !Number of snapshots
   integer, parameter :: nread= 50  !Read in new input parameters every nread snapshots
   integer, parameter :: nscreen= 100  !Print output to screen every nscreen*n2 timesteps
   double precision, parameter :: tsnap= 0.025d0/t0_Gyr !Time between successive snapshots
   integer :: n2  !Number of timesteps in between snapshots
-  double precision :: dt,t=0.d0,first=0.d0, eps_t=0.005d0
+  double precision :: dt,t=0.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
 !
   contains
     subroutine set_ts_params
-      n2= nint(tsnap/t0_Gyr/eps_t)  !Change n2 by changing eps_t
+      n2= max(nint(tsnap/t0_Gyr/eps_t),1)  !Change n2 by changing eps_t
       dt= tsnap/n2  !Timestep in units of t0=h0^2/etat0
-      print*,'dt=',dt
+      print*,'n2,dt,iread=',n2,dt,iread
+      print*,'Uz_sol_kms=',Uz_sol_kms
+      print*,''
     endsubroutine set_ts_params
 end module ts_params
 !*****************************************************

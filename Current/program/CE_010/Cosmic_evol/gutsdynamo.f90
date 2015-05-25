@@ -47,7 +47,7 @@ module modules  !Contains switches
   implicit none
 !
 ! PARAMETER INPUTS
-  logical, parameter :: Read_param=   .true.  !Set to T to read in parameters from file, set to F to use defaults
+  logical, parameter :: Read_param=   .false.  !Set to T to read in parameters from file, set to F to use defaults
 ! PARAMETER INPUTS
   logical, parameter :: Time_evol=    .true.  !Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
 ! ALPHA QUENCHING
@@ -192,7 +192,7 @@ module input_params  !Contains default input parameters and a subroutine for rea
 !
 !       VERTICAL WIND (DEFAULTS)
 !mark1
-        Uz_sol_kms=      0.0d0  !Vertical mean velocity at r=r_sol in km/s (if Var_Uz=F then Uz_kms=Uz_sol_kms)
+        Uz_sol_kms=      20.0d0  !Vertical mean velocity at r=r_sol in km/s (if Var_Uz=F then Uz_kms=Uz_sol_kms)
         r_Uz_kpc=      100.0d0!15.0d0 !Uz_kms=Uz_sol_kms*exp((r_kpc-r_sol_kpc)/r_Uz_kpc) if Var_Uz=T
 !
 !       SCALE HEIGHT (DEFAULTS)
@@ -289,8 +289,8 @@ module ts_params  !Contains time-stepping parameters
 !
   implicit none
 !
-  integer, parameter :: n1= 150!420   !Number of snapshots
-  integer, parameter :: nread= 25  !Read in new input parameters every nread snapshots
+  integer, parameter :: n1= 60!420   !Number of snapshots
+  integer, parameter :: nread= 50  !Read in new input parameters every nread snapshots
   integer, parameter :: nscreen= 100  !Print output to screen every nscreen*n2 timesteps
   double precision, parameter :: tsnap= 0.025d0/t0_Gyr !Time between successive snapshots
   integer :: n2  !Number of timesteps in between snapshots
@@ -300,6 +300,7 @@ module ts_params  !Contains time-stepping parameters
     subroutine set_ts_params
       n2= nint(tsnap/t0_Gyr/eps_t)  !Change n2 by changing eps_t
       dt= tsnap/n2  !Timestep in units of t0=h0^2/etat0
+      print*,'dt=',dt
     endsubroutine set_ts_params
 end module ts_params
 !*****************************************************
@@ -568,8 +569,10 @@ module initial_conditions  !Set initial conditions
         enddo
         enddo
       else
-        f(:,1)=-Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
-        f(:,2)= Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
+!        f(:,1)=-Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
+!        f(:,2)= Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
+        f(:,1)=-Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
+        f(:,2)= Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
       endif
       call impose_bc(f)
 !      print*,'Seed field: Br        =',f(:,1)
@@ -714,7 +717,7 @@ module equ  !Contains the partial differential equations to be solved
   double precision, dimension(nx) :: Br, Bp, Fr, Fp, Er, Ep, dBrdr, d2Brdr2, dBpdr, d2Bpdr2
   double precision, dimension(nx) :: alp_m, alp, dalp_mdr, d2alp_mdr2, dalpdr, detatdr
   double precision, dimension(nx) :: Bsqtot, DivVishniac, Dyn_gen
-  double precision, dimension(nx) :: brms, Bp_floor
+  double precision, dimension(nx) :: brms, B_floor
   integer :: i
   double precision :: rmax, delta_r, hmax, lmax, Ncells
 !
@@ -776,20 +779,20 @@ module equ  !Contains the partial differential equations to be solved
       Dyn_gen=G*alp*h**3/etat**2
 !
       if (Floor) then
-        do i=nxghost+1,nx-nxghost-1
+        do i=nxghost+1,nx-nxghost
           if (abs(Bp(i))==maxval(abs(Bp))) then
             rmax=r(i)  !radius at max of Bp(r)
-            delta_r=2*dsqrt(abs(Bp(i)/d2Bpdr2(i)))  !width of Gaussian approx to Bp(r)
+            delta_r= 2*dsqrt(abs(Bp(i)/d2Bpdr2(i)))  !width of Gaussian approx to Bp(r)
             hmax=h(i)  !scale height at max of Bp(r)
             lmax=l(i)  !turbulent scale at max of Bp(r)
           endif
         enddo
         Ncells= 3.d0*rmax*delta_r*hmax/lmax**3/lambda**2
         brms= fmag*Beq
-        Bp_floor= brms/dsqrt(Ncells)*lmax/delta_r*lambda/3 !brms/dsqrt(Ncells)*lmax/delta_r*lambda
-        Bp_floor=Bp_floor*(r/rmax)**(1.d0/2)*exp(-(r-rmax)**2/2/(delta_r/2)**2)  !multiply by r^(1/2)*(renormalized Gaussian of width delta_r/2)
+        B_floor= brms/dsqrt(Ncells)*lmax/delta_r*lambda/3 !brms/dsqrt(Ncells)*lmax/delta_r*lambda
+        B_floor=B_floor*abs(r/rmax)**(1.d0/2)*exp(-(r-rmax)**2/2/(delta_r/2)**2)  !multiply by r^(1/2)*(renormalized Gaussian of width delta_r/2)
 !mark2
-        alp= alp*(1.d0 +Bp_floor**2/Bsqtot)  !Formula for simple alpha quenching
+        alp= alp*(1.d0 +B_floor**2/Bsqtot)  !Formula for simple alpha quenching
       endif
 !
 !     LIST OF VARIABLE NAMES FOR f ARRAY

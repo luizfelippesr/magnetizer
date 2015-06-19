@@ -1,8 +1,7 @@
+""" this code compares output from multiple simulation runs """
 import sys
 import numpy as np
 import os
-
-#this code compares output from multiple simulation runs
 
 nruns=2
 

@@ -1,3 +1,4 @@
+""" this code compares output from multiple simulation runs """
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -5,8 +6,6 @@ from matplotlib.colors import LogNorm
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter,MaxNLocator,NullFormatter,FixedLocator, AutoMinorLocator
 from matplotlib import rc
 from rc import *
-
-#this code compares output from multiple simulation runs
 
 pi=np.pi
 sqrt=np.sqrt

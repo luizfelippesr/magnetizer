@@ -5,7 +5,7 @@ module direc_names  !Specifies paths
   implicit none
 !
   character (len=6), parameter :: s0= 'CE_010'
-  character (len=42), parameter :: s1= '/Users/luke/fortran_pde/1D/telegraph/r_noz'
+  character (len=10), parameter :: s1 = '../../..'
 end module direc_names
 !*****************************************************
 module math_constants  !Contains math constants, unit conversions
@@ -47,7 +47,7 @@ module modules  !Contains switches
   implicit none
 !
 ! PARAMETER INPUTS
-  logical, parameter :: Read_param=   .true.  !Set to T to read in parameters from file, set to F to use defaults
+  logical, parameter :: Read_param=   .false.  !Set to T to read in parameters from file, set to F to use defaults
 ! PARAMETER INPUTS
   logical, parameter :: Time_evol=    .true.  !Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
 ! ALPHA QUENCHING
@@ -159,12 +159,14 @@ module input_params  !Contains default input parameters and a subroutine for rea
 !
 !     DIMENSIONAL INPUT PARAMETERS THAT MUST BE SPECIFIED AND MAY VARY FROM GALAXY TO GALAXY AND FROM TIMESTEP TO TIMESTEP
       if (Read_param) then
-        open(29,file= s1 // '/input/' // s0 // '/time_indep_params_' &
+
+        open(29,file= trim(s1) // '/input/' // s0 // '/time_indep_params_' &
                       // gal_id_string // '.in',status="old")
         read(29,*)header_time_indep  !Header gives time-independent parameters in order
         read(29,*)r_disk_kpc  !Read time-independent parameter values
         close(29)  !Close file containing time-independent parameter values
-        open(30,file= s1 // '/input/' // s0 // '/time_dep_params_'   &
+
+        open(30,file= trim(s1) // '/input/' // s0 // '/time_dep_params_'   &
                       // gal_id_string // '.in',status="old")
         if (iread == 0) then
           read(30,*)header_time_dep  !Read header if first iteration only
@@ -969,7 +971,7 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,''
         print*,'INPUT/OUTPUT INFORMATION'
         print*,'Directory ending   =',s0
-        print*,'home directory     =',s1
+        print*,'home directory     =',trim(s1)
       endif
 !
 !     WRITE INFO TO FILE "diagnostic.out"
@@ -1011,7 +1013,7 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),''
       write(20,*),'INPUT/OUTPUT INFORMATION'
       write(20,*),'Directory ending   =',s0
-      write(20,*),'home directory     =',s1
+      write(20,*),'home directory     =',trim(s1)
       write(20,*),''
       close(20)
     end subroutine print_info
@@ -1048,7 +1050,7 @@ module initial_data_dump
       write(20,*)''
       write(20,*)'Writing parameters to file param',gal_id_string,'.out'
       close(20)
-      open(10,file= s1 // '/output/' // s0 &
+      open(10,file= trim(s1) // '/output/' // s0 &
                     // '/param_' // gal_id_string // '.out',status="replace")
       write(10,*)t0_Gyr,t0_kpcskm,h0_kpc,etat0_cm2s,n0_cm3,B0_mkG
       write(10,*)nvar,dt,n1,n2,dx,nxphys,nxghost,nx
@@ -1068,7 +1070,7 @@ module initial_data_dump
       close(20)
 !
 !     WRITE DATA TO FILE "init.out"
-      open(11,file= s1 // '/output/' // s0 &
+      open(11,file= trim(s1) // '/output/' // s0 &
                     // '/init_' // gal_id_string // '.out' ,status="replace")
       write(11,*)r
       write(11,*)h
@@ -1181,7 +1183,7 @@ module output_dump
       open(20,file= 'diagnostic.out',status="old",position="append")
       write(20,*)'Writing output for final timestep to file run',gal_id_string,'.out'
       close(20)
-      open(12,file= s1 // '/output/' // s0 &
+      open(12,file= trim(s1) // '/output/' // s0 &
                     // '/run_' // gal_id_string // '.out',status="replace")
       write(12,*)t
       write(12,*)f(:,1)
@@ -1212,7 +1214,7 @@ module output_dump
       if (info> 0) then
         print*,'Writing time series output to file ts',gal_id_string,'.out'
       endif
-      open(13,file= s1 // '/output/' // &
+      open(13,file= trim(s1) // '/output/' // &
                     s0 // '/ts_' // gal_id_string // '.out',status="replace")
       write(13,*)ts_t
       write(13,*)ts_Br

@@ -1,0 +1,4 @@
+cd Cosmic_evol
+rm *.mod
+rm *.o
+

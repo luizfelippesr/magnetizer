@@ -1,4 +1,4 @@
 cd Cosmic_evol
 rm *.mod
 rm *.o
-
+rm fcall fmpicall

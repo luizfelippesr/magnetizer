@@ -57,7 +57,8 @@ module dynamo
             !stop 'NANs detected, change time step'
             print*, 'NANs or unrealistically large magnetic fields detected, changing time step'
             eps_t=0.5*eps_t
-            iread=0 !Reset reading of input parameters
+            ! Reset reading of input parameters
+            call reset_input_params()
             t=0.d0 !reset time
             first=0.d0 !reset timestepping
             deallocate(f) !Reset variables

@@ -1,9 +1,19 @@
-! Contains switches (to be edited before any particular run)
-! (At some point we may substitute this by a function which reads parameter files...)
+! Input parameters
+! At some point we may substitute this by a functions which reads parameter files...)
+
+module direc_names  !Specifies run paths
+  implicit none
+
+  character (len=6), parameter :: s0 = 'CE_010'
+  character (len=10), parameter :: s1 = '../../..'
+
+end module direc_names
+
 
 module modules
-
+  ! Contains switches (to be edited before any particular run)
   implicit none
+
 
   ! PARAMETER INPUTS
   !Set to T to read in parameters from file, set to F to use defaults
@@ -12,6 +22,7 @@ module modules
   ! PARAMETER INPUTS
   ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
   logical, parameter :: Time_evol= .true.
+  integer, parameter :: max_number_of_redshifts = 10
 
   ! ALPHA QUENCHING
   ! Works with alg_quench=F; Set to T for dynamical quenching (d_alpha_m/dt eqn incl in sim)

@@ -1,13 +1,6 @@
 !*****************************************************
 !This code contains modules, settings and parameters used by the galactic dynamo code dynamo.f90.
 !*****************************************************
-module direc_names  !Specifies paths
-  implicit none
-!
-  character (len=6), parameter :: s0= 'CE_010'
-  character (len=10), parameter :: s1 = '../../..'
-end module direc_names
-!*****************************************************
 module grid  !Contains grid parameters and subroutine for constructing grid
   use math_constants
   use units
@@ -35,46 +28,103 @@ module grid  !Contains grid parameters and subroutine for constructing grid
     endsubroutine construct_grid
 end module grid
 !*****************************************************
-module input_params  !Contains default input parameters and a subroutine for reading input parameters from files
+module input_params
+  ! Contains default input parameters and a subroutine for reading input parameters from files
   use modules
   use math_constants
-  use direc_names
-!
+
   implicit none
-!
+
   character (len=200) :: header_time_indep, header_time_dep
   integer :: iread=0
+  ! File units
+
   double precision :: r_disk_kpc,R_kappa
   double precision :: l_sol_kpc, r_l_kpc, v_sol_kms, r_v_kpc, n_sol_cm3, r_n_kpc, Uz_sol_kms, r_Uz_kpc, &
                       h_sol_kpc, r_h_kpc, Uphi_sol_kms, r_om_kpc
+
+  real, dimension(max_number_of_redshifts,12), private :: galaxy_data ! All galaxy data
+  character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
+
+
   contains
+
+    subroutine read_input_parameters(gal_id_string)
+      ! Reads the input parameters file to RAM
+      use direc_names
+      use iso_fortran_env
+      character (len=8), intent(in) :: gal_id_string
+      integer, parameter :: u_dep = 30
+      integer, parameter :: u_indep = 29
+      integer i
+      integer             :: stat
+
+      current_gal_id_string = gal_id_string
+
+      ! Reads time-dependent parameter values
+      open(u_indep, file = trim(s1) // '/input/' // s0 // '/time_indep_params_' &
+                            // gal_id_string // '.in', status="old")
+      read(u_indep,*) header_time_indep  !Header gives time-independent parameters in order
+      read(u_indep,*) r_disk_kpc  !Read time-independent parameter values
+      close(u_indep)  !Close file containing time-independent parameter values
+
+
+      ! Reads time-dependent parameter values
+      open(u_dep, file= trim(s1) // '/input/' // s0 // '/time_dep_params_' &
+                      // gal_id_string // '.in', status="old")
+      read(u_dep,*) header_time_dep ! Discards header
+      do i=1, max_number_of_redshifts
+        read(u_dep, *, iostat=stat) galaxy_data(i,:)
+        if (stat == iostat_end) exit
+      enddo
+      close(u_dep)
+
+      ! Flags abscence of any other values with negatives 
+      galaxy_data(i:max_number_of_redshifts,:) = -1
+
+    endsubroutine read_input_parameters
+
+
+    subroutine reset_input_params()
+      ! Resets the reading of the input parameters file
+      iread = 0
+
+    end subroutine reset_input_params
+
+
     subroutine set_input_params(gal_id_string,info)
-!
+      ! Reads dimensional input parameters that must be specified and may vary
+      ! from galaxy to galaxy and from timestep to timestep
+
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
-!
-!
-!     DIMENSIONAL INPUT PARAMETERS THAT MUST BE SPECIFIED AND MAY VARY FROM GALAXY TO GALAXY AND FROM TIMESTEP TO TIMESTEP
+
       if (Read_param) then
-
-        open(29,file= trim(s1) // '/input/' // s0 // '/time_indep_params_' &
-                      // gal_id_string // '.in',status="old")
-        read(29,*)header_time_indep  !Header gives time-independent parameters in order
-        read(29,*)r_disk_kpc  !Read time-independent parameter values
-        close(29)  !Close file containing time-independent parameter values
-
-        open(30,file= trim(s1) // '/input/' // s0 // '/time_dep_params_'   &
-                      // gal_id_string // '.in',status="old")
-        if (iread == 0) then
-          read(30,*)header_time_dep  !Read header if first iteration only
+        ! Reads the whole file on first access
+        if (gal_id_string /= current_gal_id_string) then
+          call read_input_parameters(gal_id_string)
         endif
-        read(30,*)l_sol_kpc,r_l_kpc,v_sol_kms,r_v_kpc,n_sol_cm3,r_n_kpc,Uz_sol_kms,r_Uz_kpc, &
-                  h_sol_kpc,r_h_kpc,Uphi_sol_kms,r_om_kpc  !Read time-dependent parameter values
+
         iread=iread+1
+
+        l_sol_kpc    = galaxy_data(iread,1)
+        r_l_kpc      = galaxy_data(iread,2)
+        v_sol_kms    = galaxy_data(iread,3)
+        r_v_kpc      = galaxy_data(iread,4)
+        n_sol_cm3    = galaxy_data(iread,5)
+        r_n_kpc      = galaxy_data(iread,6)
+        Uz_sol_kms   = galaxy_data(iread,7)
+        r_Uz_kpc     = galaxy_data(iread,8)
+        h_sol_kpc    = galaxy_data(iread,9)
+        r_h_kpc      = galaxy_data(iread,10)
+        Uphi_sol_kms = galaxy_data(iread,11)
+        r_om_kpc     = galaxy_data(iread,12)
+
         if (info> 0) then
-          print*,''
-          print*,'Reading new parameters, iread=',iread, ', gal_id_string=',gal_id_string
+          print *,''
+          print *,'Reading new parameters, iread=',iread, ', gal_id_string=',gal_id_string
         endif
+
       else
 !       NUMERICAL (DEFAULTS)
         r_disk_kpc=     15.0d0  !The maximum radius of the domain in kpc (unit of length along r)

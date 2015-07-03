@@ -248,8 +248,8 @@ def plot_mass_evolution(model_dir, gtype='all'):
     IDs = IDs[:10]
 
     gals_dict = dict()
-    max_mass = [N.NaN,]
-    min_mass = [N.NaN,]
+    max_mass=None
+
     for ID in sorted(IDs):
         gals_dict[ID] = []
         for t in ts:
@@ -259,22 +259,21 @@ def plot_mass_evolution(model_dir, gtype='all'):
                     #data_dict[t]['mhot'][select] +
                     data_dict[t]['mstars_bulge'][select]+
                     data_dict[t]['mcold_burst'][select])
-            max_mass = N.nanmax([mass, max_mass])
-            min_mass = N.nanmax([mass, min_mass])
 
-
+            #print min_mass
             if len(mass)==1:
+                if max_mass==None:
+                    max_mass = mass[0]
+                    min_mass = mass[0]
+                max_mass = max(mass[0], max_mass)
+                min_mass = min(mass[0], min_mass)
                 gals_dict[ID].append(mass[0])
-                print '\t{0:.3f}'.format(mass[0]),
             else:
                 gals_dict[ID].append(N.NaN)
-                print '\t','-',
-    print '\n\n\t\t', min_mass, max_mass
-
 
     for ID in IDs:
-        #c=cmap( (gals_dict[ID][0]-min_mass)/(max_mass-min_mass) )
-        P.plot(ts,gals_dict[ID], marker='.')#, color=c)
+        c=cmap( (gals_dict[ID][0]-min_mass)/(max_mass-min_mass) )
+        P.plot(ts,gals_dict[ID], marker='.', color=c)
     P.xlabel(r'$t\,[{{\rm Gyr}}]$')
     P.ylabel(r'$M\,[{{\rm M}}_\odot]$')
     P.show()

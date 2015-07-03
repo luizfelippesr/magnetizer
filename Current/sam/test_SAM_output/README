@@ -1,0 +1,6 @@
+This is a tiny tiny run using the model Baugh2005, here for test purposes only.
+
+Full runs will be kept out of the repository due to space restrictions.
+
+Typical (Millenium) outputs are composed of 64 subvolumes, each of which taking
+~ 1.2 GB.

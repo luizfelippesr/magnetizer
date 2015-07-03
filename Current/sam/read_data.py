@@ -1,7 +1,5 @@
 """ Contains routines which allow extracting galform data from an output hdf5
     file and repack it in a more usable way. """
-
-import re
 import numpy as N
 import h5py
 import os
@@ -231,7 +229,7 @@ def plot_mass_evolution(model_dir, gtype='all'):
                                 maximum_final_B_over_T=1.0,
                                 minimum_final_stellar_mass=1e10,
                                 minimum_final_gas_mass=1e7,
-                                number_of_galaxies=1000,
+                                number_of_galaxies=100,
                                 empirical_disks=False,
                                 ivol_dir='ivol0')
 
@@ -250,8 +248,8 @@ def plot_mass_evolution(model_dir, gtype='all'):
     IDs = IDs[:10]
 
     gals_dict = dict()
-    max_mass = N.NaN
-    min_mass = N.NaN
+    max_mass = [N.NaN,]
+    min_mass = [N.NaN,]
     for ID in sorted(IDs):
         gals_dict[ID] = []
         for t in ts:
@@ -261,8 +259,9 @@ def plot_mass_evolution(model_dir, gtype='all'):
                     #data_dict[t]['mhot'][select] +
                     data_dict[t]['mstars_bulge'][select]+
                     data_dict[t]['mcold_burst'][select])
-            max_mass = N.fmax(mass, max_mass)
-            min_mass = N.fmin(mass, min_mass)
+            max_mass = N.nanmax([mass, max_mass])
+            min_mass = N.nanmax([mass, min_mass])
+
 
             if len(mass)==1:
                 gals_dict[ID].append(mass[0])
@@ -270,17 +269,16 @@ def plot_mass_evolution(model_dir, gtype='all'):
             else:
                 gals_dict[ID].append(N.NaN)
                 print '\t','-',
-    min_mass=min_mass[0]
-    max_mass=max_mass[0]
+    print '\n\n\t\t', min_mass, max_mass
+
 
     for ID in IDs:
-        c=cmap( (gals_dict[ID][0]-min_mass)/(max_mass-min_mass) )
-        P.plot(ts,gals_dict[ID], marker='.', color=c)
+        #c=cmap( (gals_dict[ID][0]-min_mass)/(max_mass-min_mass) )
+        P.plot(ts,gals_dict[ID], marker='.')#, color=c)
     P.xlabel(r'$t\,[{{\rm Gyr}}]$')
     P.ylabel(r'$M\,[{{\rm M}}_\odot]$')
     P.show()
 
-
 if __name__ == "__main__"  :
-    model_dir = '../Models/LAG'
+    model_dir = 'test_SAM_output'
     plot_mass_evolution(model_dir, gtype='cen')

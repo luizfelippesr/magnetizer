@@ -260,7 +260,6 @@ def plot_mass_evolution(model_dir, gtype='all'):
                     data_dict[t]['mstars_bulge'][select]+
                     data_dict[t]['mcold_burst'][select])
 
-            #print min_mass
             if len(mass)==1:
                 if max_mass==None:
                     max_mass = mass[0]

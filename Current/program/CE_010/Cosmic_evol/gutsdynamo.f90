@@ -38,6 +38,9 @@ module input_params
   character (len=200) :: header_time_indep, header_time_dep
   integer :: iread=0
 
+  !
+  logical :: last_output = .false.
+
   ! Time-stepping parameters
   integer, parameter :: n1= max_number_of_redshifts!420   !Number of snapshots
   integer :: nread= 1 !Read in new input parameters every nread snapshots
@@ -53,7 +56,7 @@ module input_params
   double precision :: h_sol_kpc, r_h_kpc, Uphi_sol_kms, r_om_kpc
 
   ! All galaxy data (private!)
-  double precision, dimension(max_number_of_redshifts,12), private :: galaxy_data
+  double precision, dimension(max_number_of_redshifts,13), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
 
@@ -110,7 +113,7 @@ module input_params
     subroutine reset_input_params()
       ! Resets the reading of the input parameters file
       iread = 0
-
+      last_output = .false.
     end subroutine reset_input_params
 
 
@@ -120,6 +123,7 @@ module input_params
 
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
+      real :: next_time_input
 
       if (Read_param) then
         ! Reads the whole file on first access
@@ -128,22 +132,26 @@ module input_params
         endif
 
         iread=iread+1
-        if (iread /= 1) then
-            call set_ts_params(galaxy_data(iread,1)-galaxy_data(iread-1,1))
+
+        next_time_input = galaxy_data(iread+1,1)
+        if ( next_time_input > 0 ) then
+          call set_ts_params(galaxy_data(iread+1,1)-galaxy_data(iread,1))
+        else
+          last_output = .true.
         endif
 
-        l_sol_kpc    = galaxy_data(iread,1)
-        r_l_kpc      = galaxy_data(iread,2)
-        v_sol_kms    = galaxy_data(iread,3)
-        r_v_kpc      = galaxy_data(iread,4)
-        n_sol_cm3    = galaxy_data(iread,5)
-        r_n_kpc      = galaxy_data(iread,6)
-        Uz_sol_kms   = galaxy_data(iread,7)
-        r_Uz_kpc     = galaxy_data(iread,8)
-        h_sol_kpc    = galaxy_data(iread,9)
-        r_h_kpc      = galaxy_data(iread,10)
-        Uphi_sol_kms = galaxy_data(iread,11)
-        r_om_kpc     = galaxy_data(iread,12)
+        l_sol_kpc    = galaxy_data(iread,2)
+        r_l_kpc      = galaxy_data(iread,3)
+        v_sol_kms    = galaxy_data(iread,4)
+        r_v_kpc      = galaxy_data(iread,5)
+        n_sol_cm3    = galaxy_data(iread,6)
+        r_n_kpc      = galaxy_data(iread,7)
+        Uz_sol_kms   = galaxy_data(iread,8)
+        r_Uz_kpc     = galaxy_data(iread,9)
+        h_sol_kpc    = galaxy_data(iread,10)
+        r_h_kpc      = galaxy_data(iread,11)
+        Uphi_sol_kms = galaxy_data(iread,12)
+        r_om_kpc     = galaxy_data(iread,13)
 
         if (info> 0) then
           print *,''

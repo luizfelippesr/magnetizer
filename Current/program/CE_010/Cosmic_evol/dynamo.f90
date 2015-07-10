@@ -64,6 +64,7 @@ module dynamo
             deallocate(dfdt) !Reset variable time derivs
             goto 100
           endif
+          if (last_output) exit
         enddo
 !
         call impose_bc(f)  !Impose boundary conditions before writing output

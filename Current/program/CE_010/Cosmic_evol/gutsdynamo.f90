@@ -62,7 +62,7 @@ module input_params
       current_gal_id_string = gal_id_string
 
       ! Reads time-dependent parameter values
-      open(u_indep, file = trim(s1) // '/input/' // s0 // '/time_indep_params_' &
+      open(u_indep, file = trim(s1) // '/input/' // trim(s0) // '/time_indep_params_' &
                             // gal_id_string // '.in', status="old")
       read(u_indep,*) header_time_indep  !Header gives time-independent parameters in order
       read(u_indep,*) r_disk_kpc  !Read time-independent parameter values
@@ -70,7 +70,7 @@ module input_params
 
 
       ! Reads time-dependent parameter values
-      open(u_dep, file= trim(s1) // '/input/' // s0 // '/time_dep_params_' &
+      open(u_dep, file= trim(s1) // '/input/' // trim(s0) // '/time_dep_params_' &
                       // gal_id_string // '.in', status="old")
       read(u_dep,*) header_time_dep ! Discards header
       do i=1, max_number_of_redshifts
@@ -95,6 +95,7 @@ module input_params
     subroutine set_input_params(gal_id_string,info)
       ! Reads dimensional input parameters that must be specified and may vary
       ! from galaxy to galaxy and from timestep to timestep
+      use ts_params
 
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
@@ -106,6 +107,9 @@ module input_params
         endif
 
         iread=iread+1
+        if (iread /= 1) then
+            call set_ts_params(galaxy_data(iread,1)-galaxy_data(iread-1,1))
+        endif
 
         l_sol_kpc    = galaxy_data(iread,1)
         r_l_kpc      = galaxy_data(iread,2)
@@ -126,6 +130,7 @@ module input_params
         endif
 
       else
+        call set_ts_params(0.025d0)
 !       NUMERICAL (DEFAULTS)
         r_disk_kpc=     15.0d0  !The maximum radius of the domain in kpc (unit of length along r)
 !
@@ -238,15 +243,18 @@ module ts_params  !Contains time-stepping parameters
 !
   implicit none
 !
-  integer, parameter :: n1= 100!420   !Number of snapshots
-  integer, parameter :: nread= 50  !Read in new input parameters every nread snapshots
-  integer, parameter :: nscreen= 100  !Print output to screen every nscreen*n2 timesteps
-  double precision, parameter :: tsnap= 0.025d0/t0_Gyr !Time between successive snapshots
+  integer :: n1= 1!420   !Number of snapshots
+  integer :: nread= 1 !Read in new input parameters every nread snapshots
+  integer, parameter :: nscreen= 2  !Print output to screen every nscreen*n2 timesteps
+  double precision :: tsnap !Time between successive snapshots
   integer :: n2  !Number of timesteps in between snapshots
   double precision :: dt,t=0.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
 !
   contains
-    subroutine set_ts_params
+    subroutine set_ts_params(time_between_inputs)
+      double precision, intent(in) :: time_between_inputs
+
+      tsnap = time_between_inputs/t0_Gyr
       n2= max(nint(tsnap/t0_Gyr/eps_t),1)  !Change n2 by changing eps_t
       dt= tsnap/n2  !Timestep in units of t0=h0^2/etat0
       print*,'n2,dt,iread=',n2,dt,iread
@@ -997,7 +1005,7 @@ module initial_data_dump
       write(20,*)''
       write(20,*)'Writing parameters to file param',gal_id_string,'.out'
       close(20)
-      open(10,file= trim(s1) // '/output/' // s0 &
+      open(10,file= trim(s1) // '/output/' // trim(s0) &
                     // '/param_' // gal_id_string // '.out',status="replace")
       write(10,*)t0_Gyr,t0_kpcskm,h0_kpc,etat0_cm2s,n0_cm3,B0_mkG
       write(10,*)nvar,dt,n1,n2,dx,nxphys,nxghost,nx
@@ -1017,7 +1025,7 @@ module initial_data_dump
       close(20)
 !
 !     WRITE DATA TO FILE "init.out"
-      open(11,file= trim(s1) // '/output/' // s0 &
+      open(11,file= trim(s1) // '/output/' // trim(s0) &
                     // '/init_' // gal_id_string // '.out' ,status="replace")
       write(11,*)r
       write(11,*)h
@@ -1130,7 +1138,7 @@ module output_dump
       open(20,file= 'diagnostic.out',status="old",position="append")
       write(20,*)'Writing output for final timestep to file run',gal_id_string,'.out'
       close(20)
-      open(12,file= trim(s1) // '/output/' // s0 &
+      open(12,file= trim(s1) // '/output/' // trim(s0) &
                     // '/run_' // gal_id_string // '.out',status="replace")
       write(12,*)t
       write(12,*)f(:,1)
@@ -1162,7 +1170,7 @@ module output_dump
         print*,'Writing time series output to file ts',gal_id_string,'.out'
       endif
       open(13,file= trim(s1) // '/output/' // &
-                    s0 // '/ts_' // gal_id_string // '.out',status="replace")
+                    trim(s0) // '/ts_' // gal_id_string // '.out',status="replace")
       write(13,*)ts_t
       write(13,*)ts_Br
       write(13,*)ts_Bp

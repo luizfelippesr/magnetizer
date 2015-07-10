@@ -4,7 +4,7 @@
 module direc_names  !Specifies run paths
   implicit none
 
-  character (len=6), parameter :: s0 = 'CE_010'
+  character (len=6), parameter :: s0 = 'test'
   character (len=10), parameter :: s1 = '../../..'
 
 end module direc_names

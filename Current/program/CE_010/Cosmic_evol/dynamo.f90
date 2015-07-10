@@ -28,7 +28,6 @@ module dynamo
       call cpu_time(cpu_time_start)
 !
 100 continue
-      call set_ts_params  !Set timestep, etc.
 !
       call init_start(gal_id_string,info)  !Initialize galaxy model and magnetic field
 !

@@ -37,17 +37,39 @@ module input_params
 
   character (len=200) :: header_time_indep, header_time_dep
   integer :: iread=0
-  ! File units
 
+  ! Time-stepping parameters
+  integer, parameter :: n1= max_number_of_redshifts!420   !Number of snapshots
+  integer :: nread= 1 !Read in new input parameters every nread snapshots
+  integer, parameter :: nscreen= 2  !Print output to screen every nscreen*n2 timesteps
+  double precision :: tsnap !Time between successive snapshots
+  integer :: n2  !Number of timesteps in between snapshots
+  double precision :: dt,t=0.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
+
+  ! Galaxy parameters
   double precision :: r_disk_kpc,R_kappa
-  double precision :: l_sol_kpc, r_l_kpc, v_sol_kms, r_v_kpc, n_sol_cm3, r_n_kpc, Uz_sol_kms, r_Uz_kpc, &
-                      h_sol_kpc, r_h_kpc, Uphi_sol_kms, r_om_kpc
+  double precision :: l_sol_kpc, r_l_kpc, v_sol_kms, r_v_kpc
+  double precision :: n_sol_cm3, r_n_kpc, Uz_sol_kms, r_Uz_kpc
+  double precision :: h_sol_kpc, r_h_kpc, Uphi_sol_kms, r_om_kpc
 
-  real, dimension(max_number_of_redshifts,12), private :: galaxy_data ! All galaxy data
+  ! All galaxy data (private!)
+  double precision, dimension(max_number_of_redshifts,12), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
 
   contains
+   subroutine set_ts_params(time_between_inputs)
+      use units
+      double precision, intent(in) :: time_between_inputs
+
+      tsnap = time_between_inputs/t0_Gyr
+      n2= max(nint(tsnap/t0_Gyr/eps_t),1)  !Change n2 by changing eps_t
+      dt= tsnap/n2  !Timestep in units of t0=h0^2/etat0
+      print*,'n2,dt,iread=',n2,dt,iread
+      print*,'Uz_sol_kms=',Uz_sol_kms
+      print*,''
+    endsubroutine set_ts_params
+
 
     subroutine read_input_parameters(gal_id_string)
       ! Reads the input parameters file to RAM
@@ -95,7 +117,6 @@ module input_params
     subroutine set_input_params(gal_id_string,info)
       ! Reads dimensional input parameters that must be specified and may vary
       ! from galaxy to galaxy and from timestep to timestep
-      use ts_params
 
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
@@ -237,32 +258,6 @@ module calc_params  !Contains parameters that are calculated from the input para
   endsubroutine set_calc_params
 end module calc_params
 !*****************************************************
-module ts_params  !Contains time-stepping parameters
-  use input_params
-  use calc_params
-!
-  implicit none
-!
-  integer :: n1= 1!420   !Number of snapshots
-  integer :: nread= 1 !Read in new input parameters every nread snapshots
-  integer, parameter :: nscreen= 2  !Print output to screen every nscreen*n2 timesteps
-  double precision :: tsnap !Time between successive snapshots
-  integer :: n2  !Number of timesteps in between snapshots
-  double precision :: dt,t=0.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
-!
-  contains
-    subroutine set_ts_params(time_between_inputs)
-      double precision, intent(in) :: time_between_inputs
-
-      tsnap = time_between_inputs/t0_Gyr
-      n2= max(nint(tsnap/t0_Gyr/eps_t),1)  !Change n2 by changing eps_t
-      dt= tsnap/n2  !Timestep in units of t0=h0^2/etat0
-      print*,'n2,dt,iread=',n2,dt,iread
-      print*,'Uz_sol_kms=',Uz_sol_kms
-      print*,''
-    endsubroutine set_ts_params
-end module ts_params
-!*****************************************************
 module var  !Contains subroutine for setting the number of variables for which to solve
   use modules
 !
@@ -293,7 +288,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   use modules
   use var
   use grid
-  use ts_params
+  use input_params
 !
   implicit none
 !
@@ -644,7 +639,7 @@ module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
   use calc_params
   use var
   use grid
-  use ts_params
+  use input_params
   use deriv
   use profiles
 !
@@ -820,7 +815,7 @@ end module equ
 module timestep  !Contains time-stepping routine
   use var
   use grid
-  use ts_params
+  use input_params
   use equ
 !
 contains
@@ -872,7 +867,6 @@ module diagnostic  !Writes diagnostic information to screen, file
   use units
   use input_params
   use calc_params
-  use ts_params
   use grid
   use modules
   use var
@@ -980,7 +974,6 @@ module initial_data_dump
   use units
   use input_params
   use calc_params
-  use ts_params
   use grid
   use modules
   use var
@@ -1060,7 +1053,6 @@ module start  !Contains initialization routine for simulation
   use units
   use input_params
   use calc_params
-  use ts_params
   use grid
   use modules
   use galaxy_model

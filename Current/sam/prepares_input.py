@@ -73,13 +73,14 @@ def outflow_velocity(SFR_Msun_per_Gyr, height, r_50, density_cgs):
     """
     r_Uz = r_50/1.678
     Uz_sol = cq.V_ad_avg_km_per_s(SFR_Msun_per_Gyr, height, r_50, density_cgs,
-                                  attenuation=True)
+                                  attenuation=False)
 
     return Uz_sol, r_Uz
 
 
 if __name__ == "__main__"  :
     model_dir = 'test_SAM_output'
+    number_of_r50 = 5.0
 
     data_dict = read_time_data(model_dir,
                                 maximum_final_B_over_T=0.5,
@@ -114,6 +115,8 @@ if __name__ == "__main__"  :
             t_dep_input = header
             r_50_max = 0
             for t in sorted(ts):
+                if t<7:
+                    continue
                 select = data_dict[t]['ID'] == ID
                 # Skips missing times..
                 if not select.any():
@@ -162,9 +165,10 @@ if __name__ == "__main__"  :
             # Writes the file
             fdep.write(t_dep_input)
         with open(t_indep_input_file, 'w+') as findep:
-            header = 'r_disk_kpc'
-            t_indep_input_file = '{0:.3e}'.format(r_50_max)
+            t_indep_input_file = 'r_disk_kpc\n'
+            t_indep_input_file += '{0:.3e}\n'.format(number_of_r50*r_50_max*1000)
 
+            findep.write(t_indep_input_file)
 
 
 

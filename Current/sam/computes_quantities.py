@@ -99,7 +99,7 @@ def V_ad_avg_km_per_s(SFR_Msun_per_Gyr, avg_h_kpc, r_50, density_cgs,
     R_kpc = r_50 * 1000 # r_50 is usually in Mpc
     if attenuation:
         attenuation_factor = N.minimum(rho_hot_phase/density_cgs,
-                                       N.ones(density_cgs.size))
+                                       1)
     else:
         attenuation_factor = 1.0
 

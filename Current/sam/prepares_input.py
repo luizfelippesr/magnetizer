@@ -24,17 +24,16 @@ def turbulent_speed(*args):
 
 
 def density(r_50, M_stars, M_gas, vt, alpha=4.0):
-    """ Computes the density at a given radius in cm^{-3}.
+    """ Computes the density at a given radius in g cm^{-3}.
         Input: r_50 -> half mass radius (Mpc), M_stars -> stellar mass (Msun),
                M_gas -> gas mass (Msun), vt -> turbulent speed (km/s)
-        Output: n_sol, r_n
+        Output: rho_sol, r_n
         WARNING This is valid if vt is a constant...
     """
-    m = 1.67372e-24 # g (used hydrogen mass... to be updated...)
     r_n = r_50/3.36
-    n_sol = cq.density_cgs(r_n, r_50, M_stars, M_gas, sigma=vt, alpha=4.0)/m
+    rho_sol = cq.density_cgs(r_n, r_50, M_stars, M_gas, sigma=vt, alpha=4.0)
 
-    return n_sol, r_n
+    return rho_sol, r_n
 
 def height(r_50, M_stars, M_gas, vt, alpha=4.0):
     """ Computes the density at a given radius in cm^{-3}.
@@ -73,19 +72,21 @@ def outflow_velocity(SFR_Msun_per_Gyr, height, r_50, density_cgs):
         Output: Uz_sol (km/s), r_Uz (kpc)
     """
     r_Uz = r_50/1.678
-    Uz_sol = cq.V_ad_avg_km_per_s(SFR_Msun_per_Gyr, height, r_50, density_cgs)
+    Uz_sol = cq.V_ad_avg_km_per_s(SFR_Msun_per_Gyr, height, r_50, density_cgs,
+                                  attenuation=True)
 
-    return Uz_sol[0], r_Uz
+    return Uz_sol, r_Uz
 
 
 if __name__ == "__main__"  :
     model_dir = 'test_SAM_output'
 
     data_dict = read_time_data(model_dir,
-                                maximum_final_B_over_T=1.0,
+                                maximum_final_B_over_T=0.5,
                                 minimum_final_stellar_mass=1e10,
                                 minimum_final_gas_mass=1e7,
                                 number_of_galaxies=20,
+                                minimum_final_disk_size=5e-4, # Gpc, i.e. 0.5 kpc
                                 empirical_disks=False,
                                 ivol_dir='ivol0')
     ts = data_dict['tout']
@@ -140,12 +141,15 @@ if __name__ == "__main__"  :
 
                 vt = v_sol # Currently, a constant turbulent velocity is assumed
 
-                n_sol, r_n = density(r_50, M_stars, M_gas, vt, alpha=4.0)
+                rho_cgs, r_n = density(r_50, M_stars, M_gas, vt, alpha=4.0)
+
+                m = 1.67372e-24 # g (used hydrogen mass... to be updated...)
+                n_sol = rho_cgs/m
 
                 t_dep_input += '{0:.3e}    {1:.3e}    '.format(n_sol,r_n)
 
                 h_sol, r_h = height(r_50, M_stars, M_gas, vt, alpha=4.0)
-                Uz_sol, r_Uz = outflow_velocity(SFR, h_sol, r_50, n_sol)
+                Uz_sol, r_Uz = outflow_velocity(SFR, h_sol, r_50, rho_cgs)
                 t_dep_input += '{0:.3e}    {1:.3e}    '.format(Uz_sol,r_Uz)
 
                 t_dep_input += '{0:.3e}    {1:.3e}    '.format(h_sol,r_h)

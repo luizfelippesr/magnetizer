@@ -32,7 +32,7 @@ def get_parameter_values(model_dir):
 def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
                    minimum_final_stellar_mass=1e6, minimum_final_gas_mass=1e5,
                    number_of_galaxies=100, empirical_disks=True, ivol_dir='',
-                   datasets=None):
+                   minimum_final_disk_size=0.0,datasets=None):
     """Reads data from the galaxies.hdf5 file inside model_dir/ivol_dir (for
        Monte-Carlo runs, ivol_dir can be left blanck). The option
        number_of_galaxies sets the _approximate__ number of galaxies in the
@@ -153,6 +153,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             ok  = data_dict[t]['BoT'][:] < maximum_final_B_over_T
             ok *= data_dict[t]['mstars_disk'][:] > minimum_final_stellar_mass
             ok *= data_dict[t]['mcold'][:] > minimum_final_gas_mass
+            ok *= data_dict[t]['rdisk'][:] > minimum_final_disk_size
             filter_dictionary_inplace(ok,data_dict[t])
 
             print('Number of galaxies after filtering: {0}'.format(
@@ -167,8 +168,8 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             print('Actual number of selected galaxies: {0}'.format(len(ok[ok])))
             filter_dictionary_inplace(ok,data_dict[t])
 
-            print('Number of galaxies after sampling:',
-                  len(data_dict[t]['weight']))
+            print('Number of galaxies after sampling: {0}'.format(
+                                                   len(data_dict[t]['weight'])))
 
             # Stores indexing information and reference ID
             GalaxyID_target    = data_dict[t]['FirstProgenitorID']
@@ -194,8 +195,8 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             # Applies the filter
             filter_dictionary_inplace(filt,data_dict[t])
 
-            print 'Number of galaxies after sampling: ' ,
-            print len(data_dict[t]['ID'])
+            print('Number of galaxies after sampling: {0}'.format(
+                                                      len(data_dict[t]['ID'])))
 
             # Creates a list of missing galaxies
 

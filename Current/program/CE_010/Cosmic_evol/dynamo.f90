@@ -27,7 +27,7 @@ module dynamo
 !
       call cpu_time(cpu_time_start)
 !
-100 continue
+100 continue  !LFSR: what is this? A goto is REALLY necessary?
 !
       call init_start(gal_id_string,info)  !Initialize galaxy model and magnetic field
 !
@@ -62,9 +62,8 @@ module dynamo
             first=0.d0 !reset timestepping
             deallocate(f) !Reset variables
             deallocate(dfdt) !Reset variable time derivs
-            goto 100
+            goto 100 ! LFSR: we would probably be better removing this...
           endif
-          if (last_output) exit
         enddo
 !
         call impose_bc(f)  !Impose boundary conditions before writing output
@@ -103,8 +102,9 @@ module dynamo
           print*,'Uz_sol_kms=',Uz_sol_kms
           print*,''
         endif
-      enddo    
-      close(30)  !Close inputs.in which contains input parameters
+
+        if (last_output) exit
+      enddo
 !
       call write_final_output(f,gal_id_string,info)  !Write final simulation output to files run.out and ts.out
 !

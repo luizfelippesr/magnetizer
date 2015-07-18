@@ -901,8 +901,8 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,'dx=       ',dx       ,'   nxphys=   ',nxphys   ,'   nxghost=',nxghost,'   nx=',nx
         print*,'minval(x)=',minval(x),'   maxval(x)=',maxval(x)
         print*,''
-        print*,'PHYSICAL GRID:'
-        print*,'r_kpc=',r_kpc
+!         print*,'PHYSICAL GRID:'
+!         print*,'r_kpc=',r_kpc
         print*,''
         print*,'MODULES:' 
         print*,'Read_param= ',Read_param ,'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp

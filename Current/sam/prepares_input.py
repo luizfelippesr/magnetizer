@@ -3,6 +3,9 @@
 import computes_quantities as cq
 from read_data import read_time_data
 
+rs_to_r50 = 1.678 # half-mass to scale-radius conversion
+Mpc_to_kpc = 1000
+
 def turbulent_scale(*args):
     """ Returns a fit to l = l_sol * exp(r/r_l)
         WARNING At the moment, this is a dummy for testing.
@@ -27,13 +30,13 @@ def density(r_50, M_stars, M_gas, vt, alpha=4.0):
     """ Computes the density at a given radius in g cm^{-3}.
         Input: r_50 -> half mass radius (Mpc), M_stars -> stellar mass (Msun),
                M_gas -> gas mass (Msun), vt -> turbulent speed (km/s)
-        Output: rho_sol, r_n
+        Output: rho_sol, r_n (kpc)
         WARNING This is valid if vt is a constant...
     """
-    r_n = r_50/3.36
+    r_n = r_50/(2.0*rs_to_r50)
     rho_sol = cq.density_cgs(r_n, r_50, M_stars, M_gas, sigma=vt, alpha=4.0)
 
-    return rho_sol, r_n
+    return rho_sol, r_n * Mpc_to_kpc
 
 def height(r_50, M_stars, M_gas, vt, alpha=4.0):
     """ Computes the density at a given radius in cm^{-3}.
@@ -42,10 +45,10 @@ def height(r_50, M_stars, M_gas, vt, alpha=4.0):
         Output: h_sol (kpc), r_n (kpc)
         WARNING This is valid if vt is a constant...
     """
-    r_n = r_50/1.68
+    r_n = r_50/rs_to_r50 # half-mass to scale-radius conversion
     h_sol = cq.scaleheight_kpc(r_n, r_50, M_stars, M_gas, sigma=vt, alpha=4.0)
 
-    return h_sol, r_n
+    return h_sol, r_n * Mpc_to_kpc
 
 
 def Brandt_template(r, Omega_0, r_Omega, n):
@@ -61,7 +64,7 @@ def Brandt_rotation_curve(r_50, v_50):
         Output: U_phi (km/s), r_Omega (kpc), n
     """
     U_phi = v_50
-    r_Omega = r_50
+    r_Omega = r_50* Mpc_to_kpc
     n = 2
     return U_phi, r_Omega, n
 
@@ -71,15 +74,17 @@ def outflow_velocity(SFR_Msun_per_Gyr, height, r_50, density_cgs):
         WARNING At the moment, this simply scales the previous advection speed
         Output: Uz_sol (km/s), r_Uz (kpc)
     """
-    r_Uz = r_50/1.678
+    r_Uz = r_50/rs_to_r50
     Uz_sol = cq.V_ad_avg_km_per_s(SFR_Msun_per_Gyr, height, r_50, density_cgs,
-                                  attenuation=False)
+                                  attenuation=True)
 
-    return Uz_sol, r_Uz
+    return Uz_sol, r_Uz * Mpc_to_kpc
 
 
 if __name__ == "__main__"  :
+
     model_dir = 'test_SAM_output'
+    odir = '../input/test'
     number_of_r50 = 5.0
 
     data_dict = read_time_data(model_dir,
@@ -95,8 +100,8 @@ if __name__ == "__main__"  :
 
     for i, ID in enumerate(IDs):
         f_gal_id = '{0:8d}'.format(i).replace(' ','0')
-        t_dep_input_file = 'time_dep_params_{0}.in'.format(f_gal_id)
-        t_indep_input_file = 'time_indep_params_{0}.in'.format(f_gal_id)
+        t_dep_input_file = '{1}/time_dep_params_{0}.in'.format(f_gal_id, odir)
+        t_indep_input_file='{1}/time_indep_params_{0}.in'.format(f_gal_id, odir)
         header =('time        |'
                  'l_sol_kpc   |'
                  'r_l_kpc     |'
@@ -166,7 +171,8 @@ if __name__ == "__main__"  :
             fdep.write(t_dep_input)
         with open(t_indep_input_file, 'w+') as findep:
             t_indep_input_file = 'r_disk_kpc\n'
-            t_indep_input_file += '{0:.3e}\n'.format(number_of_r50*r_50_max*1000)
+            t_indep_input_file += '{0:.3e}\n'.format(
+                                              number_of_r50*r_50_max*Mpc_to_kpc)
 
             findep.write(t_indep_input_file)
 

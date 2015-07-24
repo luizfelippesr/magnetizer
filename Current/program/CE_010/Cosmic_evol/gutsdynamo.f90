@@ -231,7 +231,8 @@ module calc_params  !Contains parameters that are calculated from the input para
 !
 !     DIMENSIONLESS PARAMETERS THAT CAN BE CALCULATED OR THAT ARE NOT NORMALLY VARIED:
 !     NUMERICAL
-      r_sol=r_sol_kpc/r_disk_kpc !Chosen radius at which to specify param values (e.g. radius of solar neighbourhood)
+!       r_sol=r_sol_kpc/r_disk_kpc !Chosen radius at which to specify param values (e.g. radius of solar neighbourhood)
+      r_sol=1.0/5.0 ! r_sol is set to one fifth of r_disk, which should correspond to the half-mass radius
       lambda=h0_kpc/r_disk_kpc  !Typical aspect ratio of disk
 !
 !     TURBULENCE

@@ -32,7 +32,7 @@ module modules
 
   ! RANDOM MAGNETIC FIELD
   ! Strength of the rms random magnetic field brms in units of Beq
-  logical, parameter :: Floor= .true.
+  logical, parameter :: lFloor= .true.
 
   ! CLOSURE APPROXIMATION
   ! Set to T for FOSA, F for minimal tau approximation

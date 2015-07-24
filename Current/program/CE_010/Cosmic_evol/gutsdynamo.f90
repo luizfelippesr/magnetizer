@@ -741,7 +741,7 @@ module equ  !Contains the partial differential equations to be solved
 !     CALCULATE DYNAMO NUMBER
       Dyn_gen=G*alp*h**3/etat**2
 !
-      if (Floor) then
+      if (lFloor) then
         do i=nxghost+1,nx-nxghost
           if (abs(Bp(i))==maxval(abs(Bp))) then
             rmax=r(i)  !radius at max of Bp(r)

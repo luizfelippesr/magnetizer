@@ -6,7 +6,7 @@ program calldynamo
 !
   implicit none 
 !
-  integer :: info=2, igal=1, flag, ngal=1
+  integer :: info=2, igal=1, flag, ngal=10
 ! intent(in)
 !  info:   how much info to print during run
 !          options are 0=min, 1=standard, 2=max
@@ -25,6 +25,7 @@ program calldynamo
 do igal=1,ngal
   call dynamo_run(info, igal, flag)
   if (info>1) then
+
     print*,'flag=',flag
     print*,''
   endif

@@ -1,5 +1,6 @@
 !*****************************************************
-!This code contains modules, settings and parameters used by the galactic dynamo code dynamo.f90.
+! This code contains modules, settings and parameters
+! used by the galactic dynamo code dynamo.f90.
 !*****************************************************
 module grid  !Contains grid parameters and subroutine for constructing grid
   use math_constants
@@ -17,9 +18,9 @@ module grid  !Contains grid parameters and subroutine for constructing grid
 !
   contains
     subroutine construct_grid
-  !
-      integer :: i
-  !
+
+    integer :: i
+
       dx= (r_disk-r_in)/(nxphys-1)  !x corresponds to r coordinate
       do i=1,nx
         x(i)=r_in -nxghost*dx +(dble(i)-1.)*dx
@@ -29,7 +30,7 @@ module grid  !Contains grid parameters and subroutine for constructing grid
 end module grid
 !*****************************************************
 module input_params
-  ! Contains default input parameters and a subroutine for reading input parameters from files
+  ! Reads and sets input parameters
   use modules
   use math_constants
 

@@ -95,11 +95,11 @@ def read_ts_output(filepath, output_quantities=None):
         n_times = output_dict['ts_t'].size
 
         for quantity in output_dict:
-            if k in ('ts_delta_r', 'ts_alp' ,'ts_t'):
+            if quantity in ('ts_delta_r', 'ts_alp' ,'ts_t'):
                 continue
             qsize = output_dict[quantity].size
-            output_dict[quantity] = output_dict[quantity].reshape(
-                                                         n_times, qsize/n_times)
+            output_dict[quantity] = output_dict[quantity].reshape(qsize/n_times,
+                                                         n_times)
 
     return output_dict
 

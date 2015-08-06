@@ -997,16 +997,17 @@ module initial_data_dump
       double precision, dimension(nx,nvar), intent(in) :: f
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
+      integer, parameter :: diag_unit = 20
 !
 !     WRITE DATA TO FILE "param.out"
       if (info> 0) then
         print*,''
         print*,'Writing parameters to file param',gal_id_string,'.out'
       endif
-      open(20,file= 'diagnostic.out',status="old",position="append")
-      write(20,*)''
-      write(20,*)'Writing parameters to file param',gal_id_string,'.out'
-      close(20)
+      open(diag_unit,file= 'diagnostic.out',status="old",position="append")
+      write(diag_unit,*)''
+      write(diag_unit,*)'Writing parameters to file param',gal_id_string,'.out'
+      close(diag_unit)
       open(10,file= trim(s1) // '/output/' // trim(s0) &
                     // '/param_' // gal_id_string // '.out',status="replace")
       write(10,*)t0_Gyr,t0_kpcskm,h0_kpc,etat0_cm2s,n0_cm3,B0_mkG
@@ -1020,11 +1021,11 @@ module initial_data_dump
         print*,'Finished writing parameters to file param',gal_id_string,'.out'
         print*,'Writing initial output to file init',gal_id_string,'.out'
       endif
-      open(20,file= 'diagnostic.out',status="old",position="append")
-      write(20,*)'Finished writing parameters to file param',gal_id_string,'.out'
-      write(20,*)'Writing initial output to file init',gal_id_string,'.out'
-      write(20,*)''
-      close(20)
+      open(diag_unit,file= 'diagnostic.out',status="old",position="append")
+      write(diag_unit,*)'Finished writing parameters to file param',gal_id_string,'.out'
+      write(diag_unit,*)'Writing initial output to file init',gal_id_string,'.out'
+      write(diag_unit,*)''
+      close(diag_unit)
 !
 !     WRITE DATA TO FILE "init.out"
       open(11,file= trim(s1) // '/output/' // trim(s0) &
@@ -1050,9 +1051,9 @@ module initial_data_dump
       if (info> 0) then
         print*,'Finished writing initial output to file init',gal_id_string,'.out'
       endif
-      open(20,file= 'diagnostic.out',status="old",position="append")
-      write(20,*)'Finished writing initial output to file init',gal_id_string,'.out'
-      close(20)
+      open(diag_unit,file= 'diagnostic.out',status="old",position="append")
+      write(diag_unit,*)'Finished writing initial output to file init',gal_id_string,'.out'
+      close(diag_unit)
     end subroutine write_initial_data
 end module initial_data_dump
 !*****************************************************
@@ -1127,7 +1128,10 @@ module output_dump
       use galaxy_model
       use bzcalc
       use ts_arrays
-!  
+!
+      integer, parameter :: output_unit = 12
+      integer, parameter :: ts_unit = 13
+      integer, parameter :: diag_unit = 20
       double precision, dimension(nx,nvar), intent(in) :: f
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
@@ -1136,69 +1140,69 @@ module output_dump
       if (info> 0) then
         print*,'Writing output for final timestep to file run',gal_id_string,'.out'
       endif
-      open(20,file= 'diagnostic.out',status="old",position="append")
-      write(20,*)'Writing output for final timestep to file run',gal_id_string,'.out'
-      close(20)
-      open(12,file= trim(s1) // '/output/' // trim(s0) &
+      open(unit=diag_unit,file= 'diagnostic.out',status="old",position="append")
+      write(diag_unit,*)'Writing output for final timestep to file run',gal_id_string,'.out'
+      close(diag_unit)
+      open(unit=output_unit,file= trim(s1) // '/output/' // trim(s0) &
                     // '/run_' // gal_id_string // '.out',status="replace")
-      write(12,*)t
-      write(12,*)f(:,1)
-      write(12,*)f(:,2)
+      write(output_unit,*) t
+      write(output_unit,*) f(:,1)
+      write(output_unit,*) f(:,2)
       if (Dyn_quench) then
         if (.not.Damp) then
-          write(12,*)f(:,3)
+          write(output_unit,*) f(:,3)
         else
-          write(12,*)f(:,7)
+          write(output_unit,*) f(:,7)
         endif
       endif
-      write(12,*)Bzmod
-      write(12,*)h
-      write(12,*)om
-      write(12,*)G
-      write(12,*)l
-      write(12,*)v
-      write(12,*)etat
-      write(12,*)tau
-      write(12,*)alp_k
-      write(12,*)Uz
-      write(12,*)Ur
-      write(12,*)n
-      write(12,*)Beq
-      close(12)
+      write(output_unit,*) Bzmod
+      write(output_unit,*) h
+      write(output_unit,*) om
+      write(output_unit,*) G
+      write(output_unit,*) l
+      write(output_unit,*) v
+      write(output_unit,*) etat
+      write(output_unit,*) tau
+      write(output_unit,*) alp_k
+      write(output_unit,*) Uz
+      write(output_unit,*) Ur
+      write(output_unit,*) n
+      write(output_unit,*) Beq
+      close(output_unit)
 !  
 !     WRITE DATA FOR ALL TIMESTEPS TO FILE "ts.out"
       if (info> 0) then
         print*,'Writing time series output to file ts',gal_id_string,'.out'
       endif
-      open(13,file= trim(s1) // '/output/' // &
+      open(unit=ts_unit,file= trim(s1) // '/output/' // &
                     trim(s0) // '/ts_' // gal_id_string // '.out',status="replace")
-      write(13,*)ts_t
-      write(13,*)ts_Br
-      write(13,*)ts_Bp
+      write(ts_unit,*) ts_t
+      write(ts_unit,*) ts_Br
+      write(ts_unit,*) ts_Bp
       if (Dyn_quench) then
         if (.not.Damp) then
-          write(13,*)ts_alp_m
+          write(ts_unit,*) ts_alp_m
         else
-          write(13,*)ts_alp_m
+          write(ts_unit,*) ts_alp_m
         endif
       endif
-      write(13,*)ts_Bzmod
-      write(13,*)ts_h
-      write(13,*)ts_om
-      write(13,*)ts_G
-      write(13,*)ts_l
-      write(13,*)ts_v
-      write(13,*)ts_etat
-      write(13,*)ts_tau
-      write(13,*)ts_alp_k
-      write(13,*)ts_Uz
-      write(13,*)ts_Ur
-      write(13,*)ts_n
-      write(13,*)ts_Beq
-      write(13,*)ts_rmax
-      write(13,*)ts_delta_r
-      write(13,*)ts_alp
-      close(13)
+      write(ts_unit,*) ts_Bzmod
+      write(ts_unit,*) ts_h
+      write(ts_unit,*) ts_om
+      write(ts_unit,*) ts_G
+      write(ts_unit,*) ts_l
+      write(ts_unit,*) ts_v
+      write(ts_unit,*) ts_etat
+      write(ts_unit,*) ts_tau
+      write(ts_unit,*) ts_alp_k
+      write(ts_unit,*) ts_Uz
+      write(ts_unit,*) ts_Ur
+      write(ts_unit,*) ts_n
+      write(ts_unit,*) ts_Beq
+      write(ts_unit,*) ts_rmax
+      write(ts_unit,*) ts_delta_r
+      write(ts_unit,*) ts_alp
+      close(ts_unit)
 print*,'ts_Br(1,1)'   ,ts_Br(1,1)
 print*,'ts_Br(1,37)'  ,ts_Br(1,37)
 print*,'ts_Br(n1+1,1)' ,ts_Br(n1+1,1)

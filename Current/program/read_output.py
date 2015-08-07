@@ -77,7 +77,7 @@ def read_ts_output(filepath, output_quantities=None):
     if output_quantities==None:
         output_quantities = [
                              'ts_t', # This has less elements...
-                             'ts_Br','ts_Bp','ts_alpm','ts_Bzmod'
+                             'ts_Br','ts_Bp','ts_alpm','ts_Bzmod',
                              'ts_h', 'ts_om', 'ts_G', 'ts_l', 'ts_v', 'ts_etat',
                              'ts_tau', 'ts_alp_k', 'ts_Uz', 'ts_Ur', 'ts_n',
                              'ts_Beq','ts_rmax',

@@ -140,7 +140,7 @@ module input_params
         else
           last_output = .true.
         endif
-
+        
         l_sol_kpc    = galaxy_data(iread,2)
         r_l_kpc      = galaxy_data(iread,3)
         v_sol_kms    = galaxy_data(iread,4)

@@ -7,7 +7,6 @@ module dynamo
   use start
   use timestep
   use output_dump
-  use input_params
 !
   implicit none 
 !
@@ -39,7 +38,7 @@ module dynamo
         print*,'Br(R/2)(mkG)=',f(4+nxphys/2,1),'Bp(R/2)(mkG)=',f(4+nxphys/2,2),'|Bz(R/2)|(mkG)=',Bzmod(4+nxphys/2)
         print*,'p(R/2)(deg)=',180./pi*atan(f(4+nxphys/2,1)/f(4+nxphys/2,2))
         print*, "cpu time in seconds: ", (cpu_time_finish -cpu_time_start)
-        print*,'Directory ending   =', s0
+        print*,'Directory ending   =', model_name
         print*,
       endif
 !     TIME-STEPPING
@@ -82,7 +81,7 @@ module dynamo
           print*,'p(R/2)(deg)=',180./pi*atan(f(4+nxphys/2,1)/f(4+nxphys/2,2))
           if (info> 1) then
             print*, "cpu time in seconds: ", (cpu_time_finish -cpu_time_start)
-            print*,'Directory ending   =', s0
+            print*,'Directory ending   =', model_name
           endif
           print*,
           open(20,file= 'diagnostic.out',status="old",position="append")
@@ -90,7 +89,7 @@ module dynamo
           write(20,*),'Br(R/2)(mkG)=',f(4+nxphys/2,1),'Bp(R/2)(mkG)=',f(4+nxphys/2,2),'|Bz(R/2)|(mkG)=',Bzmod(4+nxphys/2)
           write(20,*),'p(R/2)(deg)=',180./pi*atan(f(4+nxphys/2,1)/f(4+nxphys/2,2))
           write(20,*), "cpu time in seconds: ", (cpu_time_finish -cpu_time_start)
-          write(20,*)'Directory ending   =', s0
+          write(20,*)'Directory ending   =', model_name
           write(20,*)
           close(20)
         endif

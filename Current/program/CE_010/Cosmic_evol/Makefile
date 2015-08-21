@@ -4,7 +4,7 @@ DIR=Cosmic_evol
 FC=mpif90
 FCFLAGS=
 DEP=
-COMMON_OBJ=constants.o parameters.o random.o gutsdynamo.o dynamo.o
+COMMON_OBJ=constants.o global_input_parameters.o random.o gutsdynamo.o dynamo.o
 
 %.o: %.f90 $(DEP)
 	$(FC) $(FCFLAGS) -c $^
@@ -16,7 +16,7 @@ serial: $(COMMON_OBJ) calldynamo.f90
 	$(FC) -o fcall $(COMMON_OBJ) calldynamo.f90
 
 pympi: serial
-	f2py -c -m pycall constants.f90 parameters.f90 dynamo.f90 gutsdynamo.f90 random.f90
+	f2py -c -m pycall constants.f90 global_input_parameters.f90 dynamo.f90 gutsdynamo.f90 random.f90
 
 runserial: serial
 	./fcall

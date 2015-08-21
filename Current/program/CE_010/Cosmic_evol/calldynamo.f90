@@ -2,11 +2,13 @@
 !*****************************************************
 program calldynamo
   use dynamo
-  use input_params
+  use global_input_parameters
 !
   implicit none 
 !
   integer :: info=2, igal=1, flag, ngal=10
+  character(len=32) :: command_argument
+!
 ! intent(in)
 !  info:   how much info to print during run
 !          options are 0=min, 1=standard, 2=max
@@ -22,6 +24,14 @@ program calldynamo
 ! Format:  call dynamo_run(info, gal_id, flag)
 ! Standard parameters: (0, 1, flag), where igal is looped over from 1 to ngal
 !
+
+  call get_command_argument(1, command_argument)
+  if (len_trim(command_argument) == 0) then
+    write(*,*) 'No parameter file provided. Using standard global parameters.'
+  else
+    call read_global_parameters(trim(command_argument))
+  endif
+
 do igal=1,ngal
   call dynamo_run(info, igal, flag)
   if (info>1) then

@@ -31,7 +31,7 @@ end module grid
 !*****************************************************
 module input_params
   ! Reads and sets input parameters
-  use modules
+  use global_input_parameters
   use math_constants
 
   implicit none
@@ -77,7 +77,6 @@ module input_params
 
     subroutine read_input_parameters(gal_id_string)
       ! Reads the input parameters file to RAM
-      use direc_names
       use iso_fortran_env
       character (len=8), intent(in) :: gal_id_string
       integer, parameter :: u_dep = 30
@@ -88,15 +87,16 @@ module input_params
       current_gal_id_string = gal_id_string
 
       ! Reads time-dependent parameter values
-      open(u_indep, file = trim(s1) // '/input/' // trim(s0) // '/time_indep_params_' &
+      open(u_indep, file = trim(path_to_input_directories) // '/input/'  &
+                            // trim(model_name) // '/time_indep_params_' &
                             // gal_id_string // '.in', status="old")
       read(u_indep,*) header_time_indep  !Header gives time-independent parameters in order
       read(u_indep,*) r_disk_kpc  !Read time-independent parameter values
       close(u_indep)  !Close file containing time-independent parameter values
 
-
       ! Reads time-dependent parameter values
-      open(u_dep, file= trim(s1) // '/input/' // trim(s0) // '/time_dep_params_' &
+      open(u_dep, file= trim(path_to_input_directories) // '/input/'  &
+                      //  trim(model_name) // '/time_dep_params_'     &
                       // gal_id_string // '.in', status="old")
       read(u_dep,*) header_time_dep ! Discards header
       do i=1, max_number_of_redshifts
@@ -269,7 +269,7 @@ module calc_params  !Contains parameters that are calculated from the input para
 end module calc_params
 !*****************************************************
 module var  !Contains subroutine for setting the number of variables for which to solve
-  use modules
+  use global_input_parameters
 !
   implicit none
   integer :: nvar
@@ -295,7 +295,7 @@ end module var
 !*****************************************************
 module ts_arrays  !Contains subroutine that stores time series data (n1 snapshots, separated by n2 timesteps)
 !
-  use modules
+  use global_input_parameters
   use var
   use grid
   use input_params
@@ -359,7 +359,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
 end module ts_arrays
 !*****************************************************
 module profiles
-  use modules
+  use global_input_parameters
   use calc_params
   use grid
 !
@@ -478,7 +478,7 @@ module profiles
 end module profiles
 !*****************************************************
 module boundary_conditions  !Specify and implement boundary conditions at r=0, r=R
-  use modules
+  use global_input_parameters
   use grid
   use var
 !  
@@ -872,13 +872,12 @@ contains
 end module timestep
 !*****************************************************
 module diagnostic  !Writes diagnostic information to screen, file
-  use direc_names
   use math_constants
   use units
   use input_params
   use calc_params
   use grid
-  use modules
+  use global_input_parameters
   use var
   use galaxy_model
   use initial_conditions
@@ -929,8 +928,8 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,'etat_sol=     ',etat_sol     ,'td_sol=    ',td_sol    ,'tau_sol     ',tau_sol
         print*,''
         print*,'INPUT/OUTPUT INFORMATION'
-        print*,'Directory ending   =',s0
-        print*,'home directory     =',trim(s1)
+        print*,'Directory ending   =',trim(model_name)
+        print*,'home directory     =',trim(path_to_input_directories)
       endif
 !
 !     WRITE INFO TO FILE "diagnostic.out"
@@ -971,21 +970,20 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),'etat_sol=     ',etat_sol     ,'td_sol=    ',td_sol    ,'tau_sol     ',tau_sol
       write(20,*),''
       write(20,*),'INPUT/OUTPUT INFORMATION'
-      write(20,*),'Directory ending   =',s0
-      write(20,*),'home directory     =',trim(s1)
+      write(20,*),'Directory ending   =',trim(model_name)
+      write(20,*),'home directory     =',trim(path_to_input_directories)
       write(20,*),''
       close(20)
     end subroutine print_info
 end module diagnostic
 !*****************************************************
 module initial_data_dump
-  use direc_names
   use math_constants
   use units
   use input_params
   use calc_params
   use grid
-  use modules
+  use global_input_parameters
   use var
   use galaxy_model
   use initial_conditions
@@ -1009,7 +1007,7 @@ module initial_data_dump
       write(diag_unit,*)''
       write(diag_unit,*)'Writing parameters to file param',gal_id_string,'.out'
       close(diag_unit)
-      open(10,file= trim(s1) // '/output/' // trim(s0) &
+      open(10,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
                     // '/param_' // gal_id_string // '.out',status="replace")
       write(10,*)t0_Gyr,t0_kpcskm,h0_kpc,etat0_cm2s,n0_cm3,B0_mkG
       write(10,*)nvar,dt,n1,n2,dx,nxphys,nxghost,nx
@@ -1029,7 +1027,7 @@ module initial_data_dump
       close(diag_unit)
 !
 !     WRITE DATA TO FILE "init.out"
-      open(11,file= trim(s1) // '/output/' // trim(s0) &
+      open(11,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
                     // '/init_' // gal_id_string // '.out' ,status="replace")
       write(11,*)r
       write(11,*)h
@@ -1059,13 +1057,12 @@ module initial_data_dump
 end module initial_data_dump
 !*****************************************************
 module start  !Contains initialization routine for simulation
-  use direc_names
   use math_constants
   use units
   use input_params
   use calc_params
   use grid
-  use modules
+  use global_input_parameters
   use galaxy_model
   use initial_conditions
   use var
@@ -1125,7 +1122,7 @@ module output_dump
   contains
     subroutine write_final_output(f,gal_id_string,info)
 !
-      use direc_names
+      use global_input_parameters
       use galaxy_model
       use bzcalc
       use ts_arrays
@@ -1144,7 +1141,7 @@ module output_dump
       open(unit=diag_unit,file= 'diagnostic.out',status="old",position="append")
       write(diag_unit,*)'Writing output for final timestep to file run',gal_id_string,'.out'
       close(diag_unit)
-      open(unit=output_unit,file= trim(s1) // '/output/' // trim(s0) &
+      open(unit=output_unit,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
                     // '/run_' // gal_id_string // '.out',status="replace")
       write(output_unit,*) t
       write(output_unit,*) f(:,1)
@@ -1175,8 +1172,8 @@ module output_dump
       if (info> 0) then
         print*,'Writing time series output to file ts',gal_id_string,'.out'
       endif
-      open(unit=ts_unit,file= trim(s1) // '/output/' // &
-                    trim(s0) // '/ts_' // gal_id_string // '.out',status="replace")
+      open(unit=ts_unit,file= trim(path_to_input_directories) // '/output/' // &
+                    trim(model_name) // '/ts_' // gal_id_string // '.out',status="replace")
       write(ts_unit,*) ts_t
       write(ts_unit,*) ts_Br
       write(ts_unit,*) ts_Bp

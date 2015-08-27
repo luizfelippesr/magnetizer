@@ -1,3 +1,4 @@
+! Contains two modules which deal with input parameters
 module input_params
   ! Reads and sets input parameters
   use global_input_parameters
@@ -168,3 +169,74 @@ module input_params
 !      print*,''
     endsubroutine set_input_params
 end module input_params
+!*****************************************************
+module calc_params
+  !Contains parameters that are calculated from the input parameters
+  use units
+  use math_constants
+  use input_params
+  use grid
+  use input_constants
+!
+  implicit none
+!
+  double precision :: etat_sol,etat_sol_kmskpc,etat_sol_cm2s,td_sol,td_sol_kpcskm,td_sol_Gyr,td_sol_s,om0_kmskpc, &
+                      Ur_sol_kms,r_sol,lambda,n_sol,r_n,h_sol,r_h,l_sol,r_l,v_sol,r_v,Uz_sol,r_Uz, &
+                      Ur_sol,Uphi_sol,om0,r_om,r1
+  double precision, dimension(nx) :: r_kpc
+!
+  contains
+    subroutine set_calc_params
+!     DIMENSIONAL PARAMETERS THAT CAN BE CALCULATED FROM SPECIFIED DIMENSIONAL PARAMETERS OR THAT ARE NOT NORMALLY VARIED:
+!     TURBULENCE
+      etat_sol_kmskpc= 1.d0/3*l_sol_kpc*v_sol_kms  !Typical value of etat in units of km kpc/s
+      etat_sol_cm2s= 1.d0/3*l_sol_kpc*cm_kpc*v_sol_kms*cm_km  !Typical turbulent diffusivity in units of cm^2/s
+      td_sol_kpcskm= h0_kpc**2/etat_sol_kmskpc  !Typical vertical turbulent diffusion timescale in units of kpc s/km
+      td_sol_Gyr= h0_kpc**2/etat_sol_cm2s/s_Gyr*cm_kpc*cm_kpc  !Typical vertical turbulent diffusion timescale in units of Gyr
+      td_sol_s= td_sol_Gyr*s_Gyr  !Typical vertical turbulent diffusion timescale in units of seconds
+!
+!     ROTATION CURVE
+      om0_kmskpc= dsqrt(1.d0+(r_sol_kpc/r_om_kpc)**2)*Uphi_sol_kms/r_sol_kpc  !om0 of Brandt profile in physical units
+!
+!     RADIAL FLOW
+      Ur_sol_kms=   0.0d0  !Radial mean velocity at r=r_sol in km/s
+!
+!     DIMENSIONLESS PARAMETERS THAT CAN BE CALCULATED OR THAT ARE NOT NORMALLY VARIED:
+!     NUMERICAL
+!       r_sol=r_sol_kpc/r_disk_kpc !Chosen radius at which to specify param values (e.g. radius of solar neighbourhood)
+      r_sol=1.0/5.0 ! r_sol is set to one fifth of r_disk, which should correspond to the half-mass radius
+      lambda=h0_kpc/r_disk_kpc  !Typical aspect ratio of disk
+!
+!     TURBULENCE
+      h_sol= h_sol_kpc/h0_kpc*h0  !Disk thickness at r=r_sol in units of h0
+      r_h= r_h_kpc/r_disk_kpc*r_disk  !Exponential scale radius of disk scale height
+      n_sol= n_sol_cm3/n0_cm3*n0  !Equipartition magnetic field at r=r_sol
+      r_n= r_n_kpc/r_disk_kpc*r_disk  !Exponential scale radius of equipartition magnetic field
+      l_sol= l_sol_kpc/h0_kpc*h0  !Size of largest turbulent eddies
+      r_l= r_l_kpc/r_disk_kpc*r_disk  !Exponential scale radius of turbulent scale
+      v_sol=v_sol_kms/h0_km*t0_s*h0/t0  !Turbulent velocity
+      r_v= r_v_kpc/r_disk_kpc*r_disk  !Exponential scale radius of rms turbulent velocity
+      etat_sol=1.d0/3*l_sol*v_sol  !Typical turbulent diffusivity
+      td_sol= h_sol**2/etat_sol  !Typical vertical turbulent diffusion timescale
+!
+!     VERTICAL WIND
+      Uz_sol=Uz_sol_kms/h0_km*t0_s*h0/t0  !Vertical mean velocity
+      r_Uz= r_Uz_kpc/r_disk_kpc*r_disk  !Exponential scale radius of vertical mean velocity
+!
+!     RADIAL FLOW
+      Ur_sol=Ur_sol_kms/h0_km*t0_s*h0/t0  !Radial mean velocity at r=r_sol
+!
+!     ROTATION CURVE
+      Uphi_sol=Uphi_sol_kms/h0_km*t0_s*h0/t0  !Dimensionless circular velocity at r=r_sol
+      om0=om0_kmskpc/km_kpc*t0_s/t0  !om0 of Brandt profile
+      r_om=r_om_kpc/r_disk_kpc*r_disk  !Characteristic radius of Brandt profile
+!
+!     SEED FIELD
+      r1= r1_kpc/r_disk_kpc*r_disk !Only relevant if Rand_seed=F
+!
+!     PHYSICAL GRID
+      r_kpc=r*r_disk_kpc
+  endsubroutine set_calc_params
+end module calc_params
+
+

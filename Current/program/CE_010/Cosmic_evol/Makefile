@@ -2,22 +2,22 @@ default=fmpi
 DIR=Cosmic_evol
 
 FC=mpif90
-FCFLAGS=-lfgsl -I/usr/local/include/fgsl
+FCFLAGS=-lfgsl -I/usr/local/include/fgsl 
 DEP=
-COMMON_OBJ=constants.o grid.o global_input_parameters.o input_parameters.o random.o profiles.o gutsdynamo.o dynamo.o
+COMMON_OBJ= bessel_functions.o constants.o grid.o global_input_parameters.o input_parameters.o random.o profiles.o gutsdynamo.o dynamo.o
 
 %.o: %.f90 $(DEP)
 	$(FC) $(FCFLAGS) -c $^
 
 fmpi: $(COMMON_OBJ) mpicalldynamo.f90
-	$(FC) -o fmpicall $(COMMON_OBJ) mpicalldynamo.f90
+	$(FC) -o fmpicall $(COMMON_OBJ) mpicalldynamo.f90 $(FCFLAGS)
 
 serial: $(COMMON_OBJ) calldynamo.f90
-	$(FC) -o fcall $(COMMON_OBJ) calldynamo.f90
+	$(FC)  -o fcall $(COMMON_OBJ) calldynamo.f90 $(FCFLAGS)
 
 # pympi needs to be tested...
 pympi: serial
-	f2py -c -m ${FCFLAGS)} pycall constants.f90 grid.o global_input_parameters.f90 profiles.f90 input_parameters.f90 dynamo.f90 gutsdynamo.f90 random.f90
+	f2py -c -m ${FCFLAGS)} pycall constants.f90 grid.f90 global_input_parameters.f90 profiles.f90 input_parameters.f90 dynamo.f90 gutsdynamo.f90 random.f90
 
 runserial: serial
 	./fcall

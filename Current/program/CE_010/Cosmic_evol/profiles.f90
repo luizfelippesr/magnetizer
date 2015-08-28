@@ -124,50 +124,62 @@ contains
     alp_k_kms=alp_k*h0_km/h0/t0_s*t0
   end subroutine construct_profiles
 
-  function disk_rotation_curve(r,r_disk,v_disk) result(v)
+  subroutine disk_rotation_curve(r, r_disk, v_disk, Om, G)
     ! Computes the rotation curve associated with an exponential disk
-    ! Input: r -> the radii where the rotation curve will be computed
-    !        r_disk ->  the half mass radius of the disk
-    !        v_disk -> the circular velocity at r_disk
-    !
-    ! Info:  V^2 \propto y^2 [I0(y)K0(y)-I1(y)K1(y)] where y=r/r_s
-    !        r_s --> the scale radius
-    ! Ref:   Binney & Tremaine or  Mo, Bosch & White
+    ! Input:  r -> the radii where the rotation curve will be computed
+    !         r_disk ->  the half mass radius of the disk
+    !         v_disk -> the circular velocity at r_disk
+    ! Output: Om -> angular velocity profile
+    !         G  -> shear profile
+    ! Info:   V^2 \propto y^2 [I0(y)K0(y)-I1(y)K1(y)] where y=r/r_s
+    !         r_s --> the scale radius
+    !         For the shear, see  http://is.gd/MnDKyS
+    ! Ref:    Binney & Tremaine or  Mo, Bosch & White
 
     use Bessel_Functions
     implicit none
     double precision, intent(in) :: r_disk, v_disk
     double precision, dimension(:), intent(in)  :: r
-    double precision, dimension(size(r)) :: v
+    double precision, dimension(size(r)) :: A
+    double precision, dimension(size(r)),intent(out) :: Om, G
     double precision, parameter :: rs_to_r50 = 1.678346990d0
     double precision, dimension(size(r)) :: y
     integer :: i
 
     y = r / (r_disk/rs_to_r50)
     do i=1,nx
-      v(i) = ( v_disk * y(i)/rs_to_r50 )**2                                   &
-             * ( Bessel_Function_I0(y(i)) * Bessel_Function_K0(y(i))          &
-               - Bessel_Function_I1(y(i)) * Bessel_Function_K1(y(i)) )        &
-             / ( Bessel_Function_I0(rs_to_r50) * Bessel_Function_K0(rs_to_r50)&
-               - Bessel_Function_I1(rs_to_r50) * Bessel_Function_K1(rs_to_r50))
-      v(i) = sqrt(v(i))
+      A(i) = (  I0(y(i)) * K0(y(i))          &
+              - I1(y(i)) * K1(y(i)) )        &
+            / ( I0(rs_to_r50) * K0(rs_to_r50)&
+              - I1(rs_to_r50) * K1(rs_to_r50))
+      A(i) = sqrt(A(i))
     end do
-    return
-  end function disk_rotation_curve
+    Om = A/r_disk
 
-  function bulge_rotation_curve(r,r_bulge,v_bulge) result(v)
+    do i=1,nx
+      G(i) =    I1(y(i)) * K0(y(i))                       &
+              - I0(y(i)) * K1(y(i))                       &
+              -0.5d0 * K1(y(i)) *( I0(y(i)) + I2(y(i)) )  &
+              +0.5d0 * I1(y(i)) *( K0(y(i)) + K2(y(i)) )
+    end do
+    G =G/A/2d0
+  end subroutine disk_rotation_curve
+
+  subroutine bulge_rotation_curve(r, r_bulge, v_bulge, Om, G)
     ! Computes the rotation curve associated with an Hernquist profile
-    ! Input: r -> the radii where the rotation curve will be computed
-    !        r_bulge ->  the half mass radius of the spheroid
-    !        v_bulge -> the circular velocity at r_bulge
-    !
-    ! Info:  V^2 \propto y/(y+1)^2  where y=r/a
-    ! Ref:   http://adsabs.harvard.edu/abs/1990ApJ...356..359H
+    ! Input:  r -> the radii where the rotation curve will be computed
+    !         r_bulge ->  the half mass radius of the spheroid
+    !         v_bulge -> the circular velocity at r_bulge
+    ! Output: Om -> angular velocity profile
+    !         G  -> shear profile
+    ! Info:   V^2 \propto y/(y+1)^2  where y=r/a
+    ! Ref:    http://adsabs.harvard.edu/abs/1990ApJ...356..359H
 
     implicit none
     double precision, intent(in) :: r_bulge, v_bulge
     double precision, dimension(:), intent(in)  :: r
     double precision, dimension(size(r)) :: v
+    double precision, dimension(size(r)),intent(out) :: Om, G
     double precision, parameter :: a_to_r50 = 1.0d0/(sqrt(2.0d0)-1.0d0)
     double precision, dimension(size(r)) :: y
     integer :: i
@@ -176,18 +188,20 @@ contains
 
     v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-1)
     v = v_bulge * sqrt(v)
-    return
-  end function bulge_rotation_curve
+    Om = v/r
+    G=Om ! NEEDS TO BE ADDED
+  end subroutine bulge_rotation_curve
 
-  function halo_rotation_curve(r,r_halo, v_halo, cs1) result(v)
+  subroutine halo_rotation_curve(r, r_halo, v_halo, cs1, Om, G)
     ! Computes the rotation curve associated with an NFW halo
+    ! Warning: This ignores effects of adiabatic contraction!
     ! Input: r -> the radii where the rotation curve will be computed
     !        r_halo -> the virial radius of the halo
     !        v_halo -> the circular velocity at r_halo
     !        cs1 -> 1/c_s -> inverse of the NFW concentration parameter
     !                        i.e. (NFW scale radius)/(virial radius)
-    ! Warning: This ignores effects of adiabatic contraction!
-    !
+    ! Output: Om -> angular velocity profile
+    !         G  -> shear profile
     ! Info:  V^2 \propto {ln[(cs1+y)/cs1] - y/(cs1+y)} /
     !                    {ln[(cs1+1)/cs1] - 1/(cs1+1)} / y
     ! Ref: NFW profile
@@ -196,6 +210,7 @@ contains
     double precision, intent(in) :: r_halo, v_halo, cs1
     double precision, dimension(:), intent(in)  :: r
     double precision, dimension(size(r)) :: v
+    double precision, dimension(size(r)),intent(out) :: Om, G
     double precision, dimension(size(r)) :: y
     integer :: i
 
@@ -204,7 +219,8 @@ contains
     v = (log((cs1+y)/cs1) - y/(cs1+y)) / &
                        (log((cs1+1d0)/cs1) - 1d0/(cs1+1d0)) / y
     v = v_halo * sqrt(v)
-    return
-  end function halo_rotation_curve
+    Om = v/r
+    G = Om ! NEEDS TO BE ADDED
+  end subroutine halo_rotation_curve
 
 end module profiles

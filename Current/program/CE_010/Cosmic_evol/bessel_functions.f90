@@ -1,24 +1,6 @@
-!! Copyright 2009, 2010, 2011, 2012, 2013 Andrew Benson <abenson@obs.carnegiescience.edu>
-!!
-!! This file is part of Galacticus.
-!!
-!!    Galacticus is free software: you can redistribute it and/or modify
-!!    it under the terms of the GNU General Public License as published by
-!!    the Free Software Foundation, either version 3 of the License, or
-!!    (at your option) any later version.
-!!
-!!    Galacticus is distributed in the hope that it will be useful,
-!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!!    GNU General Public License for more details.
-!!
-!!    You should have received a copy of the GNU General Public License
-!!    along with Galacticus.  If not, see <http://www.gnu.org/licenses/>.
-
-!% Contains a module which implements calculations of Bessel functions.
+! Contains a module which implements calculations of Bessel functions.
 
 module Bessel_Functions
-  !% Implements calculations of Bessel functions.
   use FGSL
   implicit none
   private
@@ -27,7 +9,7 @@ module Bessel_Functions
 contains
 
   double precision function K0(argument)
-    !% Computes the $K_0$ Bessel function.
+    ! Computes the $K_0$ Bessel function.
     implicit none
     double precision, intent(in) :: argument
 
@@ -36,7 +18,7 @@ contains
   end function K0
 
   double precision function K1(argument)
-    !% Computes the $K_1$ Bessel function.
+    ! Computes the $K_1$ Bessel function.
     implicit none
     double precision, intent(in) :: argument
 
@@ -45,7 +27,7 @@ contains
   end function K1
 
   double precision function K2(argument)
-    !% Computes the $K_1$ Bessel function.
+    ! Computes the $K_1$ Bessel function.
     implicit none
     double precision, intent(in) :: argument
 
@@ -54,7 +36,7 @@ contains
   end function K2
 
   double precision function I0(argument)
-    !% Computes the $I_0$ Bessel function.
+    ! Computes the $I_0$ Bessel function.
     implicit none
     double precision, intent(in) :: argument
 
@@ -63,7 +45,7 @@ contains
   end function I0
 
   double precision function I1(argument)
-    !% Computes the $I_1$ Bessel function.
+    ! Computes the $I_1$ Bessel function.
     implicit none
     double precision, intent(in) :: argument
 
@@ -72,7 +54,7 @@ contains
   end function I1
 
   double precision function I2(argument)
-    !% Computes the $I_1$ Bessel function.
+    ! Computes the $I_1$ Bessel function.
     implicit none
     double precision, intent(in) :: argument
 

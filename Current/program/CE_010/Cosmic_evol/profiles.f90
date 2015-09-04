@@ -7,7 +7,7 @@ module profiles
   implicit none
 
   double precision, dimension(nx) :: h, h_kpc
-  double precision, dimension(nx) :: om, G, om_kmskpc, G_kmskpc
+  double precision, dimension(nx) :: Om, G, Om_kmskpc, G_kmskpc
   double precision, dimension(nx) :: Uz, Uz_kms
   double precision, dimension(nx) :: Ur, dUrdr, d2Urdr2, Ur_kms
   double precision, dimension(nx) :: n, n_cm3
@@ -19,6 +19,10 @@ module profiles
   double precision, dimension(nx) :: Beq, Beq_mkG
   integer :: ialp_k
   double precision, dimension(nx) :: alp_k, alp_k_kms
+
+  double precision, dimension(nx), private :: Om_d, Om_b, Om_h
+  double precision, dimension(nx), private :: G_d, G_b, G_h
+
 
   private :: disk_rotation_curve
   private :: bulge_rotation_curve
@@ -35,16 +39,16 @@ contains
     h_kpc = h*h0_kpc/h0
 
     ! ROTATION CURVE
-    if (Om_Brandt) then
-      om = om0/((1.d0+(r/r_om)**2))**(1.d0/2)  !Brandt angular velocity profile
-      if (Shear) then
-        G = -om0 * (r/r_om)**2 / (1.d0+(r/r_om)**2)**(3.d0/2)
-      else
-        G = 0.
-      endif
-    endif
-    om_kmskpc=om*h0_km/h0_kpc/t0_s*t0
-    G_kmskpc=  G*h0_km/h0_kpc/t0_s*t0
+    ! Computes the profile associated with each component
+    call disk_rotation_curve(r, r_disk, v_disk, Om_d, G_d)
+    call bulge_rotation_curve(r, r_bulge, v_bulge, Om_b, G_b)
+    call halo_rotation_curve(r, r_halo, v_halo, Om_h, G_h)
+    ! Combines the various components
+    Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
+    G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om
+    ! Adjusts units to code units (set in units module)
+    Om = Om_kmskpc/h0_km*h0_kpc*t0_s/t0
+    G  = G_kmskpc /h0_km*h0_kpc*t0_s/t0
 
     ! VERTICAL VELOCITY PROFILE
     if (.not.Var_Uz) then
@@ -109,7 +113,7 @@ contains
     if (.not.Krause) then
       alp_k = C_alp  !No variation of alpha
     else
-      alp_k = C_alp*l**2/h*om  !Decreasing with radius
+      alp_k = C_alp*l**2/h*Om  !Decreasing with radius
     endif
     if (Alp_ceiling) then
       do ialp_k=1,nx
@@ -151,7 +155,7 @@ contains
               - I1(rs_to_r50) * K1(rs_to_r50))
       A(i) = sqrt(A(i))
     end do
-    Om = A/r_disk
+    Om = A*v_disk/r_disk
 
     do i=1,nx
       G(i) =    I1(y(i)) * K0(y(i))                       &
@@ -159,7 +163,8 @@ contains
               -0.5d0 * K1(y(i)) *( I0(y(i)) + I2(y(i)) )  &
               +0.5d0 * I1(y(i)) *( K0(y(i)) + K2(y(i)) )
     end do
-    G =G/A/2d0
+    G = G/A/2d0*v_disk/r_disk
+
   end subroutine disk_rotation_curve
 
   subroutine bulge_rotation_curve(r, r_bulge, v_bulge, Om, G)
@@ -186,7 +191,8 @@ contains
     v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-1)
     v = v_bulge * sqrt(v)
     Om = v/r
-    G=Om ! NEEDS TO BE ADDED
+    G = Om ! NEEDS TO BE ADDED
+
   end subroutine bulge_rotation_curve
 
   subroutine halo_rotation_curve(r, r_halo, v_halo, cs1, Om, G)

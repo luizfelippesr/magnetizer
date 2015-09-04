@@ -21,13 +21,18 @@ module input_params
   double precision :: dt,t=0.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
 
   ! Galaxy parameters
-  double precision :: r_disk_kpc,R_kappa
-  double precision :: l_sol_kpc, r_l_kpc, v_sol_kms, r_v_kpc
-  double precision :: n_sol_cm3, r_n_kpc, Uz_sol_kms, r_Uz_kpc
-  double precision :: h_sol_kpc, r_h_kpc, Uphi_sol_kms, r_om_kpc
-
+  double precision :: r_disk_kpc, R_kappa
+  double precision :: l_sol_kpc, r_l_kpc
+  double precision :: v_sol_kms, r_v_kpc
+  double precision :: n_sol_cm3, r_n_kpc
+  double precision :: Uz_sol_kms, r_Uz_kpc
+  double precision :: h_sol_kpc, r_h_kpc
+  double precision :: r_disk, v_disk
+  double precision :: r_bulge, v_bulge
+  double precision :: r_halo, v_halo
   ! All galaxy data (private!)
-  double precision, dimension(max_number_of_redshifts,13), private :: galaxy_data
+  integer, private, parameter :: number_of_columns =17 ! Number of columns in the galaxy input files
+  double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
 
@@ -121,8 +126,12 @@ module input_params
         r_Uz_kpc     = galaxy_data(iread,9)
         h_sol_kpc    = galaxy_data(iread,10)
         r_h_kpc      = galaxy_data(iread,11)
-        Uphi_sol_kms = galaxy_data(iread,12)
-        r_om_kpc     = galaxy_data(iread,13)
+        r_disk  = galaxy_data(iread,12)
+        v_disk  = galaxy_data(iread,13)
+        r_bulge = galaxy_data(iread,14)
+        v_bulge = galaxy_data(iread,15)
+        r_halo  = galaxy_data(iread,16)
+        v_halo  = galaxy_data(iread,17)
 
         if (info> 0) then
           print *,''

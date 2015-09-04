@@ -23,8 +23,6 @@ module units  !Specifies code units
   ! DIMENSIONLESS UNITS
   double precision, parameter :: etat0=  1.0d0
   double precision, parameter :: h0=     1.0d0
-  double precision, parameter :: r_disk= 1.0d0 ! Note that radii have different
-                                               ! length units than other quantities
   double precision, parameter :: B0=     1.0d0
   double precision, parameter :: t0=     h0**2/etat0
   double precision, parameter :: n0=     B0**2/h0**2*t0**2

@@ -150,8 +150,11 @@ module initial_conditions  !Set initial conditions
       else
 !        f(:,1)=-Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
 !        f(:,2)= Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
-        f(:,1)=-Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
-        f(:,2)= Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
+!        f(:,1)=-Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
+        ! NB the old 'r_disk' variable is now always 1.0 in code units
+        f(:,1)=-Bseed*r/(1.d0-r)**nn*dexp(-r/r1)
+!        f(:,2)= Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
+        f(:,2)= Bseed*r/(1.d0-r)**nn*dexp(-r/r1)
       endif
       call impose_bc(f)
 !      print*,'Seed field: Br        =',f(:,1)
@@ -528,13 +531,13 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,'Turb_dif=   ',Turb_dif
         print*,''
         print*,'INPUT PARAMETERS:'
-        print*,'r_disk_kpc= ',r_disk_kpc ,'R_kappa=   ',R_kappa
+        print*,'r_max_kpc= ',r_max_kpc ,'R_kappa=   ',R_kappa
         print*,'l_sol_kpc=  ',l_sol_kpc  ,'r_l_kpc=   ',r_l_kpc   ,'v_sol_kms=    ',v_sol_kms    ,'r_v_kpc=    ',r_v_kpc
         print*,'n_sol_cm3=  ',n_sol_cm3  ,'r_n_kpc=   ',r_n_kpc   ,'Uz_sol_kms=   ',Uz_sol_kms   ,'r_Uz_kpc=   ',r_Uz_kpc
-        print*,'h_sol_kpc=  ',h_sol_kpc  ,'r_h_kpc=   ',r_h_kpc   ,'Uphi_sol_kms= ',Uphi_sol_kms ,'r_om_kpc=   ',r_om_kpc
+        print*,'h_sol_kpc=  ',h_sol_kpc  ,'r_h_kpc=   ',r_h_kpc   ,'Uphi_halfmass_kms= ',Uphi_halfmass_kms ,'r_disk=   ',r_disk
         print*,''
         print*,'OTHER FREE PARAMETERS:'
-        print*,'r_in= ',r_in ,'r_disk_kpc=',r_disk_kpc,'r_sol_kpc=',r_sol_kpc,'r1_kpc=',r1_kpc
+        print*,'r_in= ',r_in ,'r_max_kpc=',r_max_kpc,'r_sol_kpc=',r_sol_kpc,'r1_kpc=',r1_kpc
         print*,'ctau= ',ctau ,'nn=        ',nn        ,'lambda=   ',lambda
         print*,'C_alp=',C_alp,'alpceil=   ',alpceil   ,'Rm_inv=   ',Rm_inv
         print*,''
@@ -570,13 +573,13 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),'Turb_dif=   ',Turb_dif
       write(20,*),''
       write(20,*),'INPUT PARAMETERS:'
-      write(20,*),'r_disk_kpc= ',r_disk_kpc ,'R_kappa=   ',R_kappa
+      write(20,*),'r_max_kpc= ',r_max_kpc ,'R_kappa=   ',R_kappa
       write(20,*),'l_sol_kpc=  ',l_sol_kpc  ,'r_l_kpc=   ',r_l_kpc   ,'v_sol_kms=    ',v_sol_kms    ,'r_v_kpc=    ',r_v_kpc
       write(20,*),'n_sol_cm3=  ',n_sol_cm3  ,'r_n_kpc=   ',r_n_kpc   ,'Uz_sol_kms=   ',Uz_sol_kms   ,'r_Uz_kpc=   ',r_Uz_kpc
-      write(20,*),'h_sol_kpc=  ',h_sol_kpc  ,'r_h_kpc=   ',r_h_kpc   ,'Uphi_sol_kms= ',Uphi_sol_kms ,'r_om_kpc=   ',r_om_kpc
+      write(20,*),'h_sol_kpc=  ',h_sol_kpc  ,'r_h_kpc=   ',r_h_kpc   ,'Uphi_halfmass_kms= ',Uphi_halfmass_kms ,'r_disk=   ',r_disk
       write(20,*),''
       write(20,*),'OTHER FREE PARAMETERS:'
-      write(20,*),'r_in= ',r_in ,'r_disk_kpc=',r_disk_kpc,'r_sol_kpc=',r_sol_kpc,'r1_kpc=',r1_kpc
+      write(20,*),'r_in= ',r_in ,'r_max_kpc=',r_max_kpc,'r_sol_kpc=',r_sol_kpc,'r1_kpc=',r1_kpc
       write(20,*),'ctau= ',ctau ,'nn=        ',nn        ,'lambda=   ',lambda
       write(20,*),'C_alp=',C_alp,'alpceil=   ',alpceil   ,'Rm_inv=   ',Rm_inv
       write(20,*),''
@@ -627,8 +630,8 @@ module initial_data_dump
       write(10,*)t0_Gyr,t0_kpcskm,h0_kpc,etat0_cm2s,n0_cm3,B0_mkG
       write(10,*)nvar,dt,n1,n2,dx,nxphys,nxghost,nx
       write(10,*)l_sol_kpc,r_l_kpc,v_sol_kms,r_v_kpc,n_sol_cm3,r_n_kpc,Uz_sol_kms,r_Uz_kpc, &
-                 h_sol_kpc,r_h_kpc,Uphi_sol_kms,r_om_kpc,R_kappa
-      write(10,*)r_in,r_disk_kpc,r_sol_kpc,r1_kpc,ctau,nn,lambda,C_alp,alpceil,Rm_inv
+                 h_sol_kpc,r_h_kpc,Uphi_halfmass_kms,r_disk,R_kappa
+      write(10,*)r_in,r_max_kpc,r_sol_kpc,r1_kpc,ctau,nn,lambda,C_alp,alpceil,Rm_inv
       write(10,*)etat_sol_cm2s,td_sol_Gyr,tau_sol_Gyr,etat_sol,td_sol,tau_sol
       close(10)
       if (info> 0) then

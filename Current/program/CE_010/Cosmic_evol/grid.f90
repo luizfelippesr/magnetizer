@@ -5,10 +5,11 @@ module grid
 !
   implicit none
 !
-  integer, parameter :: nxphys= 201!61!91  !Resolution in r (excluding ghost zones) (for convenience should be N*r_disk_kpc+1)
+  integer, parameter :: nxphys= 201!61!91  !Resolution in r (excluding ghost zones) (for convenience should be N*r_max_kpc+1)
   integer, parameter :: nxghost= 3  !Number of ghost cells at each end in r
   integer, parameter :: nx= nxphys +2*nxghost  !Resolution in r
-  double precision, parameter :: len_phi= 2*pi, r_in=0.0d0  !phi domain, min radius of disk, max radius of disk
+  double precision, parameter :: len_phi= 2*pi, r_in=0.0d0  !phi domain, min radius of disk
+                                                            !NB the max radius of disk is 1.0 in code units
   double precision :: dx
   double precision, dimension(nx) :: x
   double precision, dimension(nx) :: r
@@ -18,7 +19,8 @@ module grid
 
     integer :: i
 
-      dx= (r_disk-r_in)/(nxphys-1)  !x corresponds to r coordinate
+      dx= (1.0 - r_in)/(nxphys-1)  !x corresponds to r coordinate
+                                   !NB the max radius of disk is 1.0 in code units
       do i=1,nx
         x(i)=r_in -nxghost*dx +(dble(i)-1.)*dx
       enddo

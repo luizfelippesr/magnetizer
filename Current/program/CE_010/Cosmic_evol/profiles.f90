@@ -19,10 +19,10 @@ module profiles
   double precision, dimension(nx) :: Beq, Beq_mkG
   integer :: ialp_k
   double precision, dimension(nx) :: alp_k, alp_k_kms
-
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
   double precision, dimension(nx), private :: G_d, G_b, G_h
 
+  double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
 
   private :: disk_rotation_curve
   private :: bulge_rotation_curve
@@ -30,6 +30,10 @@ module profiles
 
 contains
   subroutine construct_profiles
+    integer :: i_halfmass
+    ! Sets the 'reference radius' to the disk half-mass radius
+    r_sol = r_disk/r_max_kpc
+
     ! SCALE HEIGHT PROFILE
     if (Flaring) then
       h = h_sol * exp((r-r_sol)/r_h)
@@ -40,15 +44,22 @@ contains
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component
-    call disk_rotation_curve(r, r_disk, v_disk, Om_d, G_d)
-    call bulge_rotation_curve(r, r_bulge, v_bulge, Om_b, G_b)
-    call halo_rotation_curve(r, r_halo, v_halo, Om_h, G_h)
+    call disk_rotation_curve(r_kpc, r_disk, v_disk, Om_d, G_d)
+    call bulge_rotation_curve(r_kpc, r_bulge, v_bulge, Om_b, G_b)
+    call halo_rotation_curve(r_kpc, r_halo, v_halo, nfw_cs1, Om_h, G_h)
+
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
     G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om
     ! Adjusts units to code units (set in units module)
     Om = Om_kmskpc/h0_km*h0_kpc*t0_s/t0
     G  = G_kmskpc /h0_km*h0_kpc*t0_s/t0
+
+    ! EXTRA (for debugging/diagnostic): computes quantities at r_disk
+    ! Finds the position in the grid closest to r_disk (disk half-mass radius)
+    i_halfmass = minloc(abs(r_kpc - r_disk), 1)
+    ! Computes the rotation velocity at the disk half-mass radius
+    Uphi_halfmass_kms = Om_kmskpc(i_halfmass)*r_kpc(i_halfmass)
 
     ! VERTICAL VELOCITY PROFILE
     if (.not.Var_Uz) then
@@ -58,10 +69,13 @@ contains
     endif
     Uz_kms = Uz*h0_km/h0/t0_s*t0
 
+
     ! RADIAL VELOCITY PROFILE
     Ur = Ur_sol
     dUrdr = 0.d0
     d2Urdr2 = 0.d0
+
+
     Ur_kms = Ur*h0_km/h0/t0_s*t0
 
     ! NUMBER DENSITY PROFILE
@@ -195,14 +209,14 @@ contains
 
   end subroutine bulge_rotation_curve
 
-  subroutine halo_rotation_curve(r, r_halo, v_halo, cs1, Om, G)
+  subroutine halo_rotation_curve(r, r_halo, v_halo, nfw_cs1, Om, G)
     ! Computes the rotation curve associated with an NFW halo
     ! Warning: This ignores effects of adiabatic contraction!
     !          It need to be accounted for later
     ! Input: r -> the radii where the rotation curve will be computed
     !        r_halo -> the virial radius of the halo
     !        v_halo -> the circular velocity at r_halo
-    !        cs1 -> 1/c_s -> inverse of the NFW concentration parameter
+    !        nfw_cs1 -> 1/c_s -> inverse of the NFW concentration parameter
     !                        i.e. (NFW scale radius)/(virial radius)
     ! Output: Om -> angular velocity profile
     !         G  -> shear profile
@@ -211,7 +225,7 @@ contains
     ! Ref: NFW profile
 
     implicit none
-    double precision, intent(in) :: r_halo, v_halo, cs1
+    double precision, intent(in) :: r_halo, v_halo, nfw_cs1
     double precision, dimension(:), intent(in)  :: r
     double precision, dimension(size(r)) :: v
     double precision, dimension(size(r)),intent(out) :: Om, G
@@ -220,8 +234,8 @@ contains
 
     y = r / r_halo
 
-    v = (log((cs1+y)/cs1) - y/(cs1+y)) / &
-                       (log((cs1+1d0)/cs1) - 1d0/(cs1+1d0)) / y
+    v = (log((nfw_cs1+y)/nfw_cs1) - y/(nfw_cs1+y)) / &
+                       (log((nfw_cs1+1d0)/nfw_cs1) - 1d0/(nfw_cs1+1d0)) / y
     v = v_halo * sqrt(v)
     Om = v/r
     G = Om ! NEEDS TO BE ADDED

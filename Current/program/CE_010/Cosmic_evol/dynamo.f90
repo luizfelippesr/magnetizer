@@ -34,7 +34,7 @@ module dynamo
 !
       if (info> 1) then
         print*,'galaxy id=',gal_id
-        print*,'it=',it,'t=',t,'t(Gyr)=',t*t0_Gyr,'r(R/2)(kpc)=',x(4+nxphys/2)*r_disk_kpc
+        print*,'it=',it,'t=',t,'t(Gyr)=',t*t0_Gyr,'r(R/2)(kpc)=',x(4+nxphys/2)*r_max_kpc
         print*,'Br(R/2)(mkG)=',f(4+nxphys/2,1),'Bp(R/2)(mkG)=',f(4+nxphys/2,2),'|Bz(R/2)|(mkG)=',Bzmod(4+nxphys/2)
         print*,'p(R/2)(deg)=',180./pi*atan(f(4+nxphys/2,1)/f(4+nxphys/2,2))
         print*, "cpu time in seconds: ", (cpu_time_finish -cpu_time_start)
@@ -74,7 +74,7 @@ module dynamo
         if (mod(it,nscreen) == 0) then  !Print some of the output to screen/diagnostic file while simulation runs
             print*,''
             print*,'galaxy_id=',gal_id
-            print*,'it=',it,'t=',t,'t(Gyr)=',t*t0_Gyr,'r(R/2)(kpc)=',x(4+nxphys/2)*r_disk_kpc
+            print*,'it=',it,'t=',t,'t(Gyr)=',t*t0_Gyr,'r(R/2)(kpc)=',x(4+nxphys/2)*r_max_kpc
           if (info> 1) then
             print*,'Br(R/2)(mkG)=',f(4+nxphys/2,1),'Bp(R/2)(mkG)=',f(4+nxphys/2,2),'|Bz(R/2)|(mkG)=',Bzmod(4+nxphys/2)
           endif
@@ -85,7 +85,7 @@ module dynamo
           endif
           print*,
           open(20,file= 'diagnostic.out',status="old",position="append")
-          write(20,*),'it=',it,'t=',t,'t(Gyr)=',t*t0_Gyr,'r(R/2)(kpc)=',x(4+nxphys/2)*r_disk_kpc
+          write(20,*),'it=',it,'t=',t,'t(Gyr)=',t*t0_Gyr,'r(R/2)(kpc)=',x(4+nxphys/2)*r_max_kpc
           write(20,*),'Br(R/2)(mkG)=',f(4+nxphys/2,1),'Bp(R/2)(mkG)=',f(4+nxphys/2,2),'|Bz(R/2)|(mkG)=',Bzmod(4+nxphys/2)
           write(20,*),'p(R/2)(deg)=',180./pi*atan(f(4+nxphys/2,1)/f(4+nxphys/2,2))
           write(20,*), "cpu time in seconds: ", (cpu_time_finish -cpu_time_start)

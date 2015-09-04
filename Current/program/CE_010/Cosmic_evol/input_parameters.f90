@@ -21,7 +21,7 @@ module input_params
   double precision :: dt,t=0.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
 
   ! Galaxy parameters
-  double precision :: r_disk_kpc, R_kappa
+  double precision :: r_max_kpc, R_kappa
   double precision :: l_sol_kpc, r_l_kpc
   double precision :: v_sol_kms, r_v_kpc
   double precision :: n_sol_cm3, r_n_kpc
@@ -29,9 +29,10 @@ module input_params
   double precision :: h_sol_kpc, r_h_kpc
   double precision :: r_disk, v_disk
   double precision :: r_bulge, v_bulge
-  double precision :: r_halo, v_halo
+  double precision :: r_halo, v_halo, nfw_cs1
+
   ! All galaxy data (private!)
-  integer, private, parameter :: number_of_columns =17 ! Number of columns in the galaxy input files
+  integer, private, parameter :: number_of_columns =18 ! Number of columns in the galaxy input files
   double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
@@ -66,7 +67,7 @@ module input_params
                             // trim(model_name) // '/time_indep_params_' &
                             // gal_id_string // '.in', status="old")
       read(u_indep,*) header_time_indep  !Header gives time-independent parameters in order
-      read(u_indep,*) r_disk_kpc  !Read time-independent parameter values
+      read(u_indep,*) r_max_kpc  !Read time-independent parameter values
       close(u_indep)  !Close file containing time-independent parameter values
 
       ! Reads time-dependent parameter values
@@ -132,6 +133,7 @@ module input_params
         v_bulge = galaxy_data(iread,15)
         r_halo  = galaxy_data(iread,16)
         v_halo  = galaxy_data(iread,17)
+        nfw_cs1 = galaxy_data(iread,18)
 
         if (info> 0) then
           print *,''
@@ -141,7 +143,7 @@ module input_params
       else
         call set_ts_params(0.025d0)
 !       NUMERICAL (DEFAULTS)
-        r_disk_kpc=     15.0d0  !The maximum radius of the domain in kpc (unit of length along r)
+        r_max_kpc=     15.0d0  !The maximum radius of the domain in kpc (unit of length along r)
 !
 !       TURBULENCE (DEFAULTS)
         l_sol_kpc=       0.1d0  !Typical size of largest turbulent eddies, in kpc
@@ -162,20 +164,12 @@ module input_params
         h_sol_kpc=       0.5d0 !amplitude of h_kpc=h_sol_kpc*exp((r_kpc-r_sol_kpc)/r_h_kpc)
         r_h_kpc=         9.8d0 !Relevant only if Flaring=1; charac radius of the hyperb/exp varying scale height in kpc
 !
-!       ROTATION CURVE (DEFAULTS)
-        Uphi_sol_kms=  220.0d0  !Circular rotation speed at r=r_sol in km/s
-        r_om_kpc=        2.0d0  !Relevant only if Om_Brandt =1; r_om is the charac radius of Brandt profile in kpc
       endif
 !
 !     DIMENSIONLESS PARAMETERS THAT MUST BE SPECIFIED BUT WILL NOT NORMALLY VARY FROM GALAXY TO GALAXY
 !     DIFFUSIVE MAGNETIC HELICITY FLUX (DEFAULTS)
       R_kappa=         1.0d0 !Ratio kappa_t/eta_t of turbulent diffusivities of alpha_m and B
 !
-!      print*,'r_disk_kpc= ',r_disk_kpc ,'R_kappa=   ',R_kappa
-!      print*,'l_sol_kpc=  ',l_sol_kpc  ,'r_l_kpc=   ',r_l_kpc   ,'v_sol_kms=    ',v_sol_kms    ,'r_v_kpc=    ',r_v_kpc
-!      print*,'n_sol_cm3=  ',n_sol_cm3  ,'r_n_kpc=   ',r_n_kpc   ,'Uz_sol_kms=   ',Uz_sol_kms   ,'r_Uz_kpc=   ',r_Uz_kpc
-!      print*,'h_sol_kpc=  ',h_sol_kpc  ,'r_h_kpc=   ',r_h_kpc   ,'Uphi_sol_kms= ',Uphi_sol_kms ,'r_om_kpc=   ',r_om_kpc
-!      print*,''
     endsubroutine set_input_params
 end module input_params
 !*****************************************************
@@ -191,7 +185,7 @@ module calc_params
 !
   double precision :: etat_sol,etat_sol_kmskpc,etat_sol_cm2s,td_sol,td_sol_kpcskm,td_sol_Gyr,td_sol_s,om0_kmskpc, &
                       Ur_sol_kms,r_sol,lambda,n_sol,r_n,h_sol,r_h,l_sol,r_l,v_sol,r_v,Uz_sol,r_Uz, &
-                      Ur_sol,Uphi_sol,om0,r_om,r1
+                      Ur_sol,om0,r_om,r1
   double precision, dimension(nx) :: r_kpc
 !
   contains
@@ -203,48 +197,38 @@ module calc_params
       td_sol_kpcskm= h0_kpc**2/etat_sol_kmskpc  !Typical vertical turbulent diffusion timescale in units of kpc s/km
       td_sol_Gyr= h0_kpc**2/etat_sol_cm2s/s_Gyr*cm_kpc*cm_kpc  !Typical vertical turbulent diffusion timescale in units of Gyr
       td_sol_s= td_sol_Gyr*s_Gyr  !Typical vertical turbulent diffusion timescale in units of seconds
-!
-!     ROTATION CURVE
-      om0_kmskpc= dsqrt(1.d0+(r_sol_kpc/r_om_kpc)**2)*Uphi_sol_kms/r_sol_kpc  !om0 of Brandt profile in physical units
-!
+
 !     RADIAL FLOW
       Ur_sol_kms=   0.0d0  !Radial mean velocity at r=r_sol in km/s
-!
+
 !     DIMENSIONLESS PARAMETERS THAT CAN BE CALCULATED OR THAT ARE NOT NORMALLY VARIED:
 !     NUMERICAL
-!       r_sol=r_sol_kpc/r_disk_kpc !Chosen radius at which to specify param values (e.g. radius of solar neighbourhood)
-      r_sol=1.0/5.0 ! r_sol is set to one fifth of r_disk, which should correspond to the half-mass radius
-      lambda=h0_kpc/r_disk_kpc  !Typical aspect ratio of disk
-!
+      lambda=h0_kpc/r_max_kpc  !Typical aspect ratio of disk
+
 !     TURBULENCE
       h_sol= h_sol_kpc/h0_kpc*h0  !Disk thickness at r=r_sol in units of h0
-      r_h= r_h_kpc/r_disk_kpc*r_disk  !Exponential scale radius of disk scale height
+      r_h= r_h_kpc/r_max_kpc  !Exponential scale radius of disk scale height
       n_sol= n_sol_cm3/n0_cm3*n0  !Equipartition magnetic field at r=r_sol
-      r_n= r_n_kpc/r_disk_kpc*r_disk  !Exponential scale radius of equipartition magnetic field
+      r_n= r_n_kpc/r_max_kpc  !Exponential scale radius of equipartition magnetic field
       l_sol= l_sol_kpc/h0_kpc*h0  !Size of largest turbulent eddies
-      r_l= r_l_kpc/r_disk_kpc*r_disk  !Exponential scale radius of turbulent scale
+      r_l= r_l_kpc/r_max_kpc  !Exponential scale radius of turbulent scale
       v_sol=v_sol_kms/h0_km*t0_s*h0/t0  !Turbulent velocity
-      r_v= r_v_kpc/r_disk_kpc*r_disk  !Exponential scale radius of rms turbulent velocity
+      r_v= r_v_kpc/r_max_kpc  !Exponential scale radius of rms turbulent velocity
       etat_sol=1.d0/3*l_sol*v_sol  !Typical turbulent diffusivity
       td_sol= h_sol**2/etat_sol  !Typical vertical turbulent diffusion timescale
-!
+
 !     VERTICAL WIND
       Uz_sol=Uz_sol_kms/h0_km*t0_s*h0/t0  !Vertical mean velocity
-      r_Uz= r_Uz_kpc/r_disk_kpc*r_disk  !Exponential scale radius of vertical mean velocity
-!
+      r_Uz= r_Uz_kpc/r_max_kpc  !Exponential scale radius of vertical mean velocity
+
 !     RADIAL FLOW
       Ur_sol=Ur_sol_kms/h0_km*t0_s*h0/t0  !Radial mean velocity at r=r_sol
-!
-!     ROTATION CURVE
-      Uphi_sol=Uphi_sol_kms/h0_km*t0_s*h0/t0  !Dimensionless circular velocity at r=r_sol
-      om0=om0_kmskpc/km_kpc*t0_s/t0  !om0 of Brandt profile
-      r_om=r_om_kpc/r_disk_kpc*r_disk  !Characteristic radius of Brandt profile
-!
+
 !     SEED FIELD
-      r1= r1_kpc/r_disk_kpc*r_disk !Only relevant if Rand_seed=F
-!
+      r1= r1_kpc/r_max_kpc !Only relevant if Rand_seed=F
+
 !     PHYSICAL GRID
-      r_kpc=r*r_disk_kpc
+      r_kpc=r*r_max_kpc
   endsubroutine set_calc_params
 end module calc_params
 

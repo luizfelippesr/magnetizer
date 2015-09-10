@@ -158,10 +158,19 @@ contains
     double precision, dimension(size(r)) :: A
     double precision, dimension(size(r)),intent(out) :: Om, G
     double precision, parameter :: rs_to_r50 = 1.678346990d0
+    double precision, parameter :: rmin_over_rmax=0.1
     double precision, dimension(size(r)) :: y
     integer :: i
 
-    y = r / (r_disk/rs_to_r50)
+    ! Traps disks of negligible size
+    if (r_disk < r_max_kpc*rmin_over_rmax) then
+      G = 0
+      Om = 0
+      return
+    end if
+
+    y = abs(r) / (r_disk/rs_to_r50)
+
     do i=1,nx
       A(i) = (  I0(y(i)) * K0(y(i))            &
               - I1(y(i)) * K1(y(i)) )          &
@@ -178,7 +187,7 @@ contains
               +0.5d0 * I1(y(i)) *( K0(y(i)) + K2(y(i)) )
     end do
     G = G/A/2d0*v_disk/r_disk
-
+    return
   end subroutine disk_rotation_curve
 
   subroutine bulge_rotation_curve(r, r_bulge, v_bulge, Om, G)
@@ -200,11 +209,11 @@ contains
     double precision, dimension(size(r)) :: y
     integer :: i
 
-    y = r / (r_bulge/a_to_r50)
+    y = abs(r)/ (r_bulge/a_to_r50)
 
     v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-1)
     v = v_bulge * sqrt(v)
-    Om = v/r
+    Om = v/abs(r)
     G = Om ! NEEDS TO BE ADDED
 
   end subroutine bulge_rotation_curve
@@ -232,12 +241,12 @@ contains
     double precision, dimension(size(r)) :: y
     integer :: i
 
-    y = r / r_halo
+    y = abs(r)/r_halo
 
     v = (log((nfw_cs1+y)/nfw_cs1) - y/(nfw_cs1+y)) / &
                        (log((nfw_cs1+1d0)/nfw_cs1) - 1d0/(nfw_cs1+1d0)) / y
     v = v_halo * sqrt(v)
-    Om = v/r
+    Om = v/abs(r)
     G = Om ! NEEDS TO BE ADDED
   end subroutine halo_rotation_curve
 

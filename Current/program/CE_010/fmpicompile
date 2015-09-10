@@ -1,4 +1,0 @@
-cd Cosmic_evol
-mpif90 -c constants.f90 parameters.f90 random.f90 gutsdynamo.f90 dynamo.f90
-mpif90 -o fmpicall constants.o parameters.o random.o gutsdynamo.o dynamo.o mpicalldynamo.f90
-

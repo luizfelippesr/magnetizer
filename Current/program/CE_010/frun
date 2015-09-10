@@ -1,5 +1,0 @@
-mkdir -pv '../../output/CE_010/' 
-cd Cosmic_evol
-
-./fcall
-

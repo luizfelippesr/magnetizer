@@ -54,6 +54,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
                     'vdisk', 'mstars_disk', 'mstars_bulge', 'mcold', 'mhot',
                     'mcold_burst','rdisk', 'rbulge', 'mstardot', 'mhalo',
                     'is_central', 'mstardot_average',
+                    'vbulge','vchalo','halo_r_virial','strc',
                     # Old-style indexing
                     'ident_final', 'ident_next_output', 'index',
                     # New style indexing and extras

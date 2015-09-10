@@ -99,7 +99,7 @@ if __name__ == "__main__"  :
     IDs = data_dict[ts[0]]['ID']
 
     for i, ID in enumerate(IDs):
-        f_gal_id = '{0:8d}'.format(i).replace(' ','0')
+        f_gal_id = '{0:8d}'.format(i+1).replace(' ','0')
         t_dep_input_file = '{1}/time_dep_params_{0}.in'.format(f_gal_id, odir)
         t_indep_input_file='{1}/time_indep_params_{0}.in'.format(f_gal_id, odir)
         header =('time        |'
@@ -113,8 +113,13 @@ if __name__ == "__main__"  :
                  'r_Uz_kpc    |'
                  'h_sol_kpc   |'
                  'r_h_kpc     |'
-                 'Uphi_sol_kms|'
-                 'r_om_kpc\n')
+                 'r_disk_kpc  |'
+                 'v_disk_kpc  |'
+                 'r_bulge_kpc |'
+                 'v_bulge_kpc |'
+                 'r_halo_kpc  |'
+                 'v_halo_kpc  |'
+                 'nfw_cs1\n')
 
         with open(t_dep_input_file, 'w+') as fdep:
             t_dep_input = header
@@ -162,17 +167,29 @@ if __name__ == "__main__"  :
 
                 t_dep_input += '{0:.3e}    {1:.3e}    '.format(h_sol,r_h)
 
-                U_phi, r_om, n = Brandt_rotation_curve(r_50, v_50)
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(U_phi,r_om)
+                r_disk = r_50 * Mpc_to_kpc
+                v_disk = v_50
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_disk, v_disk)
+
+                r_bulge = data_dict[t]['rbulge'][select][0] * Mpc_to_kpc
+                v_bulge = data_dict[t]['vbulge'][select][0]
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_bulge, v_bulge)
+
+                r_halo = data_dict[t]['halo_r_virial'][select][0] * Mpc_to_kpc
+                v_halo = data_dict[t]['vchalo'][select][0]
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_halo, v_halo)
+
+                nfw_cs1 = data_dict[t]['strc'][select][0]
+                t_dep_input += '{0:.3e}'.format(nfw_cs1)
 
                 t_dep_input += '\n'
 
             # Writes the file
             fdep.write(t_dep_input)
         with open(t_indep_input_file, 'w+') as findep:
-            t_indep_input_file = 'r_disk_kpc\n'
+            t_indep_input_file = 'r_max_kpc\n'
             t_indep_input_file += '{0:.3e}\n'.format(
-                                              number_of_r50*r_50_max*Mpc_to_kpc)
+                                             number_of_r50*r_50_max*Mpc_to_kpc)
 
             findep.write(t_indep_input_file)
 

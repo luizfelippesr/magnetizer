@@ -6,7 +6,7 @@ program calldynamo
 !
   implicit none 
 !
-  integer :: info=2, igal=1, flag, ngal=10
+  integer :: info=2, igal=1, flag
   character(len=32) :: command_argument
 !
 ! intent(in)

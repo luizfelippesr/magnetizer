@@ -9,6 +9,9 @@ module global_input_parameters
   character (len=10) :: model_name = 'CE_010'
   character (len=10) :: path_to_input_directories = '../../..'
 
+
+  integer :: ngal = 10
+
   ! PARAMETER INPUTS
   !Set to T to read in parameters from file, set to F to use defaults
   logical :: Read_param= .true.
@@ -86,6 +89,7 @@ module global_input_parameters
   namelist /global_pars/ &
     path_to_input_directories, model_name, &
     Read_param, Time_evol, &
+    ngal, &
 !     max_number_of_redshifts, & ! lfsr: this will be added later  (TODO)
     Dyn_quench, Alg_quench, &
     lFloor, &

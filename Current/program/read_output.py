@@ -95,7 +95,7 @@ def read_ts_output(filepath, output_quantities=None):
         n_times = output_dict['ts_t'].size
 
         for quantity in output_dict:
-            if quantity in ('ts_delta_r', 'ts_alp' ,'ts_t'):
+            if quantity in ('ts_delta_r', 'ts_t'):
                 continue
             qsize = output_dict[quantity].size
             output_dict[quantity] = output_dict[quantity].reshape(qsize/n_times,
@@ -124,11 +124,10 @@ def read_final_output(filepath):
 
 if __name__ == "__main__"  :
 
-
     param_dict = read_parameter_file('../output/test/param_00000001.out')
     for k in param_dict:
         print('{0}: {1}'.format(k, param_dict[k]))
-    #exit()
+    print
     test_dict = read_ts_output('../output/test/ts_00000001.out')
     for k in test_dict:
         print('{0}: {1} , shape: {2}'.format(k, '',test_dict[k].shape))
@@ -137,7 +136,3 @@ if __name__ == "__main__"  :
     for k in test_dict:
         print('{0}: {1} , shape: {2}'.format(k, '',test_dict[k].shape))
     print
-
-
-
-

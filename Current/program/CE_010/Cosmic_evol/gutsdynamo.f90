@@ -751,7 +751,7 @@ module output_dump
       double precision, dimension(nx,nvar), intent(in) :: f
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
-  
+
 !     WRITE DATA FOR FINAL TIMESTEP TO FILE "run.out"
       if (info> 0) then
         print*,'Writing output for final timestep to file run',gal_id_string,'.out'
@@ -759,6 +759,7 @@ module output_dump
       open(unit=diag_unit,file= 'diagnostic.out',status="old",position="append")
       write(diag_unit,*)'Writing output for final timestep to file run',gal_id_string,'.out'
       close(diag_unit)
+
       open(unit=output_unit,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
                     // '/run_' // gal_id_string // '.out',status="replace")
       write(output_unit,*) t
@@ -785,39 +786,39 @@ module output_dump
       write(output_unit,*) n
       write(output_unit,*) Beq
       close(output_unit)
-!  
+!
 !     WRITE DATA FOR ALL TIMESTEPS TO FILE "ts.out"
       if (info> 0) then
         print*,'Writing time series output to file ts',gal_id_string,'.out'
       endif
       open(unit=ts_unit,file= trim(path_to_input_directories) // '/output/' // &
                     trim(model_name) // '/ts_' // gal_id_string // '.out',status="replace")
-      write(ts_unit,*) ts_t
-      write(ts_unit,*) ts_Br
-      write(ts_unit,*) ts_Bp
+      write(ts_unit,*) ts_t(:iread-1)
+      write(ts_unit,*) ts_Br(:iread-1,:)
+      write(ts_unit,*) ts_Bp(:iread-1,:)
       if (Dyn_quench) then
         if (.not.Damp) then
-          write(ts_unit,*) ts_alp_m
+          write(ts_unit,*) ts_alp_m(:iread-1,:)
         else
-          write(ts_unit,*) ts_alp_m
+          write(ts_unit,*) ts_alp_m(:iread-1,:)
         endif
       endif
-      write(ts_unit,*) ts_Bzmod
-      write(ts_unit,*) ts_h
-      write(ts_unit,*) ts_om
-      write(ts_unit,*) ts_G
-      write(ts_unit,*) ts_l
-      write(ts_unit,*) ts_v
-      write(ts_unit,*) ts_etat
-      write(ts_unit,*) ts_tau
-      write(ts_unit,*) ts_alp_k
-      write(ts_unit,*) ts_Uz
-      write(ts_unit,*) ts_Ur
-      write(ts_unit,*) ts_n
-      write(ts_unit,*) ts_Beq
+      write(ts_unit,*) ts_Bzmod(:iread-1,:)
+      write(ts_unit,*) ts_h(:iread-1,:)
+      write(ts_unit,*) ts_om(:iread-1,:)
+      write(ts_unit,*) ts_G(:iread-1,:)
+      write(ts_unit,*) ts_l(:iread-1,:)
+      write(ts_unit,*) ts_v(:iread-1,:)
+      write(ts_unit,*) ts_etat(:iread-1,:)
+      write(ts_unit,*) ts_tau(:iread-1,:)
+      write(ts_unit,*) ts_alp_k(:iread-1,:)
+      write(ts_unit,*) ts_Uz(:iread-1,:)
+      write(ts_unit,*) ts_Ur(:iread-1,:)
+      write(ts_unit,*) ts_n(:iread-1,:)
+      write(ts_unit,*) ts_Beq(:iread-1,:)
       write(ts_unit,*) ts_rmax
       write(ts_unit,*) ts_delta_r
-      write(ts_unit,*) ts_alp
+      write(ts_unit,*) ts_alp(:iread-1,:)
       close(ts_unit)
 print*,'ts_Br(1,1)'   ,ts_Br(1,1)
 print*,'ts_Br(1,37)'  ,ts_Br(1,37)

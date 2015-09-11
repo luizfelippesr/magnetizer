@@ -18,6 +18,7 @@ module dynamo
 !
       integer, intent(in) :: info, gal_id
       integer, intent(out) :: flag
+      integer :: fail_count = 0
       character(len=8) :: frmt
       character(len=8) :: gal_id_string
 !
@@ -61,6 +62,11 @@ module dynamo
             first=0.d0 !reset timestepping
             deallocate(f) !Reset variables
             deallocate(dfdt) !Reset variable time derivs
+            fail_count = fail_count + 1
+            if (fail_count > 10) then
+              flag=1
+              return
+            endif
             goto 100 ! LFSR: we would probably be better removing this...
           endif
         enddo

@@ -10,8 +10,9 @@ module global_input_parameters
   character (len=10) :: path_to_input_directories = '../../..'
 
 
-  integer :: ngal = 10
-
+  integer :: ngals = 10
+  integer :: info = 2
+  
   ! PARAMETER INPUTS
   !Set to T to read in parameters from file, set to F to use defaults
   logical :: Read_param= .true.
@@ -19,7 +20,7 @@ module global_input_parameters
   ! PARAMETER INPUTS
   ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
   logical :: Time_evol= .true.
-  integer,parameter :: max_number_of_redshifts = 10 ! lfsr: this will became a variable later... (TODO)
+  integer, parameter :: max_number_of_redshifts = 10 ! lfsr: this will became a variable later... (TODO)
 
   ! ALPHA QUENCHING
   ! Works with alg_quench=F; Set to T for dynamical quenching (d_alpha_m/dt eqn incl in sim)
@@ -89,7 +90,8 @@ module global_input_parameters
   namelist /global_pars/ &
     path_to_input_directories, model_name, &
     Read_param, Time_evol, &
-    ngal, &
+    info, &
+    ngals, &
 !     max_number_of_redshifts, & ! lfsr: this will be added later  (TODO)
     Dyn_quench, Alg_quench, &
     lFloor, &

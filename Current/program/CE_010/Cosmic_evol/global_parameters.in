@@ -4,6 +4,10 @@
   !Specifies run paths
   model_name = 'CE_010'
   path_to_input_directories = '../../..'
+  ! Defines the number of galaxies
+  ngals = 5
+  ! Defines verbosity level
+  info = 1
   ! PARAMETER INPUTS
   !Set to T to read in parameters from file, set to F to use defaults
   Read_param = .true.

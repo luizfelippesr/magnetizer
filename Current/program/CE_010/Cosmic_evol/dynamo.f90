@@ -111,7 +111,8 @@ module dynamo
         if (last_output) exit
       enddo
 !
-      call write_final_output(f,gal_id_string,info)  !Write final simulation output to files run.out and ts.out
+      call write_final_output(f,gal_id_string)  !Write final simulation output to
+                                                     !files run.out and ts.out
 !
       call cpu_time(cpu_time_finish)
       if (info>0) then

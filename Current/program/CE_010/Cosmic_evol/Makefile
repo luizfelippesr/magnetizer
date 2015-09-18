@@ -4,7 +4,7 @@ DIR=Cosmic_evol
 FC=mpif90
 FCFLAGS=-lfgsl -I/usr/local/include/fgsl -I/usr/include/
 DEP=
-COMMON_OBJ= bessel_functions.o constants.o grid.o global_input_parameters.o input_parameters.o random.o profiles.o gutsdynamo.o dynamo.o
+COMMON_OBJ= bessel_functions.o constants.o grid.o global_input_parameters.o input_parameters.o random.o profiles.o gutsdynamo.o output.o dynamo.o
 
 %.o: %.f90 $(DEP)
 	$(FC) $(FCFLAGS) -c $^

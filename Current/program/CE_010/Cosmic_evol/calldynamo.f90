@@ -6,7 +6,7 @@ program calldynamo
 !
   implicit none 
 !
-  integer :: info=2, igal=1, flag
+  integer :: igal, flag
   character(len=32) :: command_argument
 !
 ! intent(in)
@@ -22,7 +22,7 @@ program calldynamo
 ! Note: calculated physical variables (ts_t, ts_Br, ts_Bp, ts_Bzmod, ts_alp_m) are written to files, not passed
 !
 ! Format:  call dynamo_run(info, gal_id, flag)
-! Standard parameters: (0, 1, flag), where igal is looped over from 1 to ngal
+! Standard parameters: (0, 1, flag), where igal is looped over from 1 to ngals
 !
 
   call get_command_argument(1, command_argument)
@@ -32,7 +32,7 @@ program calldynamo
     call read_global_parameters(trim(command_argument))
   endif
 
-do igal=1,ngal
+do igal=1,ngals
   call dynamo_run(info, igal, flag)
   if (info>1) then
 

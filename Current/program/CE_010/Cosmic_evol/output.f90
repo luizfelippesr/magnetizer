@@ -1,4 +1,4 @@
-module output_dump
+module output
   implicit none
   
 contains
@@ -89,4 +89,4 @@ contains
     print*,'ts_Br(n1+1,37)',ts_Br(n1+1,37)
     print*,'ts_Br(10,10)',ts_Br(10,10)
   end subroutine write_final_output
-end module output_dump
+end module output

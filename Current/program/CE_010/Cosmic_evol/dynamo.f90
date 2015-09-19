@@ -6,7 +6,7 @@ module dynamo
   use ts_arrays
   use start
   use timestep
-  use output_dump
+  use output
 !
   implicit none 
 !

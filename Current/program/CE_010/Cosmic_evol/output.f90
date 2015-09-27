@@ -1,92 +1,57 @@
+! Contains a module that calls the IO routines to output the results
 module output
+  use IO
   implicit none
   
 contains
-  subroutine write_final_output(f,gal_id_string)
-
+  subroutine write_output(f,gal_id)
+    ! Writes the output
     use global_input_parameters
     use galaxy_model
     use bzcalc
     use ts_arrays
 
-    integer, parameter :: output_unit = 12
-    integer, parameter :: ts_unit = 13
-    integer, parameter :: diag_unit = 20
     double precision, dimension(nx,nvar), intent(in) :: f
-    character (len=8), intent(in) :: gal_id_string
-
-    !     WRITE DATA FOR FINAL TIMESTEP TO FILE "run.out"
-    if (info> 0) then
-      print*,'Writing output for final timestep to file run',gal_id_string,'.out'
-    endif
-    open(unit=diag_unit,file= 'diagnostic.out',status="old",position="append")
-    write(diag_unit,*)'Writing output for final timestep to file run',gal_id_string,'.out'
-    close(diag_unit)
-
-    open(unit=output_unit,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
-                  // '/run_' // gal_id_string // '.out',status="replace")
-    write(output_unit,*) t
-    write(output_unit,*) f(:,1)
-    write(output_unit,*) f(:,2)
+    integer, intent(in) :: gal_id
+    
+    ! Writes any meta information about the run
+    call IO_start_galaxy(gal_id, info)
+    
+    ! Writes the data
+    call IO_write_dataset('t', gal_id, info,ts_t(:iread-1))
+    call IO_write_dataset('Br', gal_id, info,ts_Br(:iread-1,:))
+    call IO_write_dataset('Bp', gal_id, info,ts_Bp(:iread-1,:))
     if (Dyn_quench) then
-      if (.not.Damp) then
-        write(output_unit,*) f(:,3)
-      else
-        write(output_unit,*) f(:,7)
-      endif
+      call IO_write_dataset('alp_m', gal_id, info,ts_alp_m(:iread-1,:))
     endif
-    write(output_unit,*) Bzmod
-    write(output_unit,*) h
-    write(output_unit,*) om
-    write(output_unit,*) G
-    write(output_unit,*) l
-    write(output_unit,*) v
-    write(output_unit,*) etat
-    write(output_unit,*) tau
-    write(output_unit,*) alp_k
-    write(output_unit,*) Uz
-    write(output_unit,*) Ur
-    write(output_unit,*) n
-    write(output_unit,*) Beq
-    close(output_unit)
-!
-!     WRITE DATA FOR ALL TIMESTEPS TO FILE "ts.out"
-    if (info> 0) then
-      print*,'Writing time series output to file ts',gal_id_string,'.out'
+    call IO_write_dataset('Bzmod', gal_id, info,ts_Bzmod(:iread-1,:))
+    call IO_write_dataset('h', gal_id, info,ts_h(:iread-1,:))
+    call IO_write_dataset('om', gal_id, info,ts_om(:iread-1,:))
+    call IO_write_dataset('G', gal_id, info,ts_G(:iread-1,:))
+    call IO_write_dataset('l', gal_id, info,ts_l(:iread-1,:))
+    call IO_write_dataset('v', gal_id, info,ts_v(:iread-1,:))
+    call IO_write_dataset('etat', gal_id, info,ts_etat(:iread-1,:))
+    call IO_write_dataset('tau', gal_id, info,ts_tau(:iread-1,:))
+    call IO_write_dataset('alp_k', gal_id, info,ts_alp_k(:iread-1,:))
+    call IO_write_dataset('Uz', gal_id, info,ts_Uz(:iread-1,:))
+    call IO_write_dataset('Ur', gal_id, info,ts_Ur(:iread-1,:))
+    call IO_write_dataset('n', gal_id, info,ts_n(:iread-1,:))
+    call IO_write_dataset('Beq', gal_id, info, ts_Beq(:iread-1,:))
+    call IO_write_dataset('rmax', gal_id, info,ts_rmax(:iread-1))
+    call IO_write_dataset('delta_r', gal_id, info,ts_delta_r(:iread-1))
+    call IO_write_dataset('alp', gal_id, info,ts_alp(:iread-1,:))
+
+    call IO_finish_galaxy(gal_id, info)
+    
+    ! Writes specific values to screen for a quick check
+    if (info > 2) then
+      print *,'ts_Br(1,1)'   ,ts_Br(1,1)
+      print *,'ts_Br(1,37)'  ,ts_Br(1,37)
+      print *,'ts_Br(n1+1,1)' ,ts_Br(n1+1,1)
+      print *,'ts_Br(n1+1,37)',ts_Br(n1+1,37)
+      print *,'ts_Br(10,10)',ts_Br(10,10)
     endif
-    open(unit=ts_unit,file= trim(path_to_input_directories) // '/output/' // &
-                  trim(model_name) // '/ts_' // gal_id_string // '.out',status="replace")
-    write(ts_unit,*) ts_t(:iread-1)
-    write(ts_unit,*) ts_Br(:iread-1,:)
-    write(ts_unit,*) ts_Bp(:iread-1,:)
-    if (Dyn_quench) then
-      if (.not.Damp) then
-        write(ts_unit,*) ts_alp_m(:iread-1,:)
-      else
-        write(ts_unit,*) ts_alp_m(:iread-1,:)
-      endif
-    endif
-    write(ts_unit,*) ts_Bzmod(:iread-1,:)
-    write(ts_unit,*) ts_h(:iread-1,:)
-    write(ts_unit,*) ts_om(:iread-1,:)
-    write(ts_unit,*) ts_G(:iread-1,:)
-    write(ts_unit,*) ts_l(:iread-1,:)
-    write(ts_unit,*) ts_v(:iread-1,:)
-    write(ts_unit,*) ts_etat(:iread-1,:)
-    write(ts_unit,*) ts_tau(:iread-1,:)
-    write(ts_unit,*) ts_alp_k(:iread-1,:)
-    write(ts_unit,*) ts_Uz(:iread-1,:)
-    write(ts_unit,*) ts_Ur(:iread-1,:)
-    write(ts_unit,*) ts_n(:iread-1,:)
-    write(ts_unit,*) ts_Beq(:iread-1,:)
-    write(ts_unit,*) ts_rmax
-    write(ts_unit,*) ts_delta_r
-    write(ts_unit,*) ts_alp(:iread-1,:)
-    close(ts_unit)
-    print*,'ts_Br(1,1)'   ,ts_Br(1,1)
-    print*,'ts_Br(1,37)'  ,ts_Br(1,37)
-    print*,'ts_Br(n1+1,1)' ,ts_Br(n1+1,1)
-    print*,'ts_Br(n1+1,37)',ts_Br(n1+1,37)
-    print*,'ts_Br(10,10)',ts_Br(10,10)
-  end subroutine write_final_output
+    
+  end subroutine write_output
+  
 end module output

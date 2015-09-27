@@ -8,7 +8,7 @@ module global_input_parameters
   !Specifies run paths
   character (len=10) :: model_name = 'CE_010'
   character (len=10) :: path_to_input_directories = '../../..'
-
+  character (len=10) :: output_file_name = 'magnetic_galaxies.hdf5'
 
   integer :: ngals = 10
   integer :: info = 2
@@ -88,7 +88,7 @@ module global_input_parameters
   logical :: Turb_dif= .true.  !Set to F to turn off turbulent diffusion
 
   namelist /global_pars/ &
-    path_to_input_directories, model_name, &
+    path_to_input_directories, model_name, output_file_name, &
     Read_param, Time_evol, &
     info, &
     ngals, &

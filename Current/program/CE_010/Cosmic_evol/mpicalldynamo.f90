@@ -4,6 +4,7 @@ program mpicalldynamo
   use dynamo
   use input_params
   use global_input_parameters
+  use IO
 !
   implicit none 
 !
@@ -71,7 +72,12 @@ program mpicalldynamo
   enddo
 
   print*,'rank=',rank,'    mygals=',mygals !processor id, list of galaxies for that processor
+  
+  ! Initializes IO  
+  call IO_start(trim(path_to_input_directories) // '/output/' // &
+                trim(model_name), trim(output_file_name))
 
+  
   ! Call dynamo code for each galaxy in mygals
   if (nmygals > 0) then
     do igal=1,nmygals
@@ -79,8 +85,12 @@ program mpicalldynamo
       print*,'flag',flag,'obtained by processor',rank,'for galaxy',mygals(igal)
     enddo
   endif
-
-  call MPI_FINALIZE(ierr) !Tell the MPI library to release all resources it is using
+  
+  ! Finalizes IO
+  call IO_end()
+  
+  !Tell the MPI library to release all resources it is using
+  call MPI_FINALIZE(ierr) 
   
   if (rank == 0) then !Only the master (rank 0)
     tfinish= MPI_wtime()

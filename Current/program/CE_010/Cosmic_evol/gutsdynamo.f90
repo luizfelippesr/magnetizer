@@ -136,6 +136,7 @@ module initial_conditions  !Set initial conditions
       integer :: iseed,var
       double precision, dimension(nx) :: Bseed
       double precision, dimension(nx,nvar), intent(inout) :: f
+      double precision, dimension(nx) :: tmp
 !
       Bseed=frac_seed*Beq
 !
@@ -152,9 +153,15 @@ module initial_conditions  !Set initial conditions
 !        f(:,2)= Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
 !        f(:,1)=-Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
         ! NB the old 'r_disk' variable is now always 1.0 in code units
-        f(:,1)=-Bseed*r/(1.d0-r)**nn*dexp(-r/r1)
+        tmp = 1.d0-r
+        where (tmp /= 0.0)
+          tmp = 1./tmp
+        elsewhere
+          tmp = sqrt(tiny(tmp))
+        end where
+        f(:,1)=-Bseed*r/tmp**nn*dexp(-r/r1)
 !        f(:,2)= Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
-        f(:,2)= Bseed*r/(1.d0-r)**nn*dexp(-r/r1)
+        f(:,2)= Bseed*r/tmp**nn*dexp(-r/r1)
       endif
       call impose_bc(f)
 !      print*,'Seed field: Br        =',f(:,1)

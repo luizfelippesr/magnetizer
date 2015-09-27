@@ -50,7 +50,7 @@ contains
 
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
-    G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om
+    G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om_kmskpc
     ! Adjusts units to code units (set in units module)
     Om = Om_kmskpc/h0_km*h0_kpc*t0_s/t0
     G  = G_kmskpc /h0_km*h0_kpc*t0_s/t0

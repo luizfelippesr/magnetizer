@@ -1,3 +1,0 @@
-mpirun -n 8 python mpidynamo.py
-#mpirun -n 8 /Applications/anaconda/bin/python mpidynamo.py
-#./mpidynamo.py

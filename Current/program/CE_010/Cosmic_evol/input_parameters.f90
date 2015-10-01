@@ -18,7 +18,7 @@ module input_params
   integer, parameter :: nscreen= 2  !Print output to screen every nscreen*n2 timesteps
   double precision :: tsnap !Time between successive snapshots
   integer :: n2  !Number of timesteps in between snapshots
-  double precision :: dt,t=0.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
+  double precision :: dt,t=-1.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
 
   ! Galaxy parameters
   double precision :: r_max_kpc, R_kappa

@@ -28,10 +28,11 @@ module dynamo
       call cpu_time(cpu_time_start)
 
 100 continue  !LFSR: what is this? A goto is REALLY necessary?
-      call init_start(gal_id_string,info)  !Initialize galaxy model and magnetic field
       call reset_input_params() ! In case there was another run before this call
+      call init_start(gal_id_string,info)  !Initialize galaxy model and magnetic field
 
-      call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)  !Store simulation output into arrays
+      
+!       call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)  !Store simulation output into arrays 
 
       if (info> 1) then
         print*,'galaxy id=',gal_id

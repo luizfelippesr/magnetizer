@@ -36,7 +36,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
 !
   implicit none
 !
-  double precision, parameter :: INVALID = 1000d0
+  double precision, parameter :: INVALID = -99999d0
   double precision, dimension(n1+1) :: ts_t = INVALID
   double precision, dimension(n1+1) :: ts_rmax = INVALID
   double precision, dimension(n1+1) :: ts_delta_r = INVALID
@@ -80,33 +80,34 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
       double precision, dimension(nx), intent(in) :: Ur
       double precision, dimension(nx), intent(in) :: n
       double precision, dimension(nx), intent(in) :: Beq
-!
-      ts_t(it+1)=       t
-      ts_rmax(it+1)=    rmax
-      ts_delta_r(it+1)= delta_r
-      ts_Br(it+1,:)=    f(:,1)
-      ts_Bp(it+1,:)=    f(:,2)
+
+      ! lfsr: previously, here it was it+1 instead of it, why?
+      ts_t(it)=       t
+      ts_rmax(it)=    rmax
+      ts_delta_r(it)= delta_r
+      ts_Br(it,:)=    f(:,1)
+      ts_Bp(it,:)=    f(:,2)
       if (Dyn_quench) then   
         if (.not.Damp) then
-          ts_alp_m(it+1,:)=   f(:,3)
+          ts_alp_m(it,:)=   f(:,3)
         else
-          ts_alp_m(it+1,:)=   f(:,7)
+          ts_alp_m(it,:)=   f(:,7)
         endif
       endif
-      ts_h(it+1,:)=     h(:)
-      ts_om(it+1,:)=    om(:)
-      ts_G(it+1,:)=     G(:)
-      ts_l(it+1,:)=     l(:)
-      ts_v(it+1,:)=     v(:)
-      ts_etat(it+1,:)=  etat(:)
-      ts_tau(it+1,:)=   tau(:)
-      ts_alp_k(it+1,:)= alp_k(:)
-      ts_alp(it+1,:)=   alp(:)
-      ts_Uz(it+1,:)=    Uz(:)
-      ts_Ur(it+1,:)=    Ur(:)
-      ts_n(it+1,:)=     n(:)
-      ts_Beq(it+1,:)=   Beq(:)
-      ts_Bzmod(it+1,:)= Bzmod(:)
+      ts_h(it,:)=     h(:)
+      ts_om(it,:)=    om(:)
+      ts_G(it,:)=     G(:)
+      ts_l(it,:)=     l(:)
+      ts_v(it,:)=     v(:)
+      ts_etat(it,:)=  etat(:)
+      ts_tau(it,:)=   tau(:)
+      ts_alp_k(it,:)= alp_k(:)
+      ts_alp(it,:)=   alp(:)
+      ts_Uz(it,:)=    Uz(:)
+      ts_Ur(it,:)=    Ur(:)
+      ts_n(it,:)=     n(:)
+      ts_Beq(it,:)=   Beq(:)
+      ts_Bzmod(it,:)= Bzmod(:)
     end subroutine make_ts_arrays
 end module ts_arrays
 !*****************************************************
@@ -730,7 +731,7 @@ module start  !Contains initialization routine for simulation
       if (.not. allocated(dfdt)) allocate(dfdt(nx,nvar)) !Copied from Pitch/run.f90
 !
 !     SET INPUT PARAMETERS
-!      call set_input_params(gal_id_string,info)
+      call set_input_params(gal_id_string,info) ! lfsr:why was this commented out?
 !
 !     SET UP NUMERICS AND PLOTTING
       call construct_grid

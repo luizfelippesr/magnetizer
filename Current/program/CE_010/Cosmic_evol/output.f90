@@ -16,9 +16,8 @@ contains
     
     ! Writes any meta information about the run
     call IO_start_galaxy(gal_id, info)
-    print *, 'Galaxy',gal_id,' -> IO initialised' 
-    print *, gal_id, ts_t
-!     stop
+    print *, 'Galaxy',gal_id,' -> IO initialised' ! TO BE REMOVED
+    
     call IO_write_dataset('t', gal_id, info,ts_t)
     call IO_write_dataset('Br', gal_id, info,ts_Br(:iread-1,:))
     call IO_write_dataset('Bp', gal_id, info,ts_Bp(:iread-1,:))
@@ -41,7 +40,7 @@ contains
     call IO_write_dataset('rmax', gal_id, info,ts_rmax)
     call IO_write_dataset('delta_r', gal_id, info,ts_delta_r)
     call IO_write_dataset('alp', gal_id, info,ts_alp(:iread-1,:))
-    print *, 'Galaxy',gal_id,' -> datasets written' 
+    print *, 'Galaxy',gal_id,' -> datasets written'  ! TO BE REMOVED
     call IO_finish_galaxy(gal_id, info)
     
     ! Writes specific values to screen for a quick check

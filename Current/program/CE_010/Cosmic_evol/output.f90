@@ -16,9 +16,10 @@ contains
     
     ! Writes any meta information about the run
     call IO_start_galaxy(gal_id, info)
-    
-    ! Writes the data
-    call IO_write_dataset('t', gal_id, info,ts_t(:iread-1))
+    print *, 'Galaxy',gal_id,' -> IO initialised' 
+    print *, gal_id, ts_t
+!     stop
+    call IO_write_dataset('t', gal_id, info,ts_t)
     call IO_write_dataset('Br', gal_id, info,ts_Br(:iread-1,:))
     call IO_write_dataset('Bp', gal_id, info,ts_Bp(:iread-1,:))
     if (Dyn_quench) then
@@ -37,10 +38,10 @@ contains
     call IO_write_dataset('Ur', gal_id, info,ts_Ur(:iread-1,:))
     call IO_write_dataset('n', gal_id, info,ts_n(:iread-1,:))
     call IO_write_dataset('Beq', gal_id, info, ts_Beq(:iread-1,:))
-    call IO_write_dataset('rmax', gal_id, info,ts_rmax(:iread-1))
-    call IO_write_dataset('delta_r', gal_id, info,ts_delta_r(:iread-1))
+    call IO_write_dataset('rmax', gal_id, info,ts_rmax)
+    call IO_write_dataset('delta_r', gal_id, info,ts_delta_r)
     call IO_write_dataset('alp', gal_id, info,ts_alp(:iread-1,:))
-
+    print *, 'Galaxy',gal_id,' -> datasets written' 
     call IO_finish_galaxy(gal_id, info)
     
     ! Writes specific values to screen for a quick check

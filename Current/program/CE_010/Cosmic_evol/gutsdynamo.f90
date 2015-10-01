@@ -36,9 +36,27 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
 !
   implicit none
 !
-  double precision, dimension(n1+1) :: ts_t, ts_rmax, ts_delta_r  !time array
-  double precision, dimension(n1+1,nx) :: ts_Br, ts_Bp, ts_alp_m, ts_Bzmod, ts_h, ts_om, ts_G, ts_l, ts_v, &
-                                          ts_etat, ts_tau, ts_alp_k, ts_alp, ts_Uz, ts_Ur, ts_n, ts_Beq
+  double precision, parameter :: INVALID = 1000d0
+  double precision, dimension(n1+1) :: ts_t = INVALID
+  double precision, dimension(n1+1) :: ts_rmax = INVALID
+  double precision, dimension(n1+1) :: ts_delta_r = INVALID
+  double precision, dimension(n1+1,nx) :: ts_Br = INVALID
+  double precision, dimension(n1+1,nx) :: ts_Bp = INVALID
+  double precision, dimension(n1+1,nx) :: ts_alp_m = INVALID
+  double precision, dimension(n1+1,nx) :: ts_Bzmod = INVALID
+  double precision, dimension(n1+1,nx) :: ts_h = INVALID
+  double precision, dimension(n1+1,nx) :: ts_om = INVALID
+  double precision, dimension(n1+1,nx) :: ts_G = INVALID
+  double precision, dimension(n1+1,nx) :: ts_l = INVALID
+  double precision, dimension(n1+1,nx) :: ts_v = INVALID
+  double precision, dimension(n1+1,nx) :: ts_etat = INVALID
+  double precision, dimension(n1+1,nx) :: ts_tau = INVALID
+  double precision, dimension(n1+1,nx) :: ts_alp_k = INVALID
+  double precision, dimension(n1+1,nx) :: ts_alp = INVALID
+  double precision, dimension(n1+1,nx) :: ts_Uz = INVALID
+  double precision, dimension(n1+1,nx) :: ts_Ur = INVALID
+  double precision, dimension(n1+1,nx) :: ts_n = INVALID
+  double precision, dimension(n1+1,nx) :: ts_Beq = INVALID
 !
   contains
     subroutine make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
@@ -307,7 +325,7 @@ module equ  !Contains the partial differential equations to be solved
   double precision, dimension(nx) :: alp_m, alp, dalp_mdr, d2alp_mdr2, dalpdr, detatdr
   double precision, dimension(nx) :: Bsqtot, DivVishniac, Dyn_gen
   double precision, dimension(nx) :: brms, B_floor
-  integer :: i
+  integer, private :: i
   double precision :: rmax, delta_r, hmax, lmax, Ncells
 !
   contains

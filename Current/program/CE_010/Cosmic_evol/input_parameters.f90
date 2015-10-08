@@ -20,6 +20,8 @@ module input_params
   integer :: n2  !Number of timesteps in between snapshots
   double precision :: dt,t=-1.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
 
+  double precision, private :: time_between_inputs=0
+  
   ! Galaxy parameters
   double precision :: r_max_kpc, R_kappa
   double precision :: l_sol_kpc, r_l_kpc
@@ -38,13 +40,13 @@ module input_params
 
 
   contains
-   subroutine set_ts_params(time_between_inputs)
+   subroutine set_ts_params()
       use units
-      double precision, intent(in) :: time_between_inputs
 
       tsnap = time_between_inputs/t0_Gyr
-      n2= max(nint(tsnap/t0_Gyr/eps_t),1)  !Change n2 by changing eps_t
-      dt= tsnap/n2  !Timestep in units of t0=h0^2/etat0
+      n2 = max(nint(tsnap/t0_Gyr/eps_t),1)  !Change n2 by changing eps_t
+      dt = tsnap/n2  !Timestep in units of t0=h0^2/etat0
+      
       print*,'n2,dt,iread=',n2,dt,iread
       print*,'Uz_sol_kms=',Uz_sol_kms
       print*,''
@@ -111,7 +113,8 @@ module input_params
 
       next_time_input = galaxy_data(iread+1,1)
       if ( next_time_input > 0 ) then
-        call set_ts_params(galaxy_data(iread+1,1)-galaxy_data(iread,1))
+        time_between_inputs = galaxy_data(iread+1,1)-galaxy_data(iread,1)
+        call set_ts_params()
       else
         last_output = .true.
       endif

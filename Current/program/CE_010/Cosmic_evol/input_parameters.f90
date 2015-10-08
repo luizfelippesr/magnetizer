@@ -102,68 +102,41 @@ module input_params
       integer, intent(in) :: info
       real :: next_time_input
 
-      if (Read_param) then
-        ! Reads the whole file on first access
-        if (gal_id_string /= current_gal_id_string) then
-          call read_input_parameters(gal_id_string)
-        endif
+      ! Reads the whole file on first access
+      if (gal_id_string /= current_gal_id_string) then
+        call read_input_parameters(gal_id_string)
+      endif
 
-        iread=iread+1
+      iread=iread+1
 
-        next_time_input = galaxy_data(iread+1,1)
-        if ( next_time_input > 0 ) then
-          call set_ts_params(galaxy_data(iread+1,1)-galaxy_data(iread,1))
-        else
-          last_output = .true.
-        endif
-
-        l_sol_kpc    = galaxy_data(iread,2)
-        r_l_kpc      = galaxy_data(iread,3)
-        v_sol_kms    = galaxy_data(iread,4)
-        r_v_kpc      = galaxy_data(iread,5)
-        n_sol_cm3    = galaxy_data(iread,6)
-        r_n_kpc      = galaxy_data(iread,7)
-        Uz_sol_kms   = galaxy_data(iread,8)
-        r_Uz_kpc     = galaxy_data(iread,9)
-        h_sol_kpc    = galaxy_data(iread,10)
-        r_h_kpc      = galaxy_data(iread,11)
-        r_disk  = galaxy_data(iread,12)
-        v_disk  = galaxy_data(iread,13)
-        r_bulge = galaxy_data(iread,14)
-        v_bulge = galaxy_data(iread,15)
-        r_halo  = galaxy_data(iread,16)
-        v_halo  = galaxy_data(iread,17)
-        nfw_cs1 = galaxy_data(iread,18)
-
-        if (info> 0) then
-          print *,''
-          print *,'Reading new parameters, iread=',iread, ', gal_id_string=',gal_id_string
-        endif
-
+      next_time_input = galaxy_data(iread+1,1)
+      if ( next_time_input > 0 ) then
+        call set_ts_params(galaxy_data(iread+1,1)-galaxy_data(iread,1))
       else
-        call set_ts_params(0.025d0)
-!       NUMERICAL (DEFAULTS)
-        r_max_kpc=     15.0d0  !The maximum radius of the domain in kpc (unit of length along r)
-!
-!       TURBULENCE (DEFAULTS)
-        l_sol_kpc=       0.1d0  !Typical size of largest turbulent eddies, in kpc
-        r_l_kpc=       100.0d0!7.5d0  !Exponential scale radius of l in kpc; Relevant only if Var_l=T
-        v_sol_kms=      10.0d0  !Typical turbulent velocity in km/s; together with h0_kpc it determ the unit of time
-        r_v_kpc=       100.0d0!7.5d0  !Exponential scale radius of l in kpc; Relevant only if Var_v=T
-!
-!       EQUIPARTITION FIELD (DEFAULTS)
-        n_sol_cm3=       1.0d0  !Number density at r=r_sol in cm^-3
-        r_n_kpc=         7.5d0  !Exponential scale radius of density in kpc n=n_sol*exp((r-r_sol)/r_n), note that r_Beq=2*r_n if r_v=infty
-!
-!       VERTICAL WIND (DEFAULTS)
-!mark1
-        Uz_sol_kms=      20.0d0  !Vertical mean velocity at r=r_sol in km/s (if Var_Uz=F then Uz_kms=Uz_sol_kms)
-        r_Uz_kpc=      100.0d0!15.0d0 !Uz_kms=Uz_sol_kms*exp((r_kpc-r_sol_kpc)/r_Uz_kpc) if Var_Uz=T
-!
-!       SCALE HEIGHT (DEFAULTS)
-        h_sol_kpc=       0.5d0 !amplitude of h_kpc=h_sol_kpc*exp((r_kpc-r_sol_kpc)/r_h_kpc)
-        r_h_kpc=         9.8d0 !Relevant only if Flaring=1; charac radius of the hyperb/exp varying scale height in kpc
-!
+        last_output = .true.
+      endif
+
+      l_sol_kpc    = galaxy_data(iread,2)
+      r_l_kpc      = galaxy_data(iread,3)
+      v_sol_kms    = galaxy_data(iread,4)
+      r_v_kpc      = galaxy_data(iread,5)
+      n_sol_cm3    = galaxy_data(iread,6)
+      r_n_kpc      = galaxy_data(iread,7)
+      Uz_sol_kms   = galaxy_data(iread,8)
+      r_Uz_kpc     = galaxy_data(iread,9)
+      h_sol_kpc    = galaxy_data(iread,10)
+      r_h_kpc      = galaxy_data(iread,11)
+      r_disk  = galaxy_data(iread,12)
+      v_disk  = galaxy_data(iread,13)
+      r_bulge = galaxy_data(iread,14)
+      v_bulge = galaxy_data(iread,15)
+      r_halo  = galaxy_data(iread,16)
+      v_halo  = galaxy_data(iread,17)
+      nfw_cs1 = galaxy_data(iread,18)
+
+      if (info> 0) then
+        print *,''
+        print *,'Reading new parameters, iread=',iread, ', gal_id_string=',gal_id_string
       endif
 !
 !     DIMENSIONLESS PARAMETERS THAT MUST BE SPECIFIED BUT WILL NOT NORMALLY VARY FROM GALAXY TO GALAXY

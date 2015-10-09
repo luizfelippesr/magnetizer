@@ -463,15 +463,14 @@ module timestep  !Contains time-stepping routine
   use equ
 !
 contains
-  subroutine rk(f)
+  subroutine rk(f,dfdt)
 !
   implicit none
 !
   double precision :: gam1, gam2, gam3, zet1, zet2
-  double precision, dimension(nx,nvar) :: f, dfdt, pdef, ftmp
+  double precision, dimension(nx,nvar), intent(inout) :: f, dfdt
+  double precision, dimension(nx,nvar) :: pdef, ftmp
   double precision :: ttmp
-!
-  intent(inout) :: f
 !
 !  Runge Kutta 3rd order time advance
 !  f = f(exact) - 0.0046*dt**3*d3f/dt3

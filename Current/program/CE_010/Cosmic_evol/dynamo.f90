@@ -14,6 +14,7 @@ module dynamo
   integer :: it=0, jt=0
   double precision :: cpu_time_start, cpu_time_finish
   double precision, allocatable, dimension(:,:) :: f, dfdt
+  double precision, allocatable, dimension(:,:) :: f_old, dfdt_old
   
   public dynamo_run
   
@@ -25,7 +26,7 @@ module dynamo
       integer :: fail_count
       character(len=8) :: frmt
       character(len=8) :: gal_id_string
-      integer, parameter :: MAX_FAILS=6
+      integer, parameter :: MAX_FAILS=5
 
       
       frmt='(I8.8)'
@@ -38,6 +39,11 @@ module dynamo
       ! Allocates f-array (which contains all the data for the calculations)
       if (.not. allocated(f)) allocate(f(nx,nvar)) 
       if (.not. allocated(dfdt)) allocate(dfdt(nx,nvar)) 
+      if (.not. allocated(f_old)) allocate(f_old(nx,nvar)) 
+      if (.not. allocated(dfdt_old)) allocate(dfdt_old(nx,nvar)) 
+      
+      f=0
+      dfdt=0
       
       print *, 'Galaxy ',gal_id_string
       ! Prepares the grid where the computation will be made
@@ -52,8 +58,10 @@ module dynamo
       call init_seed(f)
       ! Calculates |Bz|
       call estimate_Bzmod(f)
+      ! Backs up initial state
+      f_old = f
+      dfdt_old = dfdt ! this one is probably not necessary...
       
-
       ! Loops through the SAM's snapshots
       do it=1,n1  
         print *, 'Galaxy ',gal_id_string, ' it=',it
@@ -72,7 +80,7 @@ module dynamo
           do jt=1,nsteps
             print *, 'Galaxy ',gal_id_string, ' jt=',jt
             ! Runs Runge-Kutta time-stepping routine
-            call rk(f)  
+            call rk(f, dfdt)  
             
             ! If the magnetic field blows up or something else blows up
             ! flags and exit the loop
@@ -84,6 +92,7 @@ module dynamo
           
           ! If the time evolution was solved correctly (no blow-ups), exits
           if (ok) exit
+          
           ! Otherwise, the calculation needs to be remade with a smaller
           ! timestep
           if (info>0) then
@@ -94,13 +103,19 @@ module dynamo
           
           ! Doubles the number of timesteps
           nsteps = nsteps * 2
+          
+          ! Resets the f array
+          f = f_old
+          dfdt = dfdt_old
+
           call set_ts_params()
         
         end do ! try or fail loop
         
         if (ok) then
           ! If the run was sucessful prepares to store and store
-          
+          f_old = f
+          dfdt_old = dfdt
           ! Impose boundary conditions before writing output
           call impose_bc(f)  
           ! Estimates the value of |B_z| using Div B =0 condition
@@ -113,14 +128,14 @@ module dynamo
           ts_t(it) = t !lfsr: actually, this very ugly... this variable 
                        !shouldn't be accessible at all!
           dfdt = 0.0  ! Same here 
-          
+          f = 0.0
           ! Resets the f array and adds a seed field 
           call init_seed(f)
           ! Calculates |Bz|
           call estimate_Bzmod(f)
         endif
 
-        ! Breaks loop there are no more snapshots in the input
+        ! Breaks loop if there are no more snapshots in the input
         if (last_output) exit        
         
       end do  ! snapshots loop
@@ -133,13 +148,8 @@ module dynamo
         print *, 'Galaxy ', gal_id_string,': finished after', &
             (cpu_time_finish -cpu_time_start), ' s  CPU time'
       endif
-
-      open(20,file= 'diagnostic.out',status="old",position="append")
-      write(20,*) "simulation time in seconds: ", (cpu_time_finish -cpu_time_start)
-      close(20)
-
       flag=-1  !Tell calldynamo that simulation was successful
-      iread=0  !Reset iread
+      call reset_input_params()  !Reset iread
     end subroutine dynamo_run
 end module dynamo
 !*****************************************************

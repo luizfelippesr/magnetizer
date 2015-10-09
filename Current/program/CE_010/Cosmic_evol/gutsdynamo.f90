@@ -27,7 +27,7 @@ module var  !Contains subroutine for setting the number of variables for which t
     end subroutine init_var
 end module var
 !*****************************************************
-module ts_arrays  !Contains subroutine that stores time series data (n1 snapshots, separated by n2 timesteps)
+module ts_arrays  !Contains subroutine that stores time series data (n1 snapshots, separated by nsteps timesteps)
 !
   use global_input_parameters
   use var
@@ -82,6 +82,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
       double precision, dimension(nx), intent(in) :: Beq
 
       ! lfsr: previously, here it was it+1 instead of it, why?
+      ! lfsr: mabe to store the initial condition?
       ts_t(it)=       t
       ts_rmax(it)=    rmax
       ts_delta_r(it)= delta_r
@@ -151,42 +152,31 @@ module initial_conditions  !Set initial conditions
 !
   contains
     subroutine init_seed(f)
-!
+
       integer :: iseed,var
       double precision, dimension(nx) :: Bseed
       double precision, dimension(nx,nvar), intent(inout) :: f
-      double precision, dimension(nx) :: tmp
-!
+
       Bseed=frac_seed*Beq
-!
+
       f(:,:)=0.d0 !Initialize
-!
+
       if (Rand_seed) then  
         do var=1,2 !Seed r and phi components of B
-        do iseed=1,nx
-          f(iseed,var)=Bseed(iseed)*random_normal()
-        enddo
+          do iseed=1,nx
+            f(iseed,var)=Bseed(iseed)*random_normal()
+          enddo
         enddo
       else
-!        f(:,1)=-Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
-!        f(:,2)= Bseed*r/(r_disk-dx)*(1.d0-r/(r_disk-dx))**nn*dexp(-r/r1)
-!        f(:,1)=-Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
         ! NB the old 'r_disk' variable is now always 1.0 in code units
-        tmp = 1.d0-r
-        where (tmp /= 0.0)
-          tmp = 1./tmp
-        elsewhere
-          tmp = sqrt(tiny(tmp))
-        end where
-        f(:,1)=-Bseed*r/tmp**nn*dexp(-r/r1)
-!        f(:,2)= Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
-        f(:,2)= Bseed*r/tmp**nn*dexp(-r/r1)
+!       f(:,1)=-Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
+        f(:,1)=-Bseed*r*(1.d0-r)**nn*dexp(-r/r1)
+!       f(:,2)= Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
+        f(:,2)= Bseed*r*(1.d0-r)**nn*dexp(-r/r1)
       endif
+
       call impose_bc(f)
-!      print*,'Seed field: Br        =',f(:,1)
-!      print*,'            Bphi      =',f(:,2)
-!      print*,'Seed field: Br   (mkG)=',f(:,1)*B0_mkG/B0
-!      print*,'            Bphi (mkG)=',f(:,2)*B0_mkG/B0
+      
     end subroutine init_seed
 end module initial_conditions
 !*****************************************************
@@ -542,7 +532,7 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,''
         print*,'NUMERICS:'
         print*,'nvar=     ',nvar     
-        print*,'dt=       ',dt       ,'   n1=       ',n1       ,'   n2=     ',n2
+        print*,'dt=       ',dt       ,'   n1=       ',n1       ,'   nsteps=     ',nsteps
         print*,'dx=       ',dx       ,'   nxphys=   ',nxphys   ,'   nxghost=',nxghost,'   nx=',nx
         print*,'minval(x)=',minval(x),'   maxval(x)=',maxval(x)
         print*,''
@@ -550,7 +540,7 @@ module diagnostic  !Writes diagnostic information to screen, file
 !         print*,'r_kpc=',r_kpc
         print*,''
         print*,'MODULES:' 
-        print*,'Read_param= ',Read_param ,'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
+        print*,'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
         print*,'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
         print*,'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
         print*,'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
@@ -584,7 +574,7 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),''
       write(20,*),'NUMERICS:'
       write(20,*),'nvar=     ',nvar     
-      write(20,*),'dt=       ',dt       ,'   n1=       ',n1       ,'   n2=     ',n2
+      write(20,*),'dt=       ',dt       ,'   n1=       ',n1       ,'   nsteps=     ',nsteps
       write(20,*),'dx=       ',dx       ,'   nxphys=   ',nxphys   ,'   nxghost=',nxghost,'   nx=',nx
       write(20,*),'minval(x)=',minval(x),'   maxval(x)=',maxval(x)
       write(20,*),''
@@ -592,7 +582,7 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),'r_kpc=',r_kpc
       write(20,*),''
       write(20,*),'MODULES:' 
-      write(20,*),'Read_param= ',Read_param ,'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
+      write(20,*),'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
       write(20,*),'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
       write(20,*),'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
       write(20,*),'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
@@ -643,121 +633,60 @@ module initial_data_dump
       integer, parameter :: diag_unit = 20
 !
 !     WRITE DATA TO FILE "param.out"
-      if (info> 0) then
-        print*,''
-        print*,'Writing parameters to file param',gal_id_string,'.out'
-      endif
-      open(diag_unit,file= 'diagnostic.out',status="old",position="append")
-      write(diag_unit,*)''
-      write(diag_unit,*)'Writing parameters to file param',gal_id_string,'.out'
-      close(diag_unit)
-      open(10,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
-                    // '/param_' // gal_id_string // '.out',status="replace")
-      write(10,*)t0_Gyr,t0_kpcskm,h0_kpc,etat0_cm2s,n0_cm3,B0_mkG
-      write(10,*)nvar,dt,n1,n2,dx,nxphys,nxghost,nx
-      write(10,*)l_sol_kpc,r_l_kpc,v_sol_kms,r_v_kpc,n_sol_cm3,r_n_kpc,Uz_sol_kms,r_Uz_kpc, &
-                 h_sol_kpc,r_h_kpc,Uphi_halfmass_kms,r_disk,R_kappa
-      write(10,*)r_in,r_max_kpc,r_sol_kpc,r1_kpc,ctau,nn,lambda,C_alp,alpceil,Rm_inv
-      write(10,*)etat_sol_cm2s,td_sol_Gyr,tau_sol_Gyr,etat_sol,td_sol,tau_sol
-      close(10)
-      if (info> 0) then
-        print*,'Finished writing parameters to file param',gal_id_string,'.out'
-        print*,'Writing initial output to file init',gal_id_string,'.out'
-      endif
-      open(diag_unit,file= 'diagnostic.out',status="old",position="append")
-      write(diag_unit,*)'Finished writing parameters to file param',gal_id_string,'.out'
-      write(diag_unit,*)'Writing initial output to file init',gal_id_string,'.out'
-      write(diag_unit,*)''
-      close(diag_unit)
+!       if (info> 0) then
+!         print*,''
+!         print*,'Writing parameters to file param',gal_id_string,'.out'
+!       endif
+!       open(diag_unit,file= 'diagnostic.out',status="old",position="append")
+!       write(diag_unit,*)''
+!       write(diag_unit,*)'Writing parameters to file param',gal_id_string,'.out'
+!       close(diag_unit)
+!       open(10,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
+!                     // '/param_' // gal_id_string // '.out',status="replace")
+!       write(10,*)t0_Gyr,t0_kpcskm,h0_kpc,etat0_cm2s,n0_cm3,B0_mkG
+!       write(10,*)nvar,dt,n1,nsteps,dx,nxphys,nxghost,nx
+!       write(10,*)l_sol_kpc,r_l_kpc,v_sol_kms,r_v_kpc,n_sol_cm3,r_n_kpc,Uz_sol_kms,r_Uz_kpc, &
+!                  h_sol_kpc,r_h_kpc,Uphi_halfmass_kms,r_disk,R_kappa
+!       write(10,*)r_in,r_max_kpc,r_sol_kpc,r1_kpc,ctau,nn,lambda,C_alp,alpceil,Rm_inv
+!       write(10,*)etat_sol_cm2s,td_sol_Gyr,tau_sol_Gyr,etat_sol,td_sol,tau_sol
+!       close(10)
+!       if (info> 0) then
+!         print*,'Finished writing parameters to file param',gal_id_string,'.out'
+!         print*,'Writing initial output to file init',gal_id_string,'.out'
+!       endif
+!       open(diag_unit,file= 'diagnostic.out',status="old",position="append")
+!       write(diag_unit,*)'Finished writing parameters to file param',gal_id_string,'.out'
+!       write(diag_unit,*)'Writing initial output to file init',gal_id_string,'.out'
+!       write(diag_unit,*)''
+!       close(diag_unit)
 !
 !     WRITE DATA TO FILE "init.out"
-      open(11,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
-                    // '/init_' // gal_id_string // '.out' ,status="replace")
-      write(11,*)r
-      write(11,*)h
-      write(11,*)om
-      write(11,*)G
-      write(11,*)Uz
-      write(11,*)Ur
-      write(11,*)l
-      write(11,*)v
-      write(11,*)etat
-      write(11,*)tau
-      write(11,*)alp_k
-      write(11,*)n
-      write(11,*)Beq
-      write(11,*)f(:,1)
-      write(11,*)f(:,2)
-      write(11,*)Bzmod
-      write(11,*)alp
-      close(11)
-      if (info> 0) then
-        print*,'Finished writing initial output to file init',gal_id_string,'.out'
-      endif
-      open(diag_unit,file= 'diagnostic.out',status="old",position="append")
-      write(diag_unit,*)'Finished writing initial output to file init',gal_id_string,'.out'
-      close(diag_unit)
+!       open(11,file= trim(path_to_input_directories) // '/output/' // trim(model_name) &
+!                     // '/init_' // gal_id_string // '.out' ,status="replace")
+!       write(11,*)r
+!       write(11,*)h
+!       write(11,*)om
+!       write(11,*)G
+!       write(11,*)Uz
+!       write(11,*)Ur
+!       write(11,*)l
+!       write(11,*)v
+!       write(11,*)etat
+!       write(11,*)tau
+!       write(11,*)alp_k
+!       write(11,*)n
+!       write(11,*)Beq
+!       write(11,*)f(:,1)
+!       write(11,*)f(:,2)
+!       write(11,*)Bzmod
+!       write(11,*)alp
+!       close(11)
+!       if (info> 0) then
+!         print*,'Finished writing initial output to file init',gal_id_string,'.out'
+!       endif
+!       open(diag_unit,file= 'diagnostic.out',status="old",position="append")
+!       write(diag_unit,*)'Finished writing initial output to file init',gal_id_string,'.out'
+!       close(diag_unit)
     end subroutine write_initial_data
 end module initial_data_dump
-!*****************************************************
-module start  !Contains initialization routine for simulation
-  use math_constants
-  use units
-  use input_params
-  use calc_params
-  use grid
-  use global_input_parameters
-  use galaxy_model
-  use initial_conditions
-  use var
-  use equ
-  use bzcalc
-  use diagnostic
-  use initial_data_dump
-!
-  implicit none
-  double precision, allocatable, dimension(:,:) :: f, dfdt
-!
-  contains
-    subroutine init_start(gal_id_string,info)
-!
-      character (len=8), intent(in) :: gal_id_string
-      integer, intent(in) :: info
-!
-!     INITIALIZE VARIABLE ARRAY
-      call init_var
-!
-      if (.not. allocated(f)) allocate(f(nx,nvar)) !Copied from Pitch/run.f90
-      if (.not. allocated(dfdt)) allocate(dfdt(nx,nvar)) !Copied from Pitch/run.f90
-!
-!     SET INPUT PARAMETERS
-      call set_input_params(gal_id_string,info) ! lfsr:why was this commented out?
-!
-!     SET UP NUMERICS AND PLOTTING
-      call construct_grid
-!
-!     SET UP GALAXY MODEL
-      call construct_galaxy_model(gal_id_string,info)
-!
-!     SEED FIELD
-      call init_seed(f)
-!  
-!     CALCULATE |Bz|
-      call estimate_Bzmod(f)
-!
-      if (.not.Turb_dif) then
-        etat=0.d0
-      endif
-!
-      if (.not.Advect) then
-        om=0.d0
-      endif
-!
-!     PRINT INFO TO SCREEN AND DIAGNOSTIC FILE "diagnostic.out"
-      call print_info(info)
-!
-!     WRITE INITIAL DATA TO FILES "param.out" and "init.out" and continue appending "diagnostic.out"
-      call write_initial_data(f,gal_id_string,info)
-    end subroutine init_start
-end module start
 !*****************************************************

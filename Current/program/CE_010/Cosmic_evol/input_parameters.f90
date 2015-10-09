@@ -15,10 +15,10 @@ module input_params
   ! Time-stepping parameters
   integer, parameter :: n1= max_number_of_redshifts!420   !Number of snapshots
   integer :: nread= 1 !Read in new input parameters every nread snapshots
-  integer, parameter :: nscreen= 2  !Print output to screen every nscreen*n2 timesteps
+  integer, parameter :: nscreen= 2  !Print output to screen every nscreen*nsteps timesteps
   double precision :: tsnap !Time between successive snapshots
-  integer :: n2  !Number of timesteps in between snapshots
-  double precision :: dt,t=-1.d0,first=0.d0, eps_t=0.5!eps_t=0.005d0
+  integer :: nsteps=20  !Number of timesteps in between snapshots
+  double precision :: dt,t=-1.d0,first=0.d0
 
   double precision, private :: time_between_inputs=0
   
@@ -38,17 +38,14 @@ module input_params
   double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
-
   contains
    subroutine set_ts_params()
       use units
 
       tsnap = time_between_inputs/t0_Gyr
-      n2 = max(nint(tsnap/t0_Gyr/eps_t),1)  !Change n2 by changing eps_t
-      dt = tsnap/n2  !Timestep in units of t0=h0^2/etat0
+      dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
       
-      print*,'n2,dt,iread=',n2,dt,iread
-      print*,'Uz_sol_kms=',Uz_sol_kms
+      print*,'nsteps,dt,iread=',nsteps,dt,iread
       print*,''
     endsubroutine set_ts_params
 

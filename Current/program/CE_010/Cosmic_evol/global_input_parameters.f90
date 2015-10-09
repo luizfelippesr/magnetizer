@@ -14,9 +14,9 @@ module global_input_parameters
   integer :: info = 2
   
   ! PARAMETER INPUTS
-  !Set to T to read in parameters from file, set to F to use defaults
-  logical :: Read_param= .true.
-
+  ! Number of timesteps used in the calculation between 2 snapshots
+  double precision :: nsteps_0 = 30 
+  
   ! PARAMETER INPUTS
   ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
   logical :: Time_evol= .true.
@@ -89,7 +89,8 @@ module global_input_parameters
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
-    Read_param, Time_evol, &
+    nsteps_0, &
+    Time_evol, &
     info, &
     ngals, &
 !     max_number_of_redshifts, & ! lfsr: this will be added later  (TODO)

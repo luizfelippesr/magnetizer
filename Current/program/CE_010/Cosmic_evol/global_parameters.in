@@ -10,9 +10,6 @@
   ! Defines verbosity level
   info = 1
   ! PARAMETER INPUTS
-  !Set to T to read in parameters from file, set to F to use defaults
-  Read_param = .true.
-  ! PARAMETER INPUTS
   ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
   Time_evol = .true.
 !   max_number_of_redshifts = 10   ! This will be added later

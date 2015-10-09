@@ -137,6 +137,17 @@ contains
       enddo
     endif
     alp_k_kms = alp_k*h0_km/h0/t0_s*t0
+    
+    ! Overrides previous definitions if these options were selected in the 
+    ! global parameters file
+    if (.not.Turb_dif) then
+        etat=0.d0
+      endif
+
+      if (.not.Advect) then
+        om=0.d0
+      endif
+    
   end subroutine construct_profiles
 
   subroutine disk_rotation_curve(r, r_disk, v_disk, Om, G)

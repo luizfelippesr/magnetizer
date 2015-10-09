@@ -4,14 +4,13 @@ module output
   implicit none
   
 contains
-  subroutine write_output(f,gal_id)
+  subroutine write_output(gal_id)
     ! Writes the output
     use global_input_parameters
     use galaxy_model
     use bzcalc
     use ts_arrays
 
-    double precision, dimension(nx,nvar), intent(in) :: f
     integer, intent(in) :: gal_id
     
     ! Writes any meta information about the run

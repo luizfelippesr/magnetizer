@@ -64,7 +64,7 @@ module dynamo
       
       ! Loops through the SAM's snapshots
       do it=1,n1  
-        print *, 'Galaxy ',gal_id_string, ' it=',it
+        if (info>0) print *, 'Main loop: Galaxy ',gal_id_string, ' it=',it
 
         ! Initializes the number of steps to the global input value
         nsteps = nsteps_0 
@@ -75,10 +75,12 @@ module dynamo
         ! timestep choices, if there is no success, aborts.
         do fail_count=0, MAX_FAILS
           ok = .true.
-          
           ! Loops through the timesteps
           do jt=1,nsteps
-            print *, 'Galaxy ',gal_id_string, ' jt=',jt
+            if (info>0) then
+              print *, 'Inner loop: Galaxy ',gal_id_string, ' jt=',jt, &
+                      'nsteps=',nsteps, ' fail_count=',fail_count
+            endif
             ! Runs Runge-Kutta time-stepping routine
             call rk(f, dfdt)  
             
@@ -95,10 +97,9 @@ module dynamo
           
           ! Otherwise, the calculation needs to be remade with a smaller
           ! timestep
-          if (info>0) then
+          if (info>1) then
             print *, 'Galaxy ',gal_id_string, &
             ': NANs or unrealistically large magnetic fields detected, changing time step'
-            print *, 'nsteps',nsteps
           endif
           
           ! Doubles the number of timesteps
@@ -125,19 +126,23 @@ module dynamo
         else
           ! If the run was unsuccessful, leaves the ts arrays with INVALID 
           ! values, except for ts_t (so that one knows when did things break)
-          ts_t(it) = t !lfsr: actually, this very ugly... this variable 
-                       !shouldn't be accessible at all!
-          dfdt = 0.0  ! Same here 
-          f = 0.0
+          print *,'teste',it, t_Gyr
+          
+          ts_t(it) = t_Gyr !lfsr: actually, this very ugly... this variable 
+                           !shouldn't be accessible at all!
           ! Resets the f array and adds a seed field 
+          dfdt = 0.0  ! lfsr: Ugly as well... 
+          f = 0.0  ! lfsr: Same here...
           call init_seed(f)
           ! Calculates |Bz|
           call estimate_Bzmod(f)
         endif
 
         ! Breaks loop if there are no more snapshots in the input
-        if (last_output) exit        
+        if (last_output) exit 
         
+        ! Reads in the model parameters for the next snapshot
+        call set_input_params(gal_id_string,info)  
       end do  ! snapshots loop
       
       call write_output(gal_id)  !Writes final simulation output
@@ -150,6 +155,8 @@ module dynamo
       endif
       flag=-1  !Tell calldynamo that simulation was successful
       call reset_input_params()  !Reset iread
+      ! Resets the arrays which store the time series
+      call reset_ts_arrays()  
     end subroutine dynamo_run
 end module dynamo
 !*****************************************************

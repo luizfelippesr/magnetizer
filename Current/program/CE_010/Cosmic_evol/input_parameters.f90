@@ -14,15 +14,14 @@ module input_params
 
   ! Time-stepping parameters
   integer, parameter :: n1= max_number_of_redshifts!420   !Number of snapshots
-  integer :: nread= 1 !Read in new input parameters every nread snapshots
-  integer, parameter :: nscreen= 2  !Print output to screen every nscreen*nsteps timesteps
   double precision :: tsnap !Time between successive snapshots
   integer :: nsteps=20  !Number of timesteps in between snapshots
-  double precision :: dt,t=-1.d0,first=0.d0
+  double precision :: dt,t=0,first=0.d0 !Timestep variables (lfsr: a very bad place to define them, indeed)
 
   double precision, private :: time_between_inputs=0
   
   ! Galaxy parameters
+  double precision :: t_Gyr
   double precision :: r_max_kpc, R_kappa
   double precision :: l_sol_kpc, r_l_kpc
   double precision :: v_sol_kms, r_v_kpc
@@ -45,8 +44,6 @@ module input_params
       tsnap = time_between_inputs/t0_Gyr
       dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
       
-      print*,'nsteps,dt,iread=',nsteps,dt,iread
-      print*,''
     endsubroutine set_ts_params
 
 
@@ -59,8 +56,11 @@ module input_params
       integer i
       integer             :: stat
 
+      ! Saves current galaxy identifier
       current_gal_id_string = gal_id_string
-
+      ! Resets galaxy data array
+      galaxy_data(:,:) = -1
+      
       ! Reads time-dependent parameter values
       open(u_indep, file = trim(path_to_input_directories) // '/input/'  &
                             // trim(model_name) // '/time_indep_params_' &
@@ -76,13 +76,18 @@ module input_params
       read(u_dep,*) header_time_dep ! Discards header
       do i=1, max_number_of_redshifts
         read(u_dep, *, iostat=stat) galaxy_data(i,:)
-        if (stat == iostat_end) exit
+        ! Leaves if no newline is found (and 'i' will be its index)
+        if (stat == iostat_end) exit 
+        ! Apparently, some compilers always read a newline (even if there is
+        ! none). The following workaround avoids this problem.
+        if (galaxy_data(i,1) < 1e-3) then
+          galaxy_data(i,:) = -1
+          exit
+        endif
       enddo
       close(u_dep)
-
       ! Flags abscence of any other values with negatives
       galaxy_data(i:max_number_of_redshifts,:) = -1
-
     endsubroutine read_input_parameters
 
 
@@ -99,7 +104,8 @@ module input_params
 
       character (len=8), intent(in) :: gal_id_string
       integer, intent(in) :: info
-      real :: next_time_input
+      double precision :: next_time_input
+      double precision :: current_time_input
 
       ! Reads the whole file on first access
       if (gal_id_string /= current_gal_id_string) then
@@ -107,25 +113,28 @@ module input_params
       endif
 
       iread=iread+1
-
+      
       next_time_input = galaxy_data(iread+1,1)
+      current_time_input = galaxy_data(iread,1)
+      
       if ( next_time_input > 0 ) then
-        time_between_inputs = galaxy_data(iread+1,1)-galaxy_data(iread,1)
+        time_between_inputs = next_time_input-current_time_input
+        t = 0 ! At each snapshot, reset the time variable
         call set_ts_params()
       else
         last_output = .true.
       endif
-
-      l_sol_kpc    = galaxy_data(iread,2)
-      r_l_kpc      = galaxy_data(iread,3)
-      v_sol_kms    = galaxy_data(iread,4)
-      r_v_kpc      = galaxy_data(iread,5)
-      n_sol_cm3    = galaxy_data(iread,6)
-      r_n_kpc      = galaxy_data(iread,7)
-      Uz_sol_kms   = galaxy_data(iread,8)
-      r_Uz_kpc     = galaxy_data(iread,9)
-      h_sol_kpc    = galaxy_data(iread,10)
-      r_h_kpc      = galaxy_data(iread,11)
+      t_Gyr      = galaxy_data(iread,1)
+      l_sol_kpc  = galaxy_data(iread,2)
+      r_l_kpc    = galaxy_data(iread,3)
+      v_sol_kms  = galaxy_data(iread,4)
+      r_v_kpc    = galaxy_data(iread,5)
+      n_sol_cm3  = galaxy_data(iread,6)
+      r_n_kpc    = galaxy_data(iread,7)
+      Uz_sol_kms = galaxy_data(iread,8)
+      r_Uz_kpc   = galaxy_data(iread,9)
+      h_sol_kpc  = galaxy_data(iread,10)
+      r_h_kpc    = galaxy_data(iread,11)
       r_disk  = galaxy_data(iread,12)
       v_disk  = galaxy_data(iread,13)
       r_bulge = galaxy_data(iread,14)

@@ -18,7 +18,7 @@ contains
     print *, 'Galaxy',gal_id,' -> IO initialised' ! TO BE REMOVED
     
     call IO_write_dataset('t', gal_id, info,ts_t)
-    call IO_write_dataset('dt', gal_id, info,ts_dt)
+!     call IO_write_dataset('dt', gal_id, info,ts_dt)
     call IO_write_dataset('Br', gal_id, info,ts_Br(:iread-1,:))
     call IO_write_dataset('Bp', gal_id, info,ts_Bp(:iread-1,:))
     if (Dyn_quench) then

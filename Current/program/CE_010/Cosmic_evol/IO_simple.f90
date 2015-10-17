@@ -23,11 +23,13 @@ module IO
         
 contains
 
-  subroutine IO_start(path_to_model, output_file)
+  subroutine IO_start(path_to_model, output_file, mpi_comm, mpi_info)
     ! Initializes IO
     ! The output file is NOT used with this IO settings
     
     character(len=*), intent(in) :: path_to_model, output_file   
+    integer, intent(in), optional :: mpi_comm, mpi_info
+
     
     if (Initialized) then
       error stop 'Fatal Error: start_IO trying to initialize already initialized IO'

@@ -69,12 +69,10 @@ contains
     endif
     Uz_kms = Uz*h0_km/h0/t0_s*t0
 
-
     ! RADIAL VELOCITY PROFILE
     Ur = Ur_sol
     dUrdr = 0.d0
     d2Urdr2 = 0.d0
-
 
     Ur_kms = Ur*h0_km/h0/t0_s*t0
 
@@ -222,7 +220,7 @@ contains
 
     y = abs(r)/ (r_bulge/a_to_r50)
 
-    v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-1)
+    v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-2)
     v = v_bulge * sqrt(v)
     Om = v/abs(r)
     G = Om ! NEEDS TO BE ADDED

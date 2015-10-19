@@ -8,27 +8,27 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   implicit none
 
   double precision, parameter :: INVALID = -99999d0
-  double precision, dimension(n1+1) :: ts_t = INVALID
-  double precision, dimension(n1+1) :: ts_Dt = INVALID
-  double precision, dimension(n1+1) :: ts_rmax = INVALID
-  double precision, dimension(n1+1) :: ts_delta_r = INVALID
-  double precision, dimension(n1+1,nx) :: ts_Br = INVALID
-  double precision, dimension(n1+1,nx) :: ts_Bp = INVALID
-  double precision, dimension(n1+1,nx) :: ts_alp_m = INVALID
-  double precision, dimension(n1+1,nx) :: ts_Bzmod = INVALID
-  double precision, dimension(n1+1,nx) :: ts_h = INVALID
-  double precision, dimension(n1+1,nx) :: ts_om = INVALID
-  double precision, dimension(n1+1,nx) :: ts_G = INVALID
-  double precision, dimension(n1+1,nx) :: ts_l = INVALID
-  double precision, dimension(n1+1,nx) :: ts_v = INVALID
-  double precision, dimension(n1+1,nx) :: ts_etat = INVALID
-  double precision, dimension(n1+1,nx) :: ts_tau = INVALID
-  double precision, dimension(n1+1,nx) :: ts_alp_k = INVALID
-  double precision, dimension(n1+1,nx) :: ts_alp = INVALID
-  double precision, dimension(n1+1,nx) :: ts_Uz = INVALID
-  double precision, dimension(n1+1,nx) :: ts_Ur = INVALID
-  double precision, dimension(n1+1,nx) :: ts_n = INVALID
-  double precision, dimension(n1+1,nx) :: ts_Beq = INVALID
+  double precision, dimension(n1) :: ts_t_Gyr = INVALID
+  double precision, dimension(n1) :: ts_Dt = INVALID
+  double precision, dimension(n1) :: ts_rmax = INVALID
+  double precision, dimension(n1) :: ts_delta_r = INVALID
+  double precision, dimension(n1,nx) :: ts_Br = INVALID
+  double precision, dimension(n1,nx) :: ts_Bp = INVALID
+  double precision, dimension(n1,nx) :: ts_alp_m = INVALID
+  double precision, dimension(n1,nx) :: ts_Bzmod = INVALID
+  double precision, dimension(n1,nx) :: ts_h = INVALID
+  double precision, dimension(n1,nx) :: ts_om = INVALID
+  double precision, dimension(n1,nx) :: ts_G = INVALID
+  double precision, dimension(n1,nx) :: ts_l = INVALID
+  double precision, dimension(n1,nx) :: ts_v = INVALID
+  double precision, dimension(n1,nx) :: ts_etat = INVALID
+  double precision, dimension(n1,nx) :: ts_tau = INVALID
+  double precision, dimension(n1,nx) :: ts_alp_k = INVALID
+  double precision, dimension(n1,nx) :: ts_alp = INVALID
+  double precision, dimension(n1,nx) :: ts_Uz = INVALID
+  double precision, dimension(n1,nx) :: ts_Ur = INVALID
+  double precision, dimension(n1,nx) :: ts_n = INVALID
+  double precision, dimension(n1,nx) :: ts_Beq = INVALID
 
 contains
   subroutine make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
@@ -58,7 +58,7 @@ contains
     
     ! lfsr: previously, here it was it+1 instead of it, why?
     ! lfsr: mabe to store the initial condition?
-    ts_t(it) = t_Gyr
+    ts_t_Gyr(it) = t_Gyr
     ts_Dt(it) = t*t0_Gyr
     ts_rmax(it) = rmax
     ts_delta_r(it) = delta_r
@@ -89,7 +89,7 @@ contains
   
   subroutine reset_ts_arrays()
     ! Resets the time series arrays
-    ts_t(:) = INVALID
+    ts_t_Gyr(:) = INVALID
     ts_Dt(:) = INVALID
     ts_rmax(:) = INVALID
     ts_delta_r(:) = INVALID

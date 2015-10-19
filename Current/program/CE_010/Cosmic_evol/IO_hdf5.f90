@@ -51,7 +51,7 @@ contains
     if (Initialized) then
       error stop 'Fatal Error: start_IO trying to initialize already initialized IO'
     endif
-    
+
     filename = path_to_model // '/' // output_file
     
     ! Initializes predefined datatypes
@@ -66,11 +66,11 @@ contains
     call h5pclose_f(plist_id, error)
     
     ! Sets dataset dimensions.
-    dimsf_vec = (/nx,max_number_of_redshifts,ngals/) 
-    dimsf_sca = (/max_number_of_redshifts,ngals/) 
+    dimsf_vec = (/max_number_of_redshifts,nx,ngals/)
+    dimsf_sca = (/max_number_of_redshifts,ngals/)
     ! Sets the dimensions associated with writing a single galaxy
-    dimsf_vec_1gal = (/nx,max_number_of_redshifts,1/) 
-    dimsf_sca_1gal = (/max_number_of_redshifts,1/) 
+    dimsf_vec_1gal = (/max_number_of_redshifts,nx,1/)
+    dimsf_sca_1gal = (/max_number_of_redshifts,1/)
     
     Initialized = .true.
     
@@ -132,24 +132,24 @@ contains
     integer ::  idx, error
     integer, parameter :: rank = 3
     integer(hssize_t), dimension(3) :: offset 
-! 
-!     ! Tries to find a previously opened dataset (-1 signals new)
-!     idx = find_dset(dataset_name)
-!     ! If it wasn't previously opened, creates it (collectively)
-!     if (idx < 0) then
-!       idx = create_dset(dataset_name)
-!       call h5screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error) 
-!       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
-!     end if
-!     
-!     ! Selects hyperslab in the file.
-!     offset = (/0,0,gal_id-1/) ! Means: in third dimension, start from gal_id-1
-!     call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, & 
-!                                offset, dimsf_vec_1gal, error)
-!     ! At last, writes the dataset
-!     call h5dwrite_f(dset_ids(idx), H5T_NATIVE_integer, data, dimsf_vec, error, &
-!                     file_space_id=dataspace_ids(idx), &
-!                     mem_space_id=memspace_ids(idx))
+
+    ! Tries to find a previously opened dataset (-1 signals new)
+    idx = find_dset(dataset_name)
+    ! If it wasn't previously opened, creates it (collectively)
+    if (idx < 0) then
+      idx = create_dset(dataset_name)
+      call h5screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error) 
+      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+    end if
+    
+    ! Selects hyperslab in the file.
+    offset = (/0,0,gal_id-1/) ! Means: in third dimension, start from gal_id-1
+    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, & 
+                               offset, dimsf_vec_1gal, error)
+    ! At last, writes the dataset
+    call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error, &
+                    file_space_id=dataspace_ids(idx), &
+                    mem_space_id=memspace_ids(idx))
                     
     return    
     

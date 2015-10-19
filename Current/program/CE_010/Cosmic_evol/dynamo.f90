@@ -26,7 +26,7 @@ module dynamo
       integer :: fail_count
       character(len=8) :: frmt
       character(len=8) :: gal_id_string
-      integer, parameter :: MAX_FAILS=5
+      integer, parameter :: MAX_FAILS=30
 
       
       frmt='(I8.8)'
@@ -77,16 +77,19 @@ module dynamo
           ok = .true.
           ! Loops through the timesteps
           do jt=1,nsteps
-            if (info>0) then
+            if (info>2) then
               print *, 'Inner loop: Galaxy ',gal_id_string, ' jt=',jt, &
                       'nsteps=',nsteps, ' fail_count=',fail_count
             endif
             ! Runs Runge-Kutta time-stepping routine
             call rk(f, dfdt)  
             
+            print *, 't_Gyr',t_Gyr, 'jt',jt, f(nxghost+1+nxphys/2,1), f(nxghost+1+nxphys/2,2)
+            write (*,"(E8.2)") maxval(f)
+            
             ! If the magnetic field blows up or something else blows up
             ! flags and exit the loop
-            if (isnan(f(4+nxphys/2,1)) .or. maxval(f)>1.d10) then  
+            if (isnan(f(nxghost+1+nxphys/2,1)) .or. maxval(f)>1.d10) then  
               ok = .false.
               exit 
             endif
@@ -124,11 +127,11 @@ module dynamo
           ! Then, stores simulation output in arrays containing the time series
           call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)  
         else
+          print *, 'FAIL'
+          stop
           ! If the run was unsuccessful, leaves the ts arrays with INVALID 
           ! values, except for ts_t (so that one knows when did things break)
-          print *,'teste',it, t_Gyr
-          
-          ts_t(it) = t_Gyr !lfsr: actually, this very ugly... this variable 
+          ts_t_Gyr(it) = t_Gyr !lfsr: actually, this very ugly... this variable 
                            !shouldn't be accessible at all!
           ! Resets the f array and adds a seed field 
           dfdt = 0.0  ! lfsr: Ugly as well... 
@@ -151,7 +154,7 @@ module dynamo
       
       if (info>0) then
         print *, 'Galaxy ', gal_id_string,': finished after', &
-            (cpu_time_finish -cpu_time_start), ' s  CPU time'
+            (cpu_time_finish - cpu_time_start), ' s  CPU time'
       endif
       flag=-1  !Tell calldynamo that simulation was successful
       call reset_input_params()  !Reset iread

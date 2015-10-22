@@ -41,7 +41,9 @@ contains
     call IO_write_dataset('alp', gal_id, info,ts_alp(:,:))
 
     call IO_write_dataset('dt', gal_id, info,ts_dt)
-
+    
+    call IO_write_dataset('r', gal_id, info, ts_r)
+    
     if (info>2) print *, 'Galaxy',gal_id,' -> datasets written'
 
     call IO_finish_galaxy(gal_id, info)

@@ -23,11 +23,7 @@ module profiles
   double precision, dimension(nx), private :: G_d, G_b, G_h
 
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
-
-  private :: disk_rotation_curve
-  private :: bulge_rotation_curve
-  private :: halo_rotation_curve
-
+  
 contains
   subroutine construct_profiles
     integer :: i_halfmass
@@ -51,6 +47,7 @@ contains
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
     G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om_kmskpc
+
     ! Adjusts units to code units (set in units module)
     Om = Om_kmskpc/h0_km*h0_kpc*t0_s/t0
     G  = G_kmskpc /h0_km*h0_kpc*t0_s/t0
@@ -148,14 +145,14 @@ contains
     
   end subroutine construct_profiles
 
-  subroutine disk_rotation_curve(r, r_disk, v_disk, Om, G)
+  subroutine disk_rotation_curve(rx, r_disk, v_disk, Om, G)
     ! Computes the rotation curve associated with an exponential disk
-    ! Input:  r -> the radii where the rotation curve will be computed
+    ! Input:  rx -> the radii where the rotation curve will be computed
     !         r_disk ->  the half mass radius of the disk
     !         v_disk -> the circular velocity at r_disk
     ! Output: Om -> angular velocity profile
     !         G  -> shear profile
-    ! Info:   V^2 \propto y^2 [I0(y)K0(y)-I1(y)K1(y)] where y=r/r_s
+    ! Info:   V^2 \propto y^2 [I0(y)K0(y)-I1(y)K1(y)] where y=rx/r_s
     !         r_s --> the scale radius
     !         For the shear, see  http://is.gd/MnDKyS
     ! Ref:    Binney & Tremaine or  Mo, Bosch & White
@@ -163,12 +160,12 @@ contains
     use Bessel_Functions
     implicit none
     double precision, intent(in) :: r_disk, v_disk
-    double precision, dimension(:), intent(in)  :: r
-    double precision, dimension(size(r)) :: A
-    double precision, dimension(size(r)),intent(out) :: Om, G
+    double precision, dimension(:), intent(in)  :: rx
+    double precision, dimension(size(rx)) :: A
+    double precision, dimension(size(rx)),intent(out) :: Om, G
     double precision, parameter :: rs_to_r50 = 1.678346990d0
     double precision, parameter :: rmin_over_rmax=0.1
-    double precision, dimension(size(r)) :: y
+    double precision, dimension(size(rx)) :: y
     integer :: i
 
     ! Traps disks of negligible size
@@ -178,7 +175,7 @@ contains
       return
     end if
 
-    y = abs(r) / (r_disk/rs_to_r50)
+    y = abs(rx) / (r_disk/rs_to_r50)
 
     do i=1,nx
       A(i) = (  I0(y(i)) * K0(y(i))            &
@@ -199,7 +196,7 @@ contains
     return
   end subroutine disk_rotation_curve
 
-  subroutine bulge_rotation_curve(r, r_bulge, v_bulge, Om, G)
+  subroutine bulge_rotation_curve(rx, r_bulge, v_bulge, Om, G)
     ! Computes the rotation curve associated with an Hernquist profile
     ! Input:  r -> the radii where the rotation curve will be computed
     !         r_bulge ->  the half mass radius of the spheroid
@@ -211,23 +208,23 @@ contains
 
     implicit none
     double precision, intent(in) :: r_bulge, v_bulge
-    double precision, dimension(:), intent(in)  :: r
-    double precision, dimension(size(r)) :: v
-    double precision, dimension(size(r)),intent(out) :: Om, G
+    double precision, dimension(:), intent(in)  :: rx
+    double precision, dimension(size(rx)) :: v
+    double precision, dimension(size(rx)),intent(out) :: Om, G
     double precision, parameter :: a_to_r50 = 1.0d0/(sqrt(2.0d0)-1.0d0)
-    double precision, dimension(size(r)) :: y
+    double precision, dimension(size(rx)) :: y
     integer :: i
 
-    y = abs(r)/ (r_bulge/a_to_r50)
+    y = abs(rx)/ (r_bulge/a_to_r50)
 
     v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-2)
     v = v_bulge * sqrt(v)
-    Om = v/abs(r)
-    G = Om ! NEEDS TO BE ADDED
+    Om = v/abs(rx)
+    G = - Om ! NEEDS TO BE ADDED
 
   end subroutine bulge_rotation_curve
 
-  subroutine halo_rotation_curve(r, r_halo, v_halo, nfw_cs1, Om, G)
+  subroutine halo_rotation_curve(rx, r_halo, v_halo, nfw_cs1, Om, G)
     ! Computes the rotation curve associated with an NFW halo
     ! Warning: This ignores effects of adiabatic contraction!
     !          It need to be accounted for later
@@ -244,19 +241,28 @@ contains
 
     implicit none
     double precision, intent(in) :: r_halo, v_halo, nfw_cs1
-    double precision, dimension(:), intent(in)  :: r
-    double precision, dimension(size(r)) :: v
-    double precision, dimension(size(r)),intent(out) :: Om, G
-    double precision, dimension(size(r)) :: y
+    double precision, dimension(:), intent(in)  :: rx
+    double precision, dimension(size(rx)), intent(out) :: Om, G
+    double precision, dimension(size(rx)) :: v, dv
+    double precision, dimension(size(rx)) :: y
+    double precision, dimension(size(rx)) :: B
+    double precision :: A
     integer :: i
+    
+    y = abs(rx) / r_halo
 
-    y = abs(r)/r_halo
+    A = 1.0 / ( log((nfw_cs1+1d0)/nfw_cs1) - 1d0/(nfw_cs1+1d0) )
+    A = sqrt(A)
 
-    v = (log((nfw_cs1+y)/nfw_cs1) - y/(nfw_cs1+y)) / &
-                       (log((nfw_cs1+1d0)/nfw_cs1) - 1d0/(nfw_cs1+1d0)) / y
-    v = v_halo * sqrt(v)
-    Om = v/abs(r)
-    G = Om ! NEEDS TO BE ADDED
+    B = (log((nfw_cs1+y)/nfw_cs1) - y/(nfw_cs1+y)) / y
+    v = A * v_halo * sqrt(B)
+    
+    dv = 1.0/(nfw_cs1+y)**2-(log((nfw_cs1+y)/nfw_cs1)-y/(nfw_cs1+y))/y**2/2.0
+    dv = dv * A * v_halo
+    
+    Om = v/rx
+    G = dv - Om
+    
   end subroutine halo_rotation_curve
 
 end module profiles

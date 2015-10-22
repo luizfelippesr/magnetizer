@@ -30,6 +30,8 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, dimension(n1,nx) :: ts_n = INVALID
   double precision, dimension(n1,nx) :: ts_Beq = INVALID
 
+  double precision, dimension(n1,nx) :: ts_r = INVALID
+
 contains
   subroutine make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
     ! Saves the results of simulation (obtained for a particular snapshot it)
@@ -85,6 +87,8 @@ contains
     ts_n(it,:) =  n(:)
     ts_Beq(it,:) = Beq(:)
     ts_Bzmod(it,:) = Bzmod(:)
+    
+    ts_r(it,:) = r(:)
   end subroutine make_ts_arrays
   
   subroutine reset_ts_arrays()

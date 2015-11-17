@@ -22,7 +22,7 @@ module profiles
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
   double precision, dimension(nx), private :: G_d, G_b, G_h
   double precision :: rreg
-  double precision, parameter :: FAC = 0.15
+  double precision, parameter :: RREG_TO_RDISK = 0.15
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
   
 contains
@@ -50,7 +50,7 @@ contains
     G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om_kmskpc
 
     ! Regularises 
-    rreg = r_kpc(minloc(abs(r_kpc - FAC*r_disk),1))
+    rreg = r_kpc(minloc(abs(r_kpc - RREG_TO_RDISK*r_disk),1))
     call regularize(r_kpc, rreg, Om_kmskpc, G_kmskpc)    
     
     ! Adjusts units to code units (set in units module)

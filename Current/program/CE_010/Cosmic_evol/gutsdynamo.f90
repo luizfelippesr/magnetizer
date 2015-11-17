@@ -457,7 +457,8 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
         print*,'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
         print*,'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
-        print*,'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
+!         print*,'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
+        print*,'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Advect=     ',Advect
         print*,'Turb_dif=   ',Turb_dif
         print*,''
         print*,'INPUT PARAMETERS:'
@@ -499,7 +500,8 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
       write(20,*),'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
       write(20,*),'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
-      write(20,*),'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
+!       write(20,*),'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
+      write(20,*),'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Advect=     ',Advect
       write(20,*),'Turb_dif=   ',Turb_dif
       write(20,*),''
       write(20,*),'INPUT PARAMETERS:'

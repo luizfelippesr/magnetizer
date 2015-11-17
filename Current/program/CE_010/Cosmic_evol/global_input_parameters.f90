@@ -78,7 +78,7 @@ module global_input_parameters
 
   ! OMEGA EFFECT
   ! Set to T to include Omega effect in dynamo, 0 for alpha^2 dynamo
-  logical :: Shear= .true.
+!   logical :: Shear= .true.
 
   ! ADVECTION
   ! Set to F to turn off advection of the magnetic field
@@ -106,7 +106,7 @@ module global_input_parameters
     Om_Brandt, &
     Alp_squared, &
     Krause, &
-    Shear, &
+!     Shear, &
     Advect, &
     Turb_dif
 

@@ -56,7 +56,7 @@
   Krause= .true.
   ! OMEGA EFFECT
   ! Set to T to include Omega effect in dynamo, 0 for alpha^2 dynamo
-  Shear= .true.
+  ! Shear= .true.
   ! ADVECTION
   ! Set to F to turn off advection of the magnetic field
   Advect= .true.

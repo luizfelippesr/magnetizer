@@ -59,6 +59,7 @@ module input_constants  ! Contains physical, model-dependent, constants
 
   use math_constants
   implicit none
+  
   ! TURBULENCE
   !Ratio of tau (eddy turnover time) to correlation time of the turbulence
   double precision, parameter :: ctau= 1.d0
@@ -87,5 +88,7 @@ module input_constants  ! Contains physical, model-dependent, constants
   ! RANDOM MAGNETIC FIELD
   !Strength of the rms random magnetic field brms in units of Beq
   double precision, parameter :: fmag= 0.5d0
-
+  ! Exponential disk properties
+  ! Ratio between the scale radius and the half mass radius
+  double precision, parameter :: constDiskScaleToHalfMassRatio=1.678346990d0
 end module input_constants

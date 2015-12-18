@@ -87,6 +87,17 @@ module global_input_parameters
   ! TURBULENT DIFFUSION
   logical :: Turb_dif= .true.  !Set to F to turn off turbulent diffusion
 
+  ! Pressure and density calculations
+  character(len=25) :: p_pressure_procedure = 'simple'
+  character(len=25) :: p_density_procedure = 'simple'
+  
+  ! Sound speed (in km/s)
+  double precision :: p_sound_speed_km_s = 10d0
+  ! ratio between turbulent pressure and turbulent magnetic field pressure
+  double precision :: p_csi = 1d0
+  
+  
+  
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
     nsteps_0, &
@@ -108,7 +119,11 @@ module global_input_parameters
     Krause, &
 !     Shear, &
     Advect, &
-    Turb_dif
+    Turb_dif, &
+    p_pressure_procedure, &
+    p_density_procedure, &
+    p_csi, &
+    p_sound_speed_km_s
 
   contains
 

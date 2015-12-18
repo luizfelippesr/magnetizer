@@ -17,27 +17,37 @@ module profiles
   double precision, dimension(nx) :: tau, tau_Gyr, tau_s
   double precision :: tau_sol, tau_sol_Gyr, tau_sol_s
   double precision, dimension(nx) :: Beq, Beq_mkG
-  integer :: ialp_k, i
+  integer :: ialp_k
   double precision, dimension(nx) :: alp_k, alp_k_kms
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
-  double precision, dimension(nx), private :: G_d, G_b, G_h
+  double precision, dimension(nx), private :: G_d, G_b, G_h, B2
+  double precision, dimension(nx), private :: midplanePressure
   double precision :: rreg
   double precision, parameter :: RREG_TO_RDISK = 0.15
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
   
 contains
-  subroutine construct_profiles
-    integer :: i_halfmass
+  subroutine construct_profiles(initial, B2)
+    use pressureEquilibrium
+    use input_constants
+    logical, optional, intent(in) :: initial
+    double precision, dimension(nx), intent(in), optional :: B2
+    double precision, parameter :: Hmass=1.67372d-24 !g
+    double precision, dimension(nx) :: B_aux, rho_aux
+    double precision :: rho_ref
+    double precision, parameter :: INIT_RHO_TOL = 1d-4
+    integer, parameter :: I_REF = 4
+    logical :: initial_actual
+    integer :: i_halfmass, i
+    
+    if (present(initial)) then
+      initial_actual = initial
+    else
+      initial_actual = .false.
+    endif
+    
     ! Sets the 'reference radius' to the disk half-mass radius
     r_sol = r_disk/r_max_kpc
-
-    ! SCALE HEIGHT PROFILE
-    if (Flaring) then
-      h = h_sol * exp((r-r_sol)/r_h)
-    else
-      h = h_sol
-    endif
-    h_kpc = h*h0_kpc/h0
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component
@@ -69,6 +79,7 @@ contains
     else
       Uz = Uz_sol * exp(-(r-r_sol)/r_Uz)  !Decreasing with radius according to exponential
     endif
+    
     Uz_kms = Uz*h0_km/h0/t0_s*t0
 
     ! RADIAL VELOCITY PROFILE
@@ -77,14 +88,6 @@ contains
     d2Urdr2 = 0.d0
 
     Ur_kms = Ur*h0_km/h0/t0_s*t0
-
-    ! NUMBER DENSITY PROFILE
-    if (.not.Var_n) then
-      n = n_sol
-    else
-      n = n_sol * exp(-(r-r_sol)/r_n)
-    endif
-    n_cm3 = n * n0_cm3 / n0
 
     ! TURBULENT SCALE PROFILE
     if (.not.Var_l) then
@@ -105,7 +108,56 @@ contains
       dvdr = v / r_v
     endif
     v_kms = v * h0_km / h0 / t0_s*t0
+    
+    ! NUMBER DENSITY PROFILE
+    if (initial_actual) then
+      ! Sets the procedures if it is the initial call
+      call set_density_procedures(p_density_procedure, p_pressure_procedure)
+      ! Computes the midplane pressure
+      midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
+      ! Computes the density, initially in the abscense of large scale B
+      rho_aux = midplane_density(r_kpc, midplanePressure,        &
+                                 r_kpc*0d0, p_sound_speed_km_s,  &
+                                 4d0/3d0, p_csi) 
+      ! Stores a particular point as reference
+      rho_ref = rho_aux(I_REF)
+      ! Iterates to get the initial magnetic field and density
+      do i=1,100
+        ! Computes magnetic field as a fraction of equiparition field
+        ! (consistent with later initialization of the seed field)
+        B_aux = frac_seed * sqrt(4*pi*rho_aux)*v_kms*1d5 ! uses gaussian units
+        ! Gets density accordingly
+        rho_aux = midplane_density(r_kpc, midplanePressure,        &
+                                   r_kpc*0d0, p_sound_speed_km_s,  &
+                                   4d0/3d0, p_csi)
+        
+        if (abs(rho_ref-rho_aux(I_REF))/rho_ref < INIT_RHO_TOL) exit
+        ! Updates reference
+        rho_ref = rho_aux(I_REF)
+      end do
+    else
+      ! Computes the midplane pressure
+      midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
+      B_aux = B2
+    endif 
+       
+    n_cm3 = midplane_density(r_kpc, midplanePressure,    &
+                             r_kpc*0.0, p_sound_speed_km_s,     &
+                             4d0/3d0, p_csi) / Hmass
+    n = n_cm3 / n0_cm3 * n0
 
+    ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE
+    Beq = sqrt(4*pi*n) * v  !Formula for equiparition field strength
+    Beq_mkG = Beq * B0_mkG / B0
+
+    ! SCALE HEIGHT PROFILE
+    if (Flaring) then
+      h = h_sol * exp((r-r_sol)/r_h)
+    else
+      h = h_sol
+    endif
+    h_kpc = h*h0_kpc/h0
+    
     ! TURBULENT DIFFUSIVITY PROFILE
     etat = 1.d0/3*l*v  !Formula for etat from mixing length theory
     etat_cm2s = etat*h0_cm**2/h0**2/t0_s*t0
@@ -118,10 +170,6 @@ contains
     tau_sol=      ctau*l_sol/v_sol
     tau_sol_Gyr = ctau*tau_sol*t0_Gyr/t0
     tau_sol_s=    ctau*tau_sol*t0_s/t0
-
-    ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE
-    Beq = sqrt(4*pi*n) * v  !Formula for equiparition field strength
-    Beq_mkG = Beq * B0_mkG / B0
 
     ! KINETIC ALPHA PROFILE
     if (.not.Krause) then
@@ -163,14 +211,15 @@ contains
     ! Ref:    Binney & Tremaine or  Mo, Bosch & White
 
     use Bessel_Functions
+    use input_constants
     implicit none
     double precision, intent(in) :: r_disk, v_disk
     double precision, dimension(:), intent(in)  :: rx
     double precision, dimension(size(rx)) :: A
     double precision, dimension(size(rx)),intent(out) :: Omega, Shear
-    double precision, parameter :: rs_to_r50 = 1.678346990d0
     double precision, parameter :: rmin_over_rmax=0.1
     double precision, parameter :: TOO_SMALL=2e-7 ! chosen empirically 
+    double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, dimension(size(rx)) :: y
     integer :: i
     

@@ -53,10 +53,10 @@ module dynamo
       ! Sets other necessary parameters
       call set_calc_params  
       ! Constructs galaxy model for the initial snapshot
-      call construct_profiles()
+      call construct_profiles(initial=.true.)
       ! Adds a seed field to the f-array (uses the profile info)
       call init_seed(f)
-      ! Calculates |Bz|
+      ! Calculates |Bz| (uses profile info)
       call estimate_Bzmod(f)
       ! Backs up initial state
       f_old = f
@@ -69,7 +69,7 @@ module dynamo
         ! Initializes the number of steps to the global input value
         nsteps = nsteps_0 
         ! Constructs galaxy model for the present snapshot
-        if (it /= 1) call construct_profiles()
+        if (it /= 1) call construct_profiles(B2 = f(:,2)**2 + f(:,1)**2 + Bzmod**2)
           
         ! Will try to solve the equations a few times, with different 
         ! timestep choices, if there is no success, aborts.

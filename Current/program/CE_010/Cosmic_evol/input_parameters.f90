@@ -30,10 +30,11 @@ module input_params
   double precision :: h_sol_kpc, r_h_kpc
   double precision :: r_disk, v_disk
   double precision :: r_bulge, v_bulge
-  double precision :: r_halo, v_halo, nfw_cs1
+  double precision :: r_halo, v_halo, nfw_cs1 
+  double precision :: Mstars_disk, Mgas_disk
 
   ! All galaxy data (private!)
-  integer, private, parameter :: number_of_columns =18 ! Number of columns in the galaxy input files
+  integer, private, parameter :: number_of_columns =20 ! Number of columns in the galaxy input files
   double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
@@ -142,6 +143,8 @@ module input_params
       r_halo  = galaxy_data(iread,16)
       v_halo  = galaxy_data(iread,17)
       nfw_cs1 = galaxy_data(iread,18)
+      Mgas_disk = galaxy_data(iread,19)
+      Mstars_disk = galaxy_data(iread,20)
 
       if (info> 0) then
         print *,''

@@ -96,7 +96,9 @@ module global_input_parameters
   ! ratio between turbulent pressure and turbulent magnetic field pressure
   double precision :: p_csi = 1d0
   
-  
+  ! Adiabatic index of the ISM
+  double precision :: p_gamma = 5d0/3d0
+
   
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -123,7 +125,8 @@ module global_input_parameters
     p_pressure_procedure, &
     p_density_procedure, &
     p_csi, &
-    p_sound_speed_km_s
+    p_sound_speed_km_s, &
+    p_gamma
 
   contains
 

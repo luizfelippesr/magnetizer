@@ -91,4 +91,7 @@ module input_constants  ! Contains physical, model-dependent, constants
   ! Exponential disk properties
   ! Ratio between the scale radius and the half mass radius
   double precision, parameter :: constDiskScaleToHalfMassRatio=1.678346990d0
+  ! Hydrogren mass
+  double precision, parameter :: Hmass=1.67372d-24 !g
+
 end module input_constants

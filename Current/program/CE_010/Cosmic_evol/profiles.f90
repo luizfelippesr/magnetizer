@@ -32,7 +32,7 @@ contains
     use input_constants
     logical, optional, intent(in) :: initial
     double precision, dimension(nx), intent(in), optional :: B2
-    double precision, dimension(nx) :: B_aux, rho_aux
+    double precision, dimension(nx) :: B_aux, rho_cgs
     double precision :: rho_ref
     double precision, parameter :: INIT_RHO_TOL = 1d-4
     integer, parameter :: I_REF = 4
@@ -116,24 +116,24 @@ contains
       ! NB assuming the turbulent speed to be equal the sound speed
       midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
       ! Computes the density, initially in the abscense of large scale B
-      rho_aux = midplane_density(r_kpc, midplanePressure,        &
+      rho_cgs = midplane_density(r_kpc, midplanePressure,        &
                                  r_kpc*0d0, p_sound_speed_km_s,  &
                                  p_gamma, p_csi) 
       ! Stores a particular point as reference
-      rho_ref = rho_aux(I_REF)
+      rho_ref = rho_cgs(I_REF)
       ! Iterates to get the initial magnetic field and density
       do i=1,100
         ! Computes magnetic field as a fraction of equiparition field
         ! (consistent with later initialization of the seed field)
-        B_aux = frac_seed * sqrt(4*pi*rho_aux)*v_kms*1d5 ! uses gaussian units
+        B_aux = frac_seed * sqrt(4*pi*rho_cgs)*v_kms*1d5 ! uses gaussian units
         ! Gets density accordingly
-        rho_aux = midplane_density(r_kpc, midplanePressure,        &
+        rho_cgs = midplane_density(r_kpc, midplanePressure,        &
                                    r_kpc*0d0, p_sound_speed_km_s,  &
                                    p_gamma, p_csi)
         
-        if (abs(rho_ref-rho_aux(I_REF))/rho_ref < INIT_RHO_TOL) exit
+        if (abs(rho_ref-rho_cgs(I_REF))/rho_ref < INIT_RHO_TOL) exit
         ! Updates reference
-        rho_ref = rho_aux(I_REF)
+        rho_ref = rho_cgs(I_REF)
       end do
     else
       ! Computes the midplane pressure
@@ -142,9 +142,11 @@ contains
       B_aux = B2
     endif 
        
-    n_cm3 = midplane_density(r_kpc, midplanePressure,    &
+    rho_cgs = midplane_density(r_kpc, midplanePressure,    &
                              B_aux, p_sound_speed_km_s,     &
                              p_gamma, p_csi) / Hmass
+                             
+    n_cm3 = rho_cgs/Hmass
     n = n_cm3 / n0_cm3 * n0
 
     ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE
@@ -152,12 +154,8 @@ contains
     Beq_mkG = Beq * B0_mkG / B0
 
     ! SCALE HEIGHT PROFILE
-    if (Flaring) then
-      h = h_sol * exp((r-r_sol)/r_h)
-    else
-      h = h_sol
-    endif
-    h_kpc = h*h0_kpc/h0
+    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs) 
+    h = h_kpc*h0/h0_kpc
     
     ! TURBULENT DIFFUSIVITY PROFILE
     etat = 1.d0/3*l*v  !Formula for etat from mixing length theory
@@ -205,13 +203,17 @@ contains
     ! Updates the density and scaleheight profiles
     ! NB assuming the turbulent speed to be equal the sound speed
     double precision, dimension(nx), intent(in) :: B2
+    double precision, dimension(nx)  :: rho_cgs
     
     midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
        
-    n_cm3 = midplane_density(r_kpc, midplanePressure,    &
+    rho_cgs = midplane_density(r_kpc, midplanePressure,    &
                              B2, p_sound_speed_km_s,     &
-                             p_gamma, p_csi) / Hmass
+                             p_gamma, p_csi) 
+    n_cm3 = rho_cgs / Hmass
     n = n_cm3 / n0_cm3 * n0
+    
+    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs) 
     
   end subroutine updates_density_and_height
   

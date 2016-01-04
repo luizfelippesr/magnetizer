@@ -8,7 +8,7 @@ module pressureEquilibrium
 
   procedure(press_dbl), pointer, public :: midplane_pressure
   procedure(dens_dbl), pointer, public :: midplane_density
-  procedure(dens_dbl), pointer, public :: midplane_scaleheight
+  procedure(h_dbl), pointer, public :: scaleheight
   
   abstract interface
     function press_dbl(r, rdisk, Mgas, Mstars) 
@@ -30,6 +30,15 @@ module pressureEquilibrium
     end function dens_dbl
   end interface
   
+  abstract interface
+    function h_dbl(r, rdisk, Mgas, rho)
+        import
+        double precision, dimension(:), intent(in) :: r, rho
+        double precision, intent(in) :: rdisk, Mgas
+        double precision, dimension(size(r)) :: h_dbl
+    end function h_dbl
+  end interface
+  
   public set_density_procedures
   
 contains
@@ -48,6 +57,10 @@ contains
     case('simple'); midplane_density => midplane_density_simple
     case default; stop
     end select
+    
+    ! Other options may be included later
+    scaleheight => scaleheight_simple
+    
   end subroutine set_density_procedures
 
   function midplane_pressure_simple(r, rdisk, Mgas, Mstars) result(P)
@@ -63,7 +76,6 @@ contains
     double precision, dimension(:), intent(in) :: r
     double precision, intent(in) :: rdisk, Mgas, Mstars
     double precision, dimension(size(r)) :: P
-    double precision, dimension(size(r)) :: exp_m_r_over_rs
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, parameter :: convertPressureSItoGaussian=10
     double precision :: constant 
@@ -102,5 +114,27 @@ contains
     rho = (P - B**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+0.5d0+1d0/gamma)    
   end function midplane_density_simple
   
+  function scaleheight_simple(r, rdisk, Mgas, rho) result(height)
+    ! Computes the pressure in midplane assuming that stars and gas
+    ! follow an exponential disks and have the same vertical distribution
+    ! Input: r -> radii array
+    !        rdisk -> half mass radius of the disk, in kpc
+    !        Mg -> gas mass of the disk, in solar masses
+    !        Mstars -> stellar mass of the disk, in solar masses
+    ! Output: array containing the pressure in Gaussian units
+    use input_constants
+    use fgsl
+    double precision, dimension(:), intent(in) :: r, rho
+    double precision, intent(in) :: rdisk, Mgas
+    double precision, dimension(size(r)) :: Sigma, height
+    double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
+    double precision, parameter :: unit_conversion=FGSL_CONST_MKSA_SOLAR_MASS*1d3 &
+                      / (FGSL_CONST_MKSA_PARSEC*1e5)**3 ! 1 Msun/kpc3 in g/cm3
+    
+    Sigma = Mgas/2d0/pi*(rs_to_r50/rdisk)**2  * exp(- abs(r) * rs_to_r50/rdisk)
+    height = Sigma / rho * unit_conversion ! result in kpc
+    
+  end function scaleheight_simple
+
   
 end module pressureEquilibrium

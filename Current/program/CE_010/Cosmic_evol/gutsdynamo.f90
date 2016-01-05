@@ -464,7 +464,7 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,'INPUT PARAMETERS:'
         print*,'r_max_kpc= ',r_max_kpc ,'R_kappa=   ',R_kappa
         print*,'l_sol_kpc=  ',l_sol_kpc  ,'r_l_kpc=   ',r_l_kpc   ,'v_sol_kms=    ',v_sol_kms    ,'r_v_kpc=    ',r_v_kpc
-        print*,'n_sol_cm3=  ',n_sol_cm3  ,'r_n_kpc=   ',r_n_kpc   ,'Uz_sol_kms=   ',Uz_sol_kms   ,'r_Uz_kpc=   ',r_Uz_kpc
+        print*,'Uz_sol_kms=   ',Uz_sol_kms   ,'r_Uz_kpc=   ',r_Uz_kpc
         print*,'h_sol_kpc=  ',h_sol_kpc  ,'r_h_kpc=   ',r_h_kpc   ,'Uphi_halfmass_kms= ',Uphi_halfmass_kms ,'r_disk=   ',r_disk
         print*,''
         print*,'OTHER FREE PARAMETERS:'
@@ -507,7 +507,7 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),'INPUT PARAMETERS:'
       write(20,*),'r_max_kpc= ',r_max_kpc ,'R_kappa=   ',R_kappa
       write(20,*),'l_sol_kpc=  ',l_sol_kpc  ,'r_l_kpc=   ',r_l_kpc   ,'v_sol_kms=    ',v_sol_kms    ,'r_v_kpc=    ',r_v_kpc
-      write(20,*),'n_sol_cm3=  ',n_sol_cm3  ,'r_n_kpc=   ',r_n_kpc   ,'Uz_sol_kms=   ',Uz_sol_kms   ,'r_Uz_kpc=   ',r_Uz_kpc
+      write(20,*),'Uz_sol_kms=   ',Uz_sol_kms   ,'r_Uz_kpc=   ',r_Uz_kpc
       write(20,*),'h_sol_kpc=  ',h_sol_kpc  ,'r_h_kpc=   ',r_h_kpc   ,'Uphi_halfmass_kms= ',Uphi_halfmass_kms ,'r_disk=   ',r_disk
       write(20,*),''
       write(20,*),'OTHER FREE PARAMETERS:'

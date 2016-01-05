@@ -25,7 +25,6 @@ module input_params
   double precision :: r_max_kpc, R_kappa
   double precision :: l_sol_kpc, r_l_kpc
   double precision :: v_sol_kms, r_v_kpc
-  double precision :: n_sol_cm3, r_n_kpc
   double precision :: Uz_sol_kms, r_Uz_kpc
   double precision :: h_sol_kpc, r_h_kpc
   double precision :: r_disk, v_disk
@@ -128,24 +127,21 @@ module input_params
       t_Gyr      = galaxy_data(iread,1)
       l_sol_kpc  = galaxy_data(iread,2)
       r_l_kpc    = galaxy_data(iread,3)
-      v_sol_kms  = galaxy_data(iread,4)
-      r_v_kpc    = galaxy_data(iread,5)
-      n_sol_cm3  = galaxy_data(iread,6)
-      r_n_kpc    = galaxy_data(iread,7)
-      Uz_sol_kms = galaxy_data(iread,8)
-      r_Uz_kpc   = galaxy_data(iread,9)
-      h_sol_kpc  = galaxy_data(iread,10)
-      r_h_kpc    = galaxy_data(iread,11)
-      r_disk  = galaxy_data(iread,12)
-      v_disk  = galaxy_data(iread,13)
-      r_bulge = galaxy_data(iread,14)
-      v_bulge = galaxy_data(iread,15)
-      r_halo  = galaxy_data(iread,16)
-      v_halo  = galaxy_data(iread,17)
-      nfw_cs1 = galaxy_data(iread,18)
-      Mgas_disk = galaxy_data(iread,19)
-      Mstars_disk = galaxy_data(iread,20)
+      Uz_sol_kms = galaxy_data(iread,4)
+      r_Uz_kpc   = galaxy_data(iread,5)
+      r_disk  = galaxy_data(iread,6)
+      v_disk  = galaxy_data(iread,7)
+      r_bulge = galaxy_data(iread,8)
+      v_bulge = galaxy_data(iread,9)
+      r_halo  = galaxy_data(iread,10)
+      v_halo  = galaxy_data(iread,11)
+      nfw_cs1 = galaxy_data(iread,12)
+      Mgas_disk = galaxy_data(iread,13)
+      Mstars_disk = galaxy_data(iread,14)
 
+      ! Temporarily setting v_sol_kms to the sound speed
+      v_sol_kms = p_sound_speed_km_s
+      
       if (info> 0) then
         print *,''
         print *,'Reading new parameters, iread=',iread, ', gal_id_string=',gal_id_string
@@ -193,12 +189,10 @@ module calc_params
 !     TURBULENCE
       h_sol= h_sol_kpc/h0_kpc*h0  !Disk thickness at r=r_sol in units of h0
       r_h= r_h_kpc/r_max_kpc  !Exponential scale radius of disk scale height
-      n_sol= n_sol_cm3/n0_cm3*n0  !Equipartition magnetic field at r=r_sol
-      r_n= r_n_kpc/r_max_kpc  !Exponential scale radius of equipartition magnetic field
       l_sol= l_sol_kpc/h0_kpc*h0  !Size of largest turbulent eddies
       r_l= r_l_kpc/r_max_kpc  !Exponential scale radius of turbulent scale
       v_sol=v_sol_kms/h0_km*t0_s*h0/t0  !Turbulent velocity
-      r_v= r_v_kpc/r_max_kpc  !Exponential scale radius of rms turbulent velocity
+      !r_v= r_v_kpc/r_max_kpc  !Exponential scale radius of rms turbulent velocity
       etat_sol=1.d0/3*l_sol*v_sol  !Typical turbulent diffusivity
       td_sol= h_sol**2/etat_sol  !Typical vertical turbulent diffusion timescale
 

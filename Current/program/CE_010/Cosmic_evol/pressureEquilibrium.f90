@@ -95,7 +95,7 @@ contains
     ! c_s = v_{turb} = constant
     ! Input: r -> radii array (in kpc)
     !        P -> total pressure in the midplane, erg/cm^3
-    !        B -> array containing the large scale magnetic field B(r), in Gauss
+    !        B -> array containing the large scale magnetic field B(r), in microGauss
     !        cs -> sound speed, in km/s
     !        gamma -> adiabatic index
     !        csi -> ratio between turbulent pressure and turbulent magnetic 
@@ -111,7 +111,7 @@ contains
     if (present(vturb)) &
       print *, 'midplane_density_simple: warning, vturb will be ignored.'
       
-    rho = (P - B**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+0.5d0+1d0/gamma)    
+    rho = (P - (B/1d6)**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+0.5d0+1d0/gamma)    
   end function midplane_density_simple
   
   function scaleheight_simple(r, rdisk, Mgas, rho) result(height)

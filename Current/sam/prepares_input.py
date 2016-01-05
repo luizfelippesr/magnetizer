@@ -105,21 +105,23 @@ if __name__ == "__main__"  :
         header =('time        |'
                  'l_sol_kpc   |'
                  'r_l_kpc     |'
-                 'v_sol_kms   |'
-                 'r_v_kpc     |'
-                 'n_sol_cm3   |'
-                 'r_n_kpc     |'
+                 #'v_sol_kms   |'
+                 #'r_v_kpc     |'
+                 #'n_sol_cm3   |'
+                 #'r_n_kpc     |'
                  'Uz_sol_kms  |'
                  'r_Uz_kpc    |'
-                 'h_sol_kpc   |'
-                 'r_h_kpc     |'
+                 #'h_sol_kpc   |'
+                 #'r_h_kpc     |'
                  'r_disk_kpc  |'
                  'v_disk_kpc  |'
                  'r_bulge_kpc |'
                  'v_bulge_kpc |'
                  'r_halo_kpc  |'
                  'v_halo_kpc  |'
-                 'nfw_cs1\n')
+                 'nfw_cs1     |'
+                 'Mgas_disk   |'
+                 'Mstars_disk\n')
 
         with open(t_dep_input_file, 'w+') as fdep:
             t_dep_input = header
@@ -144,13 +146,10 @@ if __name__ == "__main__"  :
                 r_50_max = max(r_50, r_50_max)
 
                 # Computes and stores
-                t_dep_input += '{0:.3e}    '.format(t)
 
                 l_sol, r_l = turbulent_scale()
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(l_sol,r_l)
 
                 v_sol, r_v = turbulent_speed()
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(v_sol,r_v)
 
                 vt = v_sol # Currently, a constant turbulent velocity is assumed
 
@@ -159,29 +158,34 @@ if __name__ == "__main__"  :
                 m = 1.67372e-24 # g (used hydrogen mass... to be updated...)
                 n_sol = rho_cgs/m
 
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(n_sol,r_n)
-
                 h_sol, r_h = height(r_50, M_stars, M_gas, vt, alpha=4.0)
                 Uz_sol, r_Uz = outflow_velocity(SFR, h_sol, r_50, rho_cgs)
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(Uz_sol,r_Uz)
-
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(h_sol,r_h)
-
+                Uz_sol = 2
+                
                 r_disk = r_50 * Mpc_to_kpc
                 v_disk = v_50
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_disk, v_disk)
 
                 r_bulge = data_dict[t]['rbulge'][select][0] * Mpc_to_kpc
                 v_bulge = data_dict[t]['vbulge'][select][0]
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_bulge, v_bulge)
 
                 r_halo = data_dict[t]['halo_r_virial'][select][0] * Mpc_to_kpc
                 v_halo = data_dict[t]['vchalo'][select][0]
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_halo, v_halo)
+
 
                 nfw_cs1 = data_dict[t]['strc'][select][0]
-                t_dep_input += '{0:.3e}'.format(nfw_cs1)
 
+                t_dep_input += '{0:.3e}    '.format(t)
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(l_sol,r_l)
+                #t_dep_input += '{0:.3e}    {1:.3e}    '.format(v_sol,r_v)
+                #t_dep_input += '{0:.3e}    {1:.3e}    '.format(n_sol,r_n)
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(Uz_sol,r_Uz)
+                #t_dep_input += '{0:.3e}    {1:.3e}    '.format(h_sol,r_h)
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_disk, v_disk)
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_bulge, v_bulge)
+                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_halo, v_halo)
+                t_dep_input += '{0:.3e}    '.format(nfw_cs1)
+                t_dep_input += '{0:.3e}    '.format(M_gas)
+                t_dep_input += '{0:.3e}'.format(M_stars)
                 t_dep_input += '\n'
 
             # Writes the file

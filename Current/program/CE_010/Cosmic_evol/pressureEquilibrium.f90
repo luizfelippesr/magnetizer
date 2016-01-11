@@ -50,12 +50,12 @@ contains
     
     select case (trim(pressureProcedure))
     case('simple'); midplane_pressure => midplane_pressure_simple
-    case default; stop
+    case default; stop 'set_density_procedures: Unknown pressureProcedure'
     end select
     
     select case (trim(densityProcedure))
     case('simple'); midplane_density => midplane_density_simple
-    case default; stop
+    case default; stop 'set_density_procedures: Unknown densityProcedure'
     end select
     
     ! Other options may be included later

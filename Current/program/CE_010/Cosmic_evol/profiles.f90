@@ -206,19 +206,20 @@ contains
     use input_constants
     use pressureEquilibrium
     ! Updates the density and scaleheight profiles
-    ! NB assuming the turbulent speed to be equal the sound speed
+    ! NB assuming the turbulent speed to be equal the (constant) sound speed
+    ! NB2 The total midplane pressure is NOT recalculated here!
     double precision, dimension(nx), intent(in) :: B2
     double precision, dimension(nx)  :: rho_cgs
     
-    midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
        
-    rho_cgs = midplane_density(r_kpc, midplanePressure,    &
-                             B2, p_sound_speed_km_s,     &
-                             p_gamma, p_csi) 
+    rho_cgs = midplane_density(r_kpc, midplanePressure,       &
+                               sqrt(B2), p_sound_speed_km_s,  &
+                               p_gamma, p_csi) 
     n_cm3 = rho_cgs / Hmass
     n = n_cm3 / n0_cm3 * n0
     
     h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs) 
+    h = h_kpc*h0/h0_kpc
     
   end subroutine updates_density_and_height
   

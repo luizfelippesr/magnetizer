@@ -272,10 +272,13 @@ module equ  !Contains the partial differential equations to be solved
         dalp_mdr=xder(alp_m)
         d2alp_mdr2=xder2(alp_m)
       endif
-!
-!     CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
+
+      ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
       Bsqtot=Br**2 +Bp**2 +Bzmod**2
-!
+
+      ! Updates the density and scaleheight
+      call updates_density_and_height(Bsqtot)
+
       if (Alg_quench) then
         alp= alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching
       elseif (Dyn_quench) then

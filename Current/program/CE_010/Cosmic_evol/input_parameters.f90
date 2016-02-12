@@ -33,7 +33,7 @@ module input_params
   double precision :: Mstars_disk, Mgas_disk
 
   ! All galaxy data (private!)
-  integer, private, parameter :: number_of_columns =20 ! Number of columns in the galaxy input files
+  integer, private, parameter :: number_of_columns=12 ! Maximum umber of columns in the galaxy input files
   double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
@@ -127,17 +127,15 @@ module input_params
       t_Gyr      = galaxy_data(iread,1)
       l_sol_kpc  = galaxy_data(iread,2)
       r_l_kpc    = galaxy_data(iread,3)
-      Uz_sol_kms = galaxy_data(iread,4)
-      r_Uz_kpc   = galaxy_data(iread,5)
-      r_disk  = galaxy_data(iread,6)
-      v_disk  = galaxy_data(iread,7)
-      r_bulge = galaxy_data(iread,8)
-      v_bulge = galaxy_data(iread,9)
-      r_halo  = galaxy_data(iread,10)
-      v_halo  = galaxy_data(iread,11)
-      nfw_cs1 = galaxy_data(iread,12)
-      Mgas_disk = galaxy_data(iread,13)
-      Mstars_disk = galaxy_data(iread,14)
+      r_disk  = galaxy_data(iread,4)
+      v_disk  = galaxy_data(iread,5)
+      r_bulge = galaxy_data(iread,6)
+      v_bulge = galaxy_data(iread,7)
+      r_halo  = galaxy_data(iread,8)
+      v_halo  = galaxy_data(iread,9)
+      nfw_cs1 = galaxy_data(iread,10)
+      Mgas_disk = galaxy_data(iread,11)
+      Mstars_disk = galaxy_data(iread,12)
 
       ! Temporarily setting v_sol_kms to the sound speed
       v_sol_kms = p_sound_speed_km_s
@@ -195,10 +193,6 @@ module calc_params
       !r_v= r_v_kpc/r_max_kpc  !Exponential scale radius of rms turbulent velocity
       etat_sol=1.d0/3*l_sol*v_sol  !Typical turbulent diffusivity
       td_sol= h_sol**2/etat_sol  !Typical vertical turbulent diffusion timescale
-
-!     VERTICAL WIND
-      Uz_sol=Uz_sol_kms/h0_km*t0_s*h0/t0  !Vertical mean velocity
-      r_Uz= r_Uz_kpc/r_max_kpc  !Exponential scale radius of vertical mean velocity
 
 !     RADIAL FLOW
       Ur_sol=Ur_sol_kms/h0_km*t0_s*h0/t0  !Radial mean velocity at r=r_sol

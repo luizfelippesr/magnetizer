@@ -12,11 +12,11 @@ module global_input_parameters
 
   integer :: ngals = 10
   integer :: info = 2
-  
+
   ! PARAMETER INPUTS
   ! Number of timesteps used in the calculation between 2 snapshots
-  double precision :: nsteps_0 = 30 
-  
+  double precision :: nsteps_0 = 30
+
   ! PARAMETER INPUTS
   ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
   logical :: Time_evol= .true.
@@ -88,18 +88,29 @@ module global_input_parameters
   logical :: Turb_dif= .true.  !Set to F to turn off turbulent diffusion
 
   ! Pressure and density calculations
-  character(len=25) :: p_pressure_procedure = 'simple'
-  character(len=25) :: p_density_procedure = 'simple'
-  
+  character(len=6) :: p_pressure_procedure = 'simple'
+  character(len=6) :: p_density_procedure = 'simple'
+
   ! Sound speed (in km/s)
   double precision :: p_sound_speed_km_s = 10d0
-  ! ratio between turbulent pressure and turbulent magnetic field pressure
-  double precision :: p_csi = 1d0
-  
+  ! Ratio between turbulent pressure and turbulent magnetic field pressure
+  double precision :: p_csi = 1d0 
   ! Adiabatic index of the ISM
   double precision :: p_gamma = 5d0/3d0
 
-  
+  ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble')
+  character(len=11) :: p_outflow_type = 'superbubble'
+  ! Mechanical luminosity associated with the superbubble (in erg/s)
+  double precision :: p_outflow_Lsn = 1e38
+  ! Ratio between OB associations (superbubbles) rate and supernovae rate
+  double precision :: p_outflow_fOB = 0.7
+  ! Ratio between supernovae rate and SFR (in \msun^{-1})
+  double precision :: p_outflow_etaSN = 9.4e-3
+  ! Lifetime of an OB association (in Myr)
+  double precision :: p_tOB = 3
+  ! Number of supernovae in 1 OB association
+  double precision :: p_N_SN1OB = 40
+
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
     nsteps_0, &
@@ -126,12 +137,18 @@ module global_input_parameters
     p_density_procedure, &
     p_csi, &
     p_sound_speed_km_s, &
-    p_gamma
+    p_gamma, &
+    p_outflow_type, &
+    p_outflow_Lsn, &
+    p_outflow_fOB, &
+    p_outflow_etaSN, &
+    p_tOB, &
+    p_N_SN1OB
 
   contains
 
   subroutine read_global_parameters(global_pars_filename)
-    ! Reads the
+    ! Reads the global parameters file
     implicit none
     character(len=*), intent(in) :: global_pars_filename
 

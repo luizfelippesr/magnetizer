@@ -25,9 +25,10 @@ module profiles
   double precision :: rreg
   double precision, parameter :: RREG_TO_RDISK = 0.15
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
-  
+
 contains
   subroutine construct_profiles(initial, B2)
+    use outflow
     use pressureEquilibrium
     use input_constants
     logical, optional, intent(in) :: initial
@@ -38,13 +39,13 @@ contains
     integer, parameter :: I_REF = 4
     logical :: initial_actual
     integer :: i_halfmass, i
-    
+
     if (present(initial)) then
       initial_actual = initial
     else
       initial_actual = .false.
     endif
-    
+
     ! Sets the 'reference radius' to the disk half-mass radius
     r_sol = r_disk/r_max_kpc
 
@@ -58,10 +59,10 @@ contains
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
     G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om_kmskpc
 
-    ! Regularises 
+    ! Regularises
     rreg = r_kpc(minloc(abs(r_kpc - RREG_TO_RDISK*r_disk),1))
-    call regularize(r_kpc, rreg, Om_kmskpc, G_kmskpc)    
-    
+    call regularize(r_kpc, rreg, Om_kmskpc, G_kmskpc)
+
     ! Adjusts units to code units (set in units module)
     Om = Om_kmskpc/h0_km*h0_kpc*t0_s/t0
     G  = G_kmskpc /h0_km*h0_kpc*t0_s/t0
@@ -72,16 +73,7 @@ contains
     ! Computes the rotation velocity at the disk half-mass radius
     Uphi_halfmass_kms = Om_kmskpc(i_halfmass)*r_kpc(i_halfmass)
 
-    ! VERTICAL VELOCITY PROFILE
-    if (.not.Var_Uz) then
-      Uz = Uz_sol  !No variation of Uz
-    else
-      Uz = Uz_sol * exp(-(r-r_sol)/r_Uz)  !Decreasing with radius according to exponential
-    endif
-    
-    Uz_kms = Uz*h0_km/h0/t0_s*t0
-
-    ! RADIAL VELOCITY PROFILE
+    ! RADIAL VELOCITY PROFILE (not currently being used?)
     Ur = Ur_sol
     dUrdr = 0.d0
     d2Urdr2 = 0.d0
@@ -99,16 +91,19 @@ contains
     l_kpc = l * h0_kpc / h0
 
     ! RMS TURBULENT VELOCITY PROFILE
-    if (.not.Var_v) then
-      v = v_sol
-      dvdr = 0.d0
-    else
-      v = v_sol * exp(-(r-r_sol)/r_v)
-      dvdr = v / r_v
-    endif
+!     if (.not.Var_v) then
+!       v = v_sol
+!       dvdr = 0.d0
+!     else
+!       v = v_sol * exp(-(r-r_sol)/r_v)
+!       dvdr = v / r_v
+!     endif
+!
+!     v_kms = v * h0_km / h0 / t0_s*t0
+    ! Using the sound speed as the turbulent velocity
+    v_kms = p_sound_speed_km_s
+    v = v_kms / h0_km * h0 * t0_s / t0
 
-    v_kms = v * h0_km / h0 / t0_s*t0
-    
     ! NUMBER DENSITY PROFILE
     if (initial_actual) then
       ! Sets the procedures if it is the initial call
@@ -119,21 +114,21 @@ contains
       ! Computes the density, initially in the abscense of large scale B
       rho_cgs = midplane_density(r_kpc, midplanePressure,        &
                                  r_kpc*0d0, p_sound_speed_km_s,  &
-                                 p_gamma, p_csi) 
+                                 p_gamma, p_csi)
       ! Stores a particular point as reference
       rho_ref = rho_cgs(I_REF)
-      
+
       ! Iterates to get the initial magnetic field and density
       do i=1,100
         ! Computes magnetic field as a fraction of equiparition field
         ! (consistent with later initialization of the seed field)
         B_aux = frac_seed * sqrt(4*pi*rho_cgs)*v_kms*1d5 ! uses gaussian units
-        
+
         ! Gets density accordingly
         rho_cgs = midplane_density(r_kpc, midplanePressure,        &
                                    B_aux, p_sound_speed_km_s,  &
                                    p_gamma, p_csi)
-        
+
         if (abs(rho_ref-rho_cgs(I_REF))/rho_ref < INIT_RHO_TOL) exit
         ! Updates reference
         rho_ref = rho_cgs(I_REF)
@@ -144,24 +139,28 @@ contains
       midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
       B_aux = sqrt(B2)
 
-    endif 
-    
+    endif
+
     rho_cgs = midplane_density(r_kpc, midplanePressure,    &
                              B_aux, p_sound_speed_km_s,     &
-                             p_gamma, p_csi) 
-    
+                             p_gamma, p_csi)
+
     n_cm3 = rho_cgs/Hmass
     n = n_cm3 / n0_cm3 * n0
-    
+
     ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE
     Beq = sqrt(4d0*pi*n) * v  !Formula for equiparition field strength
 
     Beq_mkG = Beq * B0_mkG / B0
 
     ! SCALE HEIGHT PROFILE
-    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs) 
+    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs)
     h = h_kpc*h0/h0_kpc
-    
+
+    ! Vertical velocity profile
+    Uz_kms = outflow(r_kpc, rho_cgs, h_kpc, v_kms, rdisk, SFR, Mgas, Mstars)
+    Uz = Uz_kms/h0_km*h0*t0_s/t0
+
     ! TURBULENT DIFFUSIVITY PROFILE
     etat = 1.d0/3*l*v  !Formula for etat from mixing length theory
     etat_cm2s = etat*h0_cm**2/h0**2/t0_s*t0
@@ -189,8 +188,8 @@ contains
       enddo
     endif
     alp_k_kms = alp_k*h0_km/h0/t0_s*t0
-    
-    ! Overrides previous definitions if these options were selected in the 
+
+    ! Overrides previous definitions if these options were selected in the
     ! global parameters file
     if (.not.Turb_dif) then
         etat=0.d0
@@ -199,30 +198,33 @@ contains
       if (.not.Advect) then
         om=0.d0
       endif
-    
+
   end subroutine construct_profiles
 
-  subroutine updates_density_and_height(B2)
+  subroutine updates_profiles(B2)
     use input_constants
     use pressureEquilibrium
-    ! Updates the density and scaleheight profiles
+    ! Updates the density, scaleheight and outflow velocity profiles
     ! NB assuming the turbulent speed to be equal the (constant) sound speed
     ! NB2 The total midplane pressure is NOT recalculated here!
     double precision, dimension(nx), intent(in) :: B2
     double precision, dimension(nx)  :: rho_cgs
-    
-       
+
+    ! Updates density profile
     rho_cgs = midplane_density(r_kpc, midplanePressure,       &
                                sqrt(B2), p_sound_speed_km_s,  &
-                               p_gamma, p_csi) 
+                               p_gamma, p_csi)
     n_cm3 = rho_cgs / Hmass
     n = n_cm3 / n0_cm3 * n0
-    
-    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs) 
+    ! Updates density profile
+    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs)
     h = h_kpc*h0/h0_kpc
-    
-  end subroutine updates_density_and_height
-  
+    ! Updates Uz profile
+    Uz_kms = outflow(r_kpc, rho_cgs, h_kpc, v_kms, rdisk, SFR, Mgas, Mstars)
+    Uz = Uz_kms/h0_km*h0*t0_s/t0
+
+  end subroutine updates_profiles
+
   subroutine disk_rotation_curve(rx, r_disk, v_disk, Omega, Shear)
     ! Computes the rotation curve associated with an exponential disk
     ! Input:  rx -> the radii where the rotation curve will be computed
@@ -243,11 +245,11 @@ contains
     double precision, dimension(size(rx)) :: A
     double precision, dimension(size(rx)),intent(out) :: Omega, Shear
     double precision, parameter :: rmin_over_rmax=0.1
-    double precision, parameter :: TOO_SMALL=2e-7 ! chosen empirically 
+    double precision, parameter :: TOO_SMALL=2e-7 ! chosen empirically
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, dimension(size(rx)) :: y
     integer :: i
-    
+
     ! Traps disks of negligible size
     if (r_disk < r_max_kpc*rmin_over_rmax) then
       Shear = 0
@@ -255,7 +257,7 @@ contains
       return
     end if
 
-    ! Sets y=r/rs, trapping r~0 (which breaks the evaluation 
+    ! Sets y=r/rs, trapping r~0 (which breaks the evaluation
     ! of the Bessel functions)
     where (rx > TOO_SMALL)
       ! The absolute value is taken to deal with the ghost zone
@@ -263,7 +265,7 @@ contains
     elsewhere
       y = TOO_SMALL / (r_disk/rs_to_r50)
     endwhere
-    
+
     do i=1,size(rx)
       A(i) = (  I0(y(i)) * K0(y(i))            &
               - I1(y(i)) * K1(y(i)) )          &
@@ -279,7 +281,7 @@ contains
                   -0.5d0 * K1(y(i)) *( I0(y(i)) + I2(y(i)) )  &
                   +0.5d0 * I1(y(i)) *( K0(y(i)) + K2(y(i)) )
     end do
-    
+
     Shear = Shear/A/2d0*v_disk/r_disk
     return
   end subroutine disk_rotation_curve
@@ -305,18 +307,18 @@ contains
     integer :: i
 
     y = abs(rx)/ (r_bulge/a_to_r50)
-    
+
     A = v_bulge * (1d0 + a_to_r50) / sqrt(a_to_r50)
-    
+
     ! v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-2)
     ! v = v_bulge * sqrt(v)
     v = A * sqrt(y)/(y+1d0)
-    
+
     Omega = v/abs(rx)
-    
+
     dvdr = A/2d0/((y+1d0)*sqrt(y)) - A*sqrt(y)/(1d0+y)**2
-    
-    
+
+
     Shear = dvdr - Omega
 
   end subroutine bulge_rotation_curve
@@ -345,7 +347,7 @@ contains
     double precision, dimension(size(rx)) :: B
     double precision :: A
     integer :: i
-    
+
     y = abs(rx) / r_halo
 
     A = 1.0 / ( log((nfw_cs1+1d0)/nfw_cs1) - 1d0/(nfw_cs1+1d0) )
@@ -353,26 +355,26 @@ contains
 
     B = (log((nfw_cs1+y)/nfw_cs1) - y/(nfw_cs1+y)) / y
     v = A * v_halo * sqrt(B)
-    
+
     dv = 1.0/(nfw_cs1+y)**2-(log((nfw_cs1+y)/nfw_cs1)-y/(nfw_cs1+y))/y**2/2.0
     dv = dv * A * v_halo
-    
+
     Omega = v/rx
     Shear = dv - Omega
-    
+
   end subroutine halo_rotation_curve
 
-  subroutine regularize(rx, r_xi, Omega, Shear)    
+  subroutine regularize(rx, r_xi, Omega, Shear)
     ! Regularizes the angular velocity and shear, making the centre of the
     ! galaxy behave as a rotating solid body (with constant angular velocity
     ! Omega = Omega(r_xi)).
-    ! 
+    !
     ! Input: rx -> the radii where the rotation curve will be computed
     ! Inout: Omega -> angular velocity profile
     !        Shear  -> shear profile
-    ! Info:  \Omega(r) = exp(-r_\xi/r) [\tilde\Omega(r) -\Omega(r_\xi)] 
+    ! Info:  \Omega(r) = exp(-r_\xi/r) [\tilde\Omega(r) -\Omega(r_\xi)]
     !                    + \Omega(r_\xi)
-    !                    
+    !
     double precision, dimension(:), intent(in)  :: rx
     double precision, intent(in)  :: r_xi
     double precision, dimension(size(rx)), intent(inout) :: Omega, Shear
@@ -391,15 +393,15 @@ contains
       exp_minus_rxi_over_r = exp( -rxi_over_r_2 )
     elsewhere
       exp_minus_rxi_over_r = 0.0
-      Omega = 0.0 
+      Omega = 0.0
       Shear = 0.0
       rxi_over_r_2 = 0.0
     endwhere
-    
+
     ! Regularises Shear
     Shear = exp_minus_rxi_over_r*(2.0*rxi_over_r_2*(Omega-Omega_xi)+Shear)
     ! Regularises Omega
     Omega = exp_minus_rxi_over_r*(Omega-Omega_xi)+Omega_xi
-    
+
   end subroutine regularize
 end module profiles

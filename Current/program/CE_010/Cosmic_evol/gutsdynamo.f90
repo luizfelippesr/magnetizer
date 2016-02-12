@@ -277,7 +277,7 @@ module equ  !Contains the partial differential equations to be solved
       Bsqtot=Br**2 +Bp**2 +Bzmod**2
 
       ! Updates the density and scaleheight
-      call updates_density_and_height(Bsqtot)
+      call updates_profiles(Bsqtot)
 
       if (Alg_quench) then
         alp= alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching

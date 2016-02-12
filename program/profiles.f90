@@ -391,12 +391,17 @@ contains
     ! (to avoid NaNs still keeping Omega -> Omega_xi for r->0)
     where (rx > small_factor*r_xi)
       rxi_over_r_2 = (r_xi/rx)**2
-      exp_minus_rxi_over_r = exp( -rxi_over_r_2 )
     elsewhere
       exp_minus_rxi_over_r = 0.0
       Omega = 0.0
       Shear = 0.0
       rxi_over_r_2 = 0.0
+    endwhere
+    ! Explicitly avoids underflows too
+    where (rxi_over_r_2 < 1e8)
+      exp_minus_rxi_over_r = exp( -rxi_over_r_2 )
+    elsewhere
+      exp_minus_rxi_over_r =0
     endwhere
 
     ! Regularises Shear

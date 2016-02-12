@@ -101,15 +101,17 @@ module global_input_parameters
   ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble')
   character(len=11) :: p_outflow_type = 'superbubble'
   ! Mechanical luminosity associated with the superbubble (in erg/s)
-  double precision :: p_outflow_Lsn = 1e38
+  double precision :: p_outflow_Lsn = 1d38
   ! Ratio between OB associations (superbubbles) rate and supernovae rate
   double precision :: p_outflow_fOB = 0.7
   ! Ratio between supernovae rate and SFR (in \msun^{-1})
-  double precision :: p_outflow_etaSN = 9.4e-3
+  double precision :: p_outflow_etaSN = 9.4d-3
   ! Lifetime of an OB association (in Myr)
   double precision :: p_tOB = 3
   ! Number of supernovae in 1 OB association
   double precision :: p_N_SN1OB = 40
+  ! Density of the hot gas (in g/cm^3)
+  double precision :: p_outflow_hot_gas_density = 1.7d-27
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -143,7 +145,8 @@ module global_input_parameters
     p_outflow_fOB, &
     p_outflow_etaSN, &
     p_tOB, &
-    p_N_SN1OB
+    p_N_SN1OB, &
+    p_outflow_hot_gas_density
 
   contains
 

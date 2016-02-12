@@ -30,10 +30,10 @@ module input_params
   double precision :: r_disk, v_disk
   double precision :: r_bulge, v_bulge
   double precision :: r_halo, v_halo, nfw_cs1 
-  double precision :: Mstars_disk, Mgas_disk
+  double precision :: Mstars_disk, Mgas_disk, SFR
 
   ! All galaxy data (private!)
-  integer, private, parameter :: number_of_columns=12 ! Maximum umber of columns in the galaxy input files
+  integer, private, parameter :: number_of_columns=13 ! Maximum umber of columns in the galaxy input files
   double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
@@ -136,6 +136,7 @@ module input_params
       nfw_cs1 = galaxy_data(iread,10)
       Mgas_disk = galaxy_data(iread,11)
       Mstars_disk = galaxy_data(iread,12)
+      SFR = galaxy_data(iread,13)
 
       ! Temporarily setting v_sol_kms to the sound speed
       v_sol_kms = p_sound_speed_km_s

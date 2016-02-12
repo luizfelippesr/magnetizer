@@ -158,7 +158,7 @@ contains
     h = h_kpc*h0/h0_kpc
 
     ! Vertical velocity profile
-    Uz_kms = outflow(r_kpc, rho_cgs, h_kpc, v_kms, rdisk, SFR, Mgas, Mstars)
+    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, r_disk, SFR, Mgas_disk, Mstars_disk)
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
     ! TURBULENT DIFFUSIVITY PROFILE
@@ -204,6 +204,7 @@ contains
   subroutine updates_profiles(B2)
     use input_constants
     use pressureEquilibrium
+    use outflow
     ! Updates the density, scaleheight and outflow velocity profiles
     ! NB assuming the turbulent speed to be equal the (constant) sound speed
     ! NB2 The total midplane pressure is NOT recalculated here!
@@ -220,7 +221,7 @@ contains
     h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs)
     h = h_kpc*h0/h0_kpc
     ! Updates Uz profile
-    Uz_kms = outflow(r_kpc, rho_cgs, h_kpc, v_kms, rdisk, SFR, Mgas, Mstars)
+    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, r_disk, SFR, Mgas_disk, Mstars_disk)
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
   end subroutine updates_profiles

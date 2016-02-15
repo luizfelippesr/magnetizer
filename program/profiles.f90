@@ -33,7 +33,7 @@ contains
     use input_constants
     logical, optional, intent(in) :: initial
     double precision, dimension(nx), intent(in), optional :: B2
-    double precision, dimension(nx) :: B_aux, rho_cgs
+    double precision, dimension(nx) :: B_aux_muG, rho_cgs
     double precision :: rho_ref
     double precision, parameter :: INIT_RHO_TOL = 1d-6
     integer, parameter :: I_REF = 4
@@ -122,11 +122,11 @@ contains
       do i=1,100
         ! Computes magnetic field as a fraction of equiparition field
         ! (consistent with later initialization of the seed field)
-        B_aux = frac_seed * sqrt(4*pi*rho_cgs)*v_kms*1d5 ! uses gaussian units
+        B_aux_muG = frac_seed * sqrt(4d0*pi*rho_cgs)*v_kms*1d5*1d6
 
         ! Gets density accordingly
         rho_cgs = midplane_density(r_kpc, midplanePressure,        &
-                                   B_aux, p_sound_speed_km_s,  &
+                                   B_aux_muG, p_sound_speed_km_s,  &
                                    p_gamma, p_csi)
 
         if (abs(rho_ref-rho_cgs(I_REF))/rho_ref < INIT_RHO_TOL) exit
@@ -137,12 +137,12 @@ contains
       ! Computes the midplane pressure
       ! NB assuming the turbulent speed to be equal the sound speed
       midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
-      B_aux = sqrt(B2)
+      B_aux_muG = sqrt(B2)
 
     endif
 
     rho_cgs = midplane_density(r_kpc, midplanePressure,    &
-                             B_aux, p_sound_speed_km_s,     &
+                             B_aux_muG, p_sound_speed_km_s,     &
                              p_gamma, p_csi)
 
     n_cm3 = rho_cgs/Hmass

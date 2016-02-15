@@ -43,11 +43,16 @@ contains
     rs = r_disk/constDiskScaleToHalfMassRatio
     n = rho/Hmass
 
-    constant = 51.3 * (p_outflow_Lsn/1e38)**(1./3.) * p_outflow_fOB/0.7 &
-        * (p_outflow_etaSN/9.4e-3) * (p_tOB/3.0) * (40/p_N_SN1OB)
+    constant = 51.3 * (p_outflow_Lsn/1d38)**(1./3.) * p_outflow_fOB/0.7d0 &
+        * (p_outflow_etaSN/9.4e-3) * (p_tOB/3d0) * (40d0/p_N_SN1OB)
 
-    v = constant * n**(-1./3.) * n**(-1./3.) * (rs/3.0)**(-2) * SFR
-
+    v = constant
+    v = v * (rs/3.0)**(-2) * SFR
+    where (n>0)
+      v = v * n**(-1./3.)
+    elsewhere
+      v = 1e10
+    endwhere
     v = v * exp(-r/rs)
     if (no_average) return
 

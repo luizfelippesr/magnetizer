@@ -107,11 +107,21 @@ contains
     double precision, intent(in) :: cs, gamma, csi
     double precision, dimension(size(r)) :: rho
     double precision, parameter :: KMS_TO_CMS=1d5
-    
+    integer :: i
+
     if (present(vturb)) &
       print *, 'midplane_density_simple: warning, vturb will be ignored.'
       
-    rho = (P - (B/1d6)**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+0.5d0+1d0/gamma)    
+    rho = (P - (B/1d6)**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+0.5d0+1d0/gamma)
+    print *, 1d0/(cs*KMS_TO_CMS)**2/(csi+0.5d0+1d0/gamma)
+    stop
+    do i=1,size(rho)
+      if (rho(i)<0d0) then
+        print *, i,r(i),sqrt(P(i))*4d0*pi*1e6, B(i)
+        rho(i) = 0.0
+      endif
+    enddo
+!     stop
   end function midplane_density_simple
   
   function scaleheight_simple(r, rdisk, Mgas, rho) result(height)
@@ -130,10 +140,18 @@ contains
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, parameter :: unit_conversion=FGSL_CONST_MKSA_SOLAR_MASS*1d3 &
                       / (FGSL_CONST_MKSA_PARSEC*1e5)**3 ! 1 Msun/kpc3 in g/cm3
+    integer :: i
     
     Sigma = Mgas/2d0/pi*(rs_to_r50/rdisk)**2  * exp(- abs(r) * rs_to_r50/rdisk)
     height = Sigma / rho * unit_conversion ! result in kpc
-    
+    do i=1,size(height)
+      if (height(i)<0d0) then
+        print *, height(i)
+        print *, i
+        print *, rho(i)
+        stop
+      endif
+    enddo
   end function scaleheight_simple
 
   

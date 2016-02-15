@@ -3,7 +3,7 @@
 &global_pars  ! DIRECTORY NAMES
   !Specifies run paths
   model_name = 'CE_010'
-  path_to_input_directories = '../../..'
+  path_to_input_directories = '../'
   output_file_name = 'magnetic_galaxies.hdf5'
   ! Defines the number of galaxies
   ngals = 5

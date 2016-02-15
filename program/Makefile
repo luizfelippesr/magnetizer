@@ -4,7 +4,7 @@ IO=IO_simple
 # IO options: IO_hdf5, IO_simple 
 FC=mpif90
 # FC=h5pfc
-FCFLAGS=-lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,underflow,overflow -g
+FCFLAGS=-lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g
 DEP=
 COMMON_OBJ= bessel_functions.o constants.o grid.o global_input_parameters.o input_parameters.o outflow.o random.o pressureEquilibrium.o profiles.o gutsdynamo.o ts_arrays.o $(IO).o output.o dynamo.o
 

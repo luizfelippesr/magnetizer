@@ -31,7 +31,7 @@ module boundary_conditions  !Specify and implement boundary conditions at r=0, r
   use global_input_parameters
   use grid
   use var
-!  
+!
   implicit none
 !
   contains
@@ -53,7 +53,7 @@ module boundary_conditions  !Specify and implement boundary conditions at r=0, r
         enddo
       endif
     end subroutine impose_bc
-end module boundary_conditions  
+end module boundary_conditions
 !*****************************************************
 module initial_conditions  !Set initial conditions
   use calc_params
@@ -62,7 +62,7 @@ module initial_conditions  !Set initial conditions
   use boundary_conditions
   use random
   use profiles
-!  
+!
   implicit none
 !
   contains
@@ -76,7 +76,7 @@ module initial_conditions  !Set initial conditions
 
       f(:,:)=0.d0 !Initialize
 
-      if (Rand_seed) then  
+      if (Rand_seed) then
         do var=1,2 !Seed r and phi components of B
           do iseed=1,nx
             f(iseed,var)=Bseed(iseed)*random_normal()
@@ -91,7 +91,7 @@ module initial_conditions  !Set initial conditions
       endif
 
       call impose_bc(f)
-      
+
     end subroutine init_seed
 end module initial_conditions
 !*****************************************************
@@ -113,7 +113,7 @@ module deriv  !Finite differencing routine for spatial differentiation (same as 
       fac=1.d0/(60.*(x(2)-x(1)))
 !
       do ix=4,nx-3
-        xder(ix)=fac*(+45.*(f(ix+1)-f(ix-1)) & 
+        xder(ix)=fac*(+45.*(f(ix+1)-f(ix-1)) &
                       - 9.*(f(ix+2)-f(ix-2)) &
                       +    (f(ix+3)-f(ix-3)) &
                      )
@@ -224,7 +224,7 @@ module equ  !Contains the partial differential equations to be solved
   use deriv
   use boundary_conditions
   use bzcalc
-!  
+!
   implicit none
 !
   double precision, dimension(nx) :: Br, Bp, Fr, Fp, Er, Ep, dBrdr, d2Brdr2, dBpdr, d2Bpdr2
@@ -312,7 +312,7 @@ module equ  !Contains the partial differential equations to be solved
       endif
 !
 !     LIST OF VARIABLE NAMES FOR f ARRAY
-!   
+!
 !     UNDER FOSA          UNDER TAU APPROXIMATION
 !     f(:,1)=Br           f(:,1)=Br
 !     f(:,2)=Bp           f(:,2)=Bp
@@ -321,7 +321,7 @@ module equ  !Contains the partial differential equations to be solved
 !                         f(:,5)=Er
 !                         f(:,6)=Ep
 !                         f(:,7)=alp_m
-!   
+!
 !     METHOD: ALL ARRAYS ARE 2-DIMENSIONAL
 !
       r(nxghost+1)=0.000001d0
@@ -331,12 +331,12 @@ module equ  !Contains the partial differential equations to be solved
 !       CASE 1: FOSA (tau-->0 LIMIT)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY
         dfdt(:,1)=      -C_U*Uz*Br/h -lambda*Ur*Br/r -lambda*Ur*dBrdr         &
                    -2.d0/pi/h*ctau*alp*Bp -pi**2/4/h**2*(ctau+Rm_inv)*etat*Br &
-                   +(ctau+Rm_inv)*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2)                     
+                   +(ctau+Rm_inv)*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2)
 !                   +ctau*( detatdz*dBrdz -detatdz*lambda*dBzdr)  !Contains detatdz terms
         dfdt(:,2)= G*Br -C_U*Uz*Bp/h -lambda*dUrdr*Bp -lambda*Ur*dBpdr        &
                    -2.d0/pi/h*ctau*alp*Br -pi**2/4/h**2*(ctau+Rm_inv)*etat*Bp &
                    +(ctau+Rm_inv)*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2) &
-                   +ctau*lambda**2*( detatdr*Bp/r +detatdr*dBpdr)  !Contains detatdr terms 
+                   +ctau*lambda**2*( detatdr*Bp/r +detatdr*dBpdr)  !Contains detatdr terms
 !                   +ctau*(detatdz*dBpdz)  !Contains detatdz terms
         if (.not.Alp_squared) then
           dfdt(:,2)=dfdt(:,2) +2.d0/pi/h*ctau*alp*Br
@@ -354,7 +354,7 @@ module equ  !Contains the partial differential equations to be solved
         dfdt(:,2)=  G*Br -C_U*Uz*Bp/h                 -lambda*dUrdr*Bp   -lambda*Ur*dBpdr +Fp    &
                    +Rm_inv*(-pi**2/4/h**2*etat*Bp +etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2))
         dfdt(:,3)=  tau**(-1)*(-2.d0/pi/h*ctau*alp*Bp -pi**2/4/h**2*ctau*etat*Br                 &
-                   +ctau*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2) -Fr)                          
+                   +ctau*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2) -Fr)
 !                   +ctau*( detatdz*dBrdz -detatdz*lambda*dBzdr)  !Contains detatdz terms
         dfdt(:,4)=  tau**(-1)*(-2.d0/pi/h*ctau*alp*Br -pi**2/4/h**2*ctau*etat*Bp                 &
                    +ctau*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2) -Fp                         &
@@ -439,16 +439,16 @@ module diagnostic  !Writes diagnostic information to screen, file
 !
   contains
     subroutine print_info(info)
-      
+
       integer, intent(in) :: info
-       
+
       if (info>1) then
         print*,''
         print*,'UNITS'
         print*,'t0 (Gyr)=',t0_Gyr,'t0 (kpc s/km)=',t0_kpcskm,'h0 (kpc)=',h0_kpc,'etat0 (cm2s)= ',etat0_cm2s
         print*,''
         print*,'NUMERICS:'
-        print*,'nvar=     ',nvar     
+        print*,'nvar=     ',nvar
         print*,'dt=       ',dt       ,'   n1=       ',n1       ,'   nsteps=     ',nsteps
         print*,'dx=       ',dx       ,'   nxphys=   ',nxphys   ,'   nxghost=',nxghost,'   nx=',nx
         print*,'minval(x)=',minval(x),'   maxval(x)=',maxval(x)
@@ -456,7 +456,7 @@ module diagnostic  !Writes diagnostic information to screen, file
 !         print*,'PHYSICAL GRID:'
 !         print*,'r_kpc=',r_kpc
         print*,''
-        print*,'MODULES:' 
+        print*,'MODULES:'
         print*,'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
         print*,'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
         print*,'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
@@ -491,7 +491,7 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),'t0 (Gyr)=',t0_Gyr,'t0 (kpc s/km)=',t0_kpcskm,'h0 (kpc)=',h0_kpc,'etat0 (cm2s)= ',etat0_cm2s
       write(20,*),''
       write(20,*),'NUMERICS:'
-      write(20,*),'nvar=     ',nvar     
+      write(20,*),'nvar=     ',nvar
       write(20,*),'dt=       ',dt       ,'   n1=       ',n1       ,'   nsteps=     ',nsteps
       write(20,*),'dx=       ',dx       ,'   nxphys=   ',nxphys   ,'   nxghost=',nxghost,'   nx=',nx
       write(20,*),'minval(x)=',minval(x),'   maxval(x)=',maxval(x)
@@ -499,7 +499,7 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),'PHYSICAL GRID:'
       write(20,*),'r_kpc=',r_kpc
       write(20,*),''
-      write(20,*),'MODULES:' 
+      write(20,*),'MODULES:'
       write(20,*),'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
       write(20,*),'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
       write(20,*),'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt

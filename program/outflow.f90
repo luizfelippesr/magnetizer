@@ -25,6 +25,7 @@ contains
     double precision, dimension(size(r)) :: v, n
     double precision :: constant, rs
     logical :: no_average
+
     select case (trim(p_outflow_type))
       case('no_outflow')
         v = r*0.0
@@ -48,11 +49,8 @@ contains
 
     v = constant
     v = v * (rs/3.0)**(-2) * SFR
-    where (n>0)
-      v = v * n**(-1./3.)
-    elsewhere
-      v = 1e10
-    endwhere
+    v = v * n**(-1./3.)
+    v = v * (h/0.2)**(4./3.)
     v = v * exp(-r/rs)
     if (no_average) return
 

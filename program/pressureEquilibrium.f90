@@ -11,11 +11,12 @@ module pressureEquilibrium
   procedure(h_dbl), pointer, public :: scaleheight
 
   abstract interface
-    function press_dbl(r, rdisk, Mgas, Mstars)
+    function press_dbl(r, rdisk, Mgas, Mstars, sigma_scaling)
         import
         double precision, dimension(:), intent(in) :: r
         double precision, intent(in) ::rdisk, Mgas, Mstars
         double precision, dimension(size(r)) :: press_dbl
+        logical, optional, intent(in) :: sigma_scaling
     end function press_dbl
   end interface
 
@@ -63,7 +64,7 @@ contains
 
   end subroutine set_density_procedures
 
-  function midplane_pressure_simple(r, rdisk, Mgas, Mstars) result(P)
+  function midplane_pressure_simple(r, rdisk, Mgas, Mstars,sigma_scaling) result(P)
     ! Computes the pressure in midplane assuming that stars and gas
     ! follow an exponential disks and have the same vertical distribution
     ! Input: r -> radii array
@@ -75,18 +76,42 @@ contains
     use fgsl
     double precision, dimension(:), intent(in) :: r
     double precision, intent(in) :: rdisk, Mgas, Mstars
-    double precision, dimension(size(r)) :: P
+    double precision, dimension(size(r)) :: P, sigma_star_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, parameter :: convertPressureSItoGaussian=10
+    double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
+    double precision, parameter :: G_SI = FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
+    double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
+    double precision, parameter :: stellarHeightToRadiusScale = 1d0/7.3
+    double precision :: sigma_gas_SI = 10d3 ! m/s
     double precision :: constant
+    logical, optional, intent(in) :: sigma_scaling
+    logical :: sigma_scaling_actual
 
-    ! G_SI * Msun_SI**2 / kpc_SI**4 (i.e. G and unit adjustments)
-    constant = FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT &
-              *FGSL_CONST_MKSA_SOLAR_MASS**2  &
-              / FGSL_CONST_MKSA_PARSEC**4 / 1e3**4 * convertPressureSItoGaussian ! J/m^3 -> erg/cm^3
+    if (present(sigma_scaling)) then
+      sigma_scaling_actual = sigma_scaling
+    else
+      sigma_scaling_actual = .false.
+    endif
 
-    P = constant/4d0*(rs_to_r50/rdisk)**2 * Mgas*(Mgas+Mstars) &
-          * exp(- abs(r) * rs_to_r50/rdisk )
+    if (sigma_scaling) then
+      sigma_star_SI = sqrt( G_SI/2d0 &
+                        * stellarHeightToRadiusScale &
+                        * rs_to_r50**2/rdisk/kpc_SI  &
+                        * Mstars * Msun_SI &
+                        * exp(- abs(r) * rs_to_r50/rdisk ))
+
+      where (sigma_star_SI < sigma_gas_SI)
+        sigma_star_SI = sigma_gas_SI
+      endwhere
+    else
+      sigma_star_SI = sigma_gas_SI
+    endif
+
+    P = G_SI/8d0/pi &
+              * Mgas*(Mgas+ (sigma_gas_SI/sigma_star_SI)*Mstars) * Msun_SI**2 &
+              * (rs_to_r50/rdisk/kpc_SI)**4      &
+              * exp(- 2d0 * abs(r) * rs_to_r50/rdisk ) * convertPressureSItoGaussian
 
   end function midplane_pressure_simple
 
@@ -113,10 +138,12 @@ contains
       print *, 'midplane_density_simple: warning, vturb will be ignored.'
 
     ! Computes the density, taking into account the large scale field pressur e
-    rho = (P - (B/1d6)**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+1d0/3d0+1d0/gamma)
+    rho = P/(cs*KMS_TO_CMS)**2/(csi+1d0/3d0+1d0/gamma)
+!     rho = (P - (B/1d6)**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+1d0/3d0+1d0/gamma)
 
     if ( any(rho <= 0.0)) &
       print *, 'midplane_density_simple: warning, non-positive densities.'
+
   end function midplane_density_simple
 
   function scaleheight_simple(r, rdisk, Mgas, rho) result(height)
@@ -142,7 +169,12 @@ contains
 
     if ( any(height <= 0.0)) &
       print *, 'midplane_density_simple: warning, non-positive heights.'
-      
+
+    do i=1,size(height)
+      if (height(i)>5)  &
+        print *, 'r', r(i), 'h', height(i), rho(i)/Hmass
+    end do
+
   end function scaleheight_simple
 
 

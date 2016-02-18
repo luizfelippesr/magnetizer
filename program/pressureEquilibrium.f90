@@ -94,7 +94,7 @@ contains
       sigma_scaling_actual = .false.
     endif
 
-    if (sigma_scaling) then
+    if (sigma_scaling_actual) then
       sigma_star_SI = sqrt( G_SI/2d0 &
                         * stellarHeightToRadiusScale &
                         * rs_to_r50**2/rdisk/kpc_SI  &

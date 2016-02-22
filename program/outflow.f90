@@ -4,7 +4,7 @@ module outflow
   private
   public outflow_speed
 contains
-  function outflow_speed(r, rho, h, vt, r_disk, SFR, Mgas, Mstars) result(v)
+  function outflow_speed(r, rho, h, vt, r_disk, SFR, Mgas, Mstars,outflow_type) result(v)
     ! Computes the pressure in midplane assuming that stars and gas
     ! follow an exponential disks and have the same vertical distribution
     ! Input: r -> radii array, in kpc
@@ -24,9 +24,17 @@ contains
     double precision, dimension(:), intent(in) :: r, rho, h, vt
     double precision, dimension(size(r)) :: v, n
     double precision :: constant, rs
+    character(len=*), optional, intent(in) :: outflow_type
+    character(len=35) :: outflow_type_actual
     logical :: no_average
 
-    select case (trim(p_outflow_type))
+    if (present(outflow_type)) then
+      outflow_type_actual = outflow_type
+    else
+      outflow_type_actual = p_outflow_type
+    endif
+
+    select case (trim(outflow_type_actual))
       case('no_outflow')
         v = r*0.0
         return
@@ -38,6 +46,7 @@ contains
       case('superbubble')
         no_average=.false.
       case default
+        print *, outflow_type_actual
         stop 'outflow: Unknown outflow_type'
     end select
 

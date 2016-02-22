@@ -99,7 +99,7 @@ module global_input_parameters
   double precision :: p_gamma = 5d0/3d0
 
   ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble')
-  character(len=11) :: p_outflow_type = 'superbubble'
+  character(len=21) :: p_outflow_type = 'superbubble'
   ! Mechanical luminosity associated with the superbubble (in erg/s)
   double precision :: p_outflow_Lsn = 1d38
   ! Ratio between OB associations (superbubbles) rate and supernovae rate
@@ -112,6 +112,8 @@ module global_input_parameters
   double precision :: p_N_SN1OB = 40
   ! Density of the hot gas (in g/cm^3)
   double precision :: p_outflow_hot_gas_density = 1.7d-27
+  ! Scaling of the galactic stellar mass in the pressure calculations (T/F)
+  logical :: p_pressure_sigma_scaling = .true.
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &

@@ -73,6 +73,7 @@ contains
     !        Mstars -> stellar mass of the disk, in solar masses
     ! Output: array containing the pressure in Gaussian units
     use input_constants
+    use global_input_parameters
     use fgsl
     double precision, dimension(:), intent(in) :: r
     double precision, intent(in) :: rdisk, Mgas, Mstars
@@ -91,7 +92,7 @@ contains
     if (present(sigma_scaling)) then
       sigma_scaling_actual = sigma_scaling
     else
-      sigma_scaling_actual = .false.
+      sigma_scaling_actual = p_pressure_sigma_scaling
     endif
 
     if (sigma_scaling_actual) then
@@ -109,9 +110,9 @@ contains
     endif
 
     P = G_SI/8d0/pi &
-              * Mgas*(Mgas+ (sigma_gas_SI/sigma_star_SI)*Mstars) * Msun_SI**2 &
-              * (rs_to_r50/rdisk/kpc_SI)**4      &
-              * exp(- 2d0 * abs(r) * rs_to_r50/rdisk ) * convertPressureSItoGaussian
+        * Mgas*(Mgas + (sigma_gas_SI/sigma_star_SI)*Mstars) * Msun_SI**2 &
+        * (rs_to_r50/rdisk/kpc_SI)**4 &
+        * exp(- 2d0 * abs(r) * rs_to_r50/rdisk ) * convertPressureSItoGaussian
 
   end function midplane_pressure_simple
 
@@ -138,8 +139,7 @@ contains
       print *, 'midplane_density_simple: warning, vturb will be ignored.'
 
     ! Computes the density, taking into account the large scale field pressur e
-    rho = P/(cs*KMS_TO_CMS)**2/(csi+1d0/3d0+1d0/gamma)
-!     rho = (P - (B/1d6)**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+1d0/3d0+1d0/gamma)
+    rho = (P - (B/1d6)**2/4d0/pi)/(cs*KMS_TO_CMS)**2/(csi+1d0/3d0+1d0/gamma)
 
     if ( any(rho <= 0.0)) &
       print *, 'midplane_density_simple: warning, non-positive densities.'

@@ -170,11 +170,6 @@ contains
     if ( any(height <= 0.0)) &
       print *, 'midplane_density_simple: warning, non-positive heights.'
 
-    do i=1,size(height)
-      if (height(i)>5)  &
-        print *, 'r', r(i), 'h', height(i), rho(i)/Hmass
-    end do
-
   end function scaleheight_simple
 
 

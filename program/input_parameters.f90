@@ -139,7 +139,7 @@ module input_params
       SFR = galaxy_data(iread,13)
 
       ! Temporarily setting v_sol_kms to the sound speed
-      v_sol_kms = p_sound_speed_km_s
+      v_sol_kms = p_ISM_sound_speed_km_s
       
       if (info> 0) then
         print *,''

@@ -6,19 +6,84 @@ module pressureEquilibrium
   implicit none
 
 contains
-  function exp_surface_density(rdisk, r, M) result(Sigma)
-    ! Construncts exponential surface density profile
-    ! Input: r -> radii array
-    !        rdisk -> half mass radius of the disk (same units as r)
-    !        M -> Mass
-    ! Output: Array containing Sigma (units: [M]/[r^2])
+  subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B, rho_d, h_d)
+    ! Computes the mid-plane density and scale height under the assumption of
+    ! hydrostatic equilibrium
+    ! Input:  rdisk -> half mass radius of the disk (kpc)
+    !         M_g -> total gas mass (Msun)
+    !         M_star -> total stellar mass (Msun)
+    !         r -> radii array (kpc)
+    !         B -> magnetic field array (microgauss)
+    ! Output: rho_d -> density profile of the gas at the midplane (g/cm^3)
+    !         h_d   -> scaleheight profile of the gas at the midplane (kpc)
     use input_constants
-    double precision, dimension(:), intent(in) :: r
-    double precision, intent(in) :: rdisk, M
-    double precision, dimension(size(r)) :: Sigma
-    double precision :: rs
-
+    use global_input_parameters
+    use root_finder
+    use fgsl
+    double precision, intent(in) :: rdisk, M_g, M_star
+    double precision, dimension(:), intent(in) :: r, B
+    double precision, dimension(size(r)), intent(out) :: rho_d, h_d
+    double precision, dimension(size(r)) :: a0, a1, a2, a3
+    double precision, dimension(size(r)) :: Sigma_g_nonSI, Sigma_star_nonSI
+    double precision, dimension(size(r)) :: Sigma_d, Sigma_star, Sigma_d_nonSI
+    double precision, dimension(size(r)) :: B2_4pi, Rm
+    double precision :: rs, A, bm, bs, v0
+    double precision, parameter :: G=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
+    double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
+    double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
+    double precision, parameter :: h_guess = 0.2d0*kpc_SI
+    double precision, parameter :: density_SI_to_cgs = 1d-3
+    integer :: i
+    ! Prepares constants
     rs = constDiskScaleToHalfMassRatio*rdisk
+    A = (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma)
+    ! Nicknames
+    bm = p_molecularHeightToRadiusScale
+    bs = p_stellarHeightToRadiusScale
+    v0 = p_ISM_csi
+    ! Another shorthand: B^2/(4\pi)
+    B2_4pi = B**2/4d0/pi
+    ! Computes initial surface density profiles
+    Sigma_g_nonSI = exp_surface_density(rs, r, M_g)
+    Sigma_star_nonSI = exp_surface_density(rs, r, M_star)
+    ! Computes R_mol
+    Rm = molecular_to_diffuse_ratio(rdisk, Sigma_g_nonSI, Sigma_star_nonSI)
+    ! Adjusts units of stellar surface density (to SI!)
+    Sigma_star = (Sigma_star_nonSI*Msun_SI/kpc_SI/kpc_SI)
+    ! Computes diffuse gas surface density (to SI!)
+    Sigma_d_nonSI = Sigma_g_nonSI / (Rm+1d0)
+    ! Adjusts units of diffuse gas surface density (to SI!)
+    Sigma_d = (Sigma_d_nonSI*Msun_SI/kpc_SI/kpc_SI)
+
+    ! Computes the coefficients of the cubic equation
+    a0 = A/2d0 * Sigma_d * v0**2 * rs**2 * bm * bs
+
+    a1 = (B2_4pi - pi/2d0*G*Sigma_d**2)*rs**2*bm*bs &
+        + A/2d0 * Sigma_d * v0**2 * rs * (bm+bs)
+
+    a2 = B2_4pi*(bm+bs)*rs + A/2d0*Sigma_d*v0**2 &
+        - pi*G*Sigma_d*(Sigma_star*bm + Sigma_d*(bs*Rm + 0.5*bm + 0.5*bs))*rs
+
+    a3 = B2_4pi - pi*G*Sigma_d*(Sigma_star + Sigma_d*(Rm + 0.5))
+
+    do i=1,size(r)
+      h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess)
+      rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
+      h_d(i) = h_d(i)/kpc_SI
+    end do
+    return
+  end subroutine
+
+  function exp_surface_density(rs, r, M) result(Sigma)
+    ! Construncts exponential surface density profile
+    ! Input:  r -> radii array
+    !         rs -> scale radius of the disk (same units as r)
+    !         M -> Mass
+    ! Output: Array containing Sigma (units: [M]/[r^2])
+    double precision, dimension(:), intent(in) :: r
+    double precision, intent(in) :: rs, M
+    double precision, dimension(size(r)) :: Sigma
+
     Sigma = M/2./pi/rs**2 * exp(-r/rs)
     return
   end function exp_surface_density

@@ -94,7 +94,7 @@ contains
 
   function computes_midplane_ISM_pressure_using_scaleheight(   &
                                     rdisk, Sigma_g, Sigma_star, h_d) result(P)
-    ! Computes the pressure in the midplane, using Sigma_g, Sigma_star and h_d
+    ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
     ! (This helper function can be used for checking up the solution of
     !  other functions in this module)
     ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
@@ -131,8 +131,8 @@ contains
     ! Computes weighting associated with diffuse gas
     weight_d = R_m*2d0*h_d/(h_m+h_d) + 1d0
     ! Finishes calculation
-    P = pi/2d0 * G_SI * Sigma_d_SI * (Sigma_d_SI*weight_d +        &
-                                        Sigma_star_SI*weight_star)
+    P = pi/2d0 * G_SI * Sigma_d_SI * (Sigma_d_SI*weight_d         &
+                    + Sigma_star_SI*weight_star) * convertPressureSItoGaussian
     return
   end function computes_midplane_ISM_pressure_using_scaleheight
 

@@ -26,65 +26,14 @@ def turbulent_speed(*args):
     return v_sol, r_v
 
 
-def density(r_50, M_stars, M_gas, vt, alpha=4.0):
-    """ Computes the density at a given radius in g cm^{-3}.
-        Input: r_50 -> half mass radius (Mpc), M_stars -> stellar mass (Msun),
-               M_gas -> gas mass (Msun), vt -> turbulent speed (km/s)
-        Output: rho_sol, r_n (kpc)
-        WARNING This is valid if vt is a constant...
-    """
-    r_n = r_50/(2.0*rs_to_r50)
-    rho_sol = cq.density_cgs(r_n, r_50, M_stars, M_gas, sigma=vt, alpha=4.0)
-
-    return rho_sol, r_n * Mpc_to_kpc
-
-def height(r_50, M_stars, M_gas, vt, alpha=4.0):
-    """ Computes the density at a given radius in cm^{-3}.
-        Input: r_50 -> half mass radius (Mpc), M_stars -> stellar mass (Msun),
-               M_gas -> gas mass (Msun), vt -> turbulent speed (km/s)
-        Output: h_sol (kpc), r_n (kpc)
-        WARNING This is valid if vt is a constant...
-    """
-    r_n = r_50/rs_to_r50 # half-mass to scale-radius conversion
-    h_sol = cq.scaleheight_kpc(r_n, r_50, M_stars, M_gas, sigma=vt, alpha=4.0)
-
-    return h_sol, r_n * Mpc_to_kpc
-
-
-def Brandt_template(r, Omega_0, r_Omega, n):
-    """ Generalized Brandt profile (Brandt -> n=2). Template for fitting.
-    """
-    return Omega_0  / (1.0+(r/r_Omega)**n)**(1./n)
-
-def Brandt_rotation_curve(r_50, v_50):
-    """ From the values of r_50 (in the future r_50, 2*r_50, 0.5*r_50, 0.25*r50)
-        and v_50 (likewise) fits the parameters of a Brandt rotation curve.
-        WARNING This is, at the moment, only a dummy that returns r_Omega = r_50
-        and Uphi = V_disk, for testing purposes only!
-        Output: U_phi (km/s), r_Omega (kpc), n
-    """
-    U_phi = v_50
-    r_Omega = r_50* Mpc_to_kpc
-    n = 2
-    return U_phi, r_Omega, n
-
-
-def outflow_velocity(SFR_Msun_per_Gyr, height, r_50, density_cgs):
-    """ Computes the vertical velocity
-        WARNING At the moment, this simply scales the previous advection speed
-        Output: Uz_sol (km/s), r_Uz (kpc)
-    """
-    r_Uz = r_50/rs_to_r50
-    Uz_sol = cq.V_ad_avg_km_per_s(SFR_Msun_per_Gyr, height, r_50, density_cgs,
-                                  attenuation=True)
-
-    return Uz_sol, r_Uz * Mpc_to_kpc
-
-
 if __name__ == "__main__"  :
 
     model_dir = 'test_SAM_output'
     odir = '../input/test'
+
+    model_dir = '/home/nlfsr/galform_models/FON'
+    odir = '../input/test'
+
     number_of_r50 = 5.0
 
     data_dict = read_time_data(model_dir,
@@ -105,8 +54,6 @@ if __name__ == "__main__"  :
         header =('time        |'
                  'l_sol_kpc   |'
                  'r_l_kpc     |'
-                 'Uz_sol_kms  |'
-                 'r_Uz_kpc    |'
                  'r_disk_kpc  |'
                  'v_disk_kpc  |'
                  'r_bulge_kpc |'
@@ -115,7 +62,8 @@ if __name__ == "__main__"  :
                  'v_halo_kpc  |'
                  'nfw_cs1     |'
                  'Mgas_disk   |'
-                 'Mstars_disk\n')
+                 'Mstars_disk |'
+                 'SFR\n')
 
         with open(t_dep_input_file, 'w+') as fdep:
             t_dep_input = header
@@ -135,27 +83,15 @@ if __name__ == "__main__"  :
                 r_50 = data_dict[t]['rdisk'][select][0]
                 v_50 = data_dict[t]['vdisk'][select][0]
                 # NB mstars_bulge and mcold_burst not considered
-                #    they will need different profiles...
+                #    they would need different profiles...
 
                 r_50_max = max(r_50, r_50_max)
 
                 # Computes and stores
 
                 l_sol, r_l = turbulent_scale()
-
                 v_sol, r_v = turbulent_speed()
 
-                vt = v_sol # Currently, a constant turbulent velocity is assumed
-
-                rho_cgs, r_n = density(r_50, M_stars, M_gas, vt, alpha=4.0)
-
-                m = 1.67372e-24 # g (used hydrogen mass... to be updated...)
-                n_sol = rho_cgs/m
-
-                h_sol, r_h = height(r_50, M_stars, M_gas, vt, alpha=4.0)
-                Uz_sol, r_Uz = outflow_velocity(SFR, h_sol, r_50, rho_cgs)
-                Uz_sol = 2
-                
                 r_disk = r_50 * Mpc_to_kpc
                 v_disk = v_50
 
@@ -165,21 +101,22 @@ if __name__ == "__main__"  :
                 r_halo = data_dict[t]['halo_r_virial'][select][0] * Mpc_to_kpc
                 v_halo = data_dict[t]['vchalo'][select][0]
 
-
                 nfw_cs1 = data_dict[t]['strc'][select][0]
 
+
                 t_dep_input += '{0:.3e}    '.format(t)
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(l_sol,r_l)
-                #t_dep_input += '{0:.3e}    {1:.3e}    '.format(v_sol,r_v)
-                #t_dep_input += '{0:.3e}    {1:.3e}    '.format(n_sol,r_n)
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(Uz_sol,r_Uz)
-                #t_dep_input += '{0:.3e}    {1:.3e}    '.format(h_sol,r_h)
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_disk, v_disk)
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_bulge, v_bulge)
-                t_dep_input += '{0:.3e}    {1:.3e}    '.format(r_halo, v_halo)
+                t_dep_input += '{0:.3e}    '.format(l_sol)
+                t_dep_input += '{0:.3e}    '.format(r_l)
+                t_dep_input += '{0:.3e}    '.format(r_disk)
+                t_dep_input += '{0:.3e}    '.format(v_disk)
+                t_dep_input += '{0:.3e}    '.format(r_bulge)
+                t_dep_input += '{0:.3e}    '.format(v_bulge)
+                t_dep_input += '{0:.3e}    '.format(r_halo)
+                t_dep_input += '{0:.3e}    '.format(v_halo)
                 t_dep_input += '{0:.3e}    '.format(nfw_cs1)
                 t_dep_input += '{0:.3e}    '.format(M_gas)
-                t_dep_input += '{0:.3e}'.format(M_stars)
+                t_dep_input += '{0:.3e}    '.format(M_stars)
+                t_dep_input += '{0:.3e}    '.format(SFR)
                 t_dep_input += '\n'
 
             # Writes the file

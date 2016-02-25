@@ -274,9 +274,9 @@ def plot_mass_evolution(model_dir, gtype='all'):
 
     for ID in IDs:
         c=cmap( (gals_dict[ID][0]-min_mass)/(max_mass-min_mass) )
-        P.plot(ts,gals_dict[ID], marker='.', color=c)
+        P.plot(ts,N.array(gals_dict[ID])/1e10, marker='.', color=c)
     P.xlabel(r'$t\,[{{\rm Gyr}}]$')
-    P.ylabel(r'$M\,[{{\rm M}}_\odot]$')
+    P.ylabel(r'$M\,/\, (10^{10}\,{{\rm M}}_\odot)$')
     P.show()
 
 if __name__ == "__main__"  :

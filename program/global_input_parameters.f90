@@ -92,11 +92,19 @@ module global_input_parameters
   character(len=6) :: p_density_procedure = 'simple'
 
   ! Sound speed (in km/s)
-  double precision :: p_sound_speed_km_s = 10d0
+  double precision :: p_ISM_sound_speed_km_s = 10d0
+  ! Ratio between turbulent velocity and sound speed
+  double precision :: p_ISM_kappa = 1d0
   ! Ratio between turbulent pressure and turbulent magnetic field pressure
-  double precision :: p_csi = 1d0 
+  double precision :: p_ISM_csi = 1d0
   ! Adiabatic index of the ISM
-  double precision :: p_gamma = 5d0/3d0
+  double precision :: p_ISM_gamma = 5d0/3d0
+
+  ! Molecular fraction calculation
+  ! Blitz&Rosolowsky alpha
+  double precision :: p_fmol_alpha = 0.92d0
+  ! Blitz&Rosolowsky P0 (in erg/cm^3)
+  double precision :: p_fmol_P0 = 4.787d-12
 
   ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble')
   character(len=21) :: p_outflow_type = 'superbubble'
@@ -112,8 +120,7 @@ module global_input_parameters
   double precision :: p_N_SN1OB = 40
   ! Density of the hot gas (in g/cm^3)
   double precision :: p_outflow_hot_gas_density = 1.7d-27
-  ! Scaling of the galactic stellar mass in the pressure calculations (T/F)
-  logical :: p_pressure_sigma_scaling = .true.
+
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -139,9 +146,9 @@ module global_input_parameters
     Turb_dif, &
     p_pressure_procedure, &
     p_density_procedure, &
-    p_csi, &
-    p_sound_speed_km_s, &
-    p_gamma, &
+    p_ISM_csi, &
+    p_ISM_sound_speed_km_s, &
+    p_ISM_gamma, &
     p_outflow_type, &
     p_outflow_Lsn, &
     p_outflow_fOB, &

@@ -91,4 +91,20 @@ contains
   end function midplane_pressure_Elmegreen
 
 
+  function computes_midplane_ISM_pressure_from_B_and_rho(B, rho) result(P)
+    ! Computes the ISM pressure, knowing the magnetic field and density
+    ! (This helper function can be used for checking up the solution of
+    !  other functions in this module)
+    ! Input:  B   -> magnetic field (in microgauss)
+    !         rho -> density (in g/cm^3)
+    ! Output: P -> midplane pressure (in erg/cm^3)
+    use global_input_parameters
+    double precision, dimension(:), intent(in) :: B, rho
+    double precision, dimension(size(rho)) :: P
+
+    P = (B*1d6)**2/4d0/pi + (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma) &
+                            * p_ISM_sound_speed_km_s**2 * rho
+    return
+  end function computes_midplane_ISM_pressure_from_B_and_rho
+
 end module pressureEquilibrium

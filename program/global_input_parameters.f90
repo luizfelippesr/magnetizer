@@ -100,11 +100,17 @@ module global_input_parameters
   ! Adiabatic index of the ISM
   double precision :: p_ISM_gamma = 5d0/3d0
 
+  ! Ratio between stellar scale-height and stellar scale-radius
+  double precision :: p_stellarHeightToRadiusScale = 1d0/7.3
+
+  ! Ratio between molecular scale-height and molecular scale-radius
+  double precision :: p_molecularHeightToRadiusScale = 0.032
+
   ! Molecular fraction calculation
   ! Blitz&Rosolowsky alpha
-  double precision :: p_fmol_alpha = 0.92d0
+  double precision :: p_Rmol_alpha = 0.92d0
   ! Blitz&Rosolowsky P0 (in erg/cm^3)
-  double precision :: p_fmol_P0 = 4.787d-12
+  double precision :: p_Rmol_P0 = 4.787d-12
 
   ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble')
   character(len=21) :: p_outflow_type = 'superbubble'
@@ -149,6 +155,10 @@ module global_input_parameters
     p_ISM_csi, &
     p_ISM_sound_speed_km_s, &
     p_ISM_gamma, &
+    p_stellarHeightToRadiusScale, &
+    p_molecularHeightToRadiusScale, &
+    p_Rmol_alpha, &
+    p_Rmol_P0, &
     p_outflow_type, &
     p_outflow_Lsn, &
     p_outflow_fOB, &

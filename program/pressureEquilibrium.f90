@@ -6,7 +6,9 @@ module pressureEquilibrium
   implicit none
 
 contains
-  subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B, rho_d, h_d)
+  subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B,  &
+                                          rho_d, h_d, &
+                                          Sigma_star_out, Sigma_d_out, Rm_out)
     ! Computes the mid-plane density and scale height under the assumption of
     ! hydrostatic equilibrium
     ! Input:  rdisk -> half mass radius of the disk (kpc)
@@ -23,11 +25,13 @@ contains
     double precision, intent(in) :: rdisk, M_g, M_star
     double precision, dimension(:), intent(in) :: r, B
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d
+    double precision, dimension(size(r)), intent(out), optional ::    &
+                                          Rm_out, Sigma_d_out, Sigma_star_out
     double precision, dimension(size(r)) :: a0, a1, a2, a3
     double precision, dimension(size(r)) :: Sigma_g_nonSI, Sigma_star_nonSI
     double precision, dimension(size(r)) :: Sigma_d, Sigma_star, Sigma_d_nonSI
     double precision, dimension(size(r)) :: B2_4pi, Rm
-    double precision :: rs, A, bm, bs, v0
+    double precision :: rs, rs_g, A, bm, bs, v0
     double precision, parameter :: G=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
     double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
     double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
@@ -35,7 +39,8 @@ contains
     double precision, parameter :: density_SI_to_cgs = 1d-3
     integer :: i
     ! Prepares constants
-    rs = constDiskScaleToHalfMassRatio*rdisk
+    rs = constDiskScaleToHalfMassRatio * rdisk
+    rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs
     A = (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma)
     ! Nicknames
     bm = p_molecularHeightToRadiusScale
@@ -43,8 +48,9 @@ contains
     v0 = p_ISM_csi
     ! Another shorthand: B^2/(4\pi)
     B2_4pi = B**2/4d0/pi
+
     ! Computes initial surface density profiles
-    Sigma_g_nonSI = exp_surface_density(rs, r, M_g)
+    Sigma_g_nonSI = exp_surface_density(rs_g, r, M_g)
     Sigma_star_nonSI = exp_surface_density(rs, r, M_star)
     ! Computes R_mol
     Rm = molecular_to_diffuse_ratio(rdisk, Sigma_g_nonSI, Sigma_star_nonSI)
@@ -66,11 +72,17 @@ contains
 
     a3 = B2_4pi - pi*G*Sigma_d*(Sigma_star + Sigma_d*(Rm + 0.5))
 
+    !Solves the cubic equation
     do i=1,size(r)
       h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess)
       rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
       h_d(i) = h_d(i)/kpc_SI
     end do
+
+    ! Outputs optional quantities
+    if (present(Rm_out)) Rm_out=Rm
+    if (present(Sigma_star_out)) Sigma_star_out=Sigma_star_nonSI
+    if (present(Sigma_d_out)) Sigma_d_out=Sigma_d_nonSI
     return
   end subroutine
 
@@ -158,7 +170,7 @@ contains
 
 
   function computes_midplane_ISM_pressure_using_scaleheight(   &
-                                    rdisk, Sigma_g, Sigma_star, h_d) result(P)
+                                rdisk, Sigma_d, Sigma_star, R_m, h_d) result(P)
     ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
     ! (This helper function can be used for checking up the solution of
     !  other functions in this module)
@@ -171,9 +183,10 @@ contains
     use input_constants
     use fgsl
     double precision, intent(in) :: rdisk
-    double precision, dimension(:), intent(in) :: Sigma_g, Sigma_star, h_d
+    double precision, dimension(:), intent(in) :: Sigma_d, Sigma_star
+    double precision, dimension(:), intent(in) :: h_d, R_m
     double precision, dimension(size(Sigma_star)) :: weight_d, weight_star
-    double precision, dimension(size(Sigma_star)) :: P, R_m
+    double precision, dimension(size(Sigma_star)) :: P
     double precision, dimension(size(Sigma_star)) :: Sigma_d_SI, Sigma_star_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, parameter :: convertPressureSItoGaussian=10
@@ -185,12 +198,9 @@ contains
     ! Computes missing scale heights (in kpc)
     h_star = rdisk * rs_to_r50 * p_stellarHeightToRadiusScale
     h_m = rdisk * rs_to_r50 * p_molecularHeightToRadiusScale
-    ! Computes R_mol
-    R_m = molecular_to_diffuse_ratio(rdisk, Sigma_g, Sigma_star)
-    ! Adjusts units of stellar surface density
+    ! Adjusts units of surface densities
     Sigma_star_SI = (Sigma_star*Msun_SI/kpc_SI/kpc_SI)
-    ! Computes diffuse gas surface density
-    Sigma_d_SI = (Sigma_g*Msun_SI/kpc_SI/kpc_SI) / (R_m+1d0)
+    Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
     ! Computes weighting associated with stars
     weight_d = 2d0*h_d/(h_star+h_d)
     ! Computes weighting associated with diffuse gas

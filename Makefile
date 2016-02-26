@@ -6,7 +6,7 @@ FC=h5pfc
 FC_nonMPI=h5fc
 srcdir=program
 builddir=build
-FCFLAGS=-I./${srcdir}/ -J./${builddir}/ -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g
+FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g
 
 OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o
 
@@ -19,14 +19,16 @@ serial: $(OBJ) ${srcdir}/calldynamo.f90
 	$(FC_nonMPI) ${builddir}/$< $(FCFLAGS) -o magnetize_galform_serial.exe $(OBJ) ${srcdir}/calldynamo.f90
 
 # Test programs
-testProfiles: pressureEquilibrium.o outflow.o tests.printProfiles.o
-	$(FC) ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/tests.printProfiles.o $(FCFLAGS) -o printProfiles.exe
+testProfiles: pressureEquilibrium.o tests.printProfiles.o global_input_parameters.o root_finder.o
+	$(FC) $(FCFLAGS) ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe
 testRoots: root_finder.o tests.testRoots.o
 	$(FC) ${builddir}/root_finder.o ${builddir}/tests.testRoots.o $(FCFLAGS) -o testRoots.exe
+# All programs
+all: testRoots testProfiles mpi 
 
 # Builds all objects/modules following
 %.o : ${srcdir}/%.f90 $(DEP)
-	$(FC) -I$(srcdir) $(FCFLAGS) -c $^ -o ${builddir}/$@
+	$(FC)  $(FCFLAGS) -c $^ -o ${builddir}/$@
 
 # Explicit dependencies between files
 $(srcdir)/pressureEquilibrium.f90: root_finder.o constants.o global_input_parameters.o

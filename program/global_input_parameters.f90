@@ -106,6 +106,9 @@ module global_input_parameters
   ! Ratio between molecular scale-height and molecular scale-radius
   double precision :: p_molecularHeightToRadiusScale = 0.032
 
+  ! Ratio between total gas scale length and stellar scale length
+  double precision :: p_gasScaleRadiusToStellarScaleRadius_ratio = 2d0
+
   ! Molecular fraction calculation
   ! Blitz&Rosolowsky alpha
   double precision :: p_Rmol_alpha = 0.92d0
@@ -155,6 +158,7 @@ module global_input_parameters
     p_ISM_csi, &
     p_ISM_sound_speed_km_s, &
     p_ISM_gamma, &
+    p_gasScaleRadiusToStellarScaleRadius_ratio, &
     p_stellarHeightToRadiusScale, &
     p_molecularHeightToRadiusScale, &
     p_Rmol_alpha, &

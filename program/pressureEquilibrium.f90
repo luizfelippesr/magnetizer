@@ -42,35 +42,41 @@ contains
     rs = constDiskScaleToHalfMassRatio * rdisk
     rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs
     A = (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma)
+
     ! Nicknames
     bm = p_molecularHeightToRadiusScale
     bs = p_stellarHeightToRadiusScale
     v0 = p_ISM_csi
-    ! Another shorthand: B^2/(4\pi)
-    B2_4pi = B**2/4d0/pi
+
+    ! Another shorthand: (B_Gauss)^2/(4\pi)
+    B2_4pi = (B*1d6)**2/4d0/pi
 
     ! Computes initial surface density profiles
     Sigma_g_nonSI = exp_surface_density(rs_g, r, M_g)
     Sigma_star_nonSI = exp_surface_density(rs, r, M_star)
+
     ! Computes R_mol
     Rm = molecular_to_diffuse_ratio(rdisk, Sigma_g_nonSI, Sigma_star_nonSI)
+
     ! Adjusts units of stellar surface density (to SI!)
     Sigma_star = (Sigma_star_nonSI*Msun_SI/kpc_SI/kpc_SI)
+
     ! Computes diffuse gas surface density (to SI!)
     Sigma_d_nonSI = Sigma_g_nonSI / (Rm+1d0)
+
     ! Adjusts units of diffuse gas surface density (to SI!)
     Sigma_d = (Sigma_d_nonSI*Msun_SI/kpc_SI/kpc_SI)
 
     ! Computes the coefficients of the cubic equation
-    a0 = A/2d0 * Sigma_d * v0**2 * rs**2 * bm * bs
-
-    a1 = (B2_4pi - pi/2d0*G*Sigma_d**2)*rs**2*bm*bs &
-        + A/2d0 * Sigma_d * v0**2 * rs * (bm+bs)
+    a3 = B2_4pi - pi*G*Sigma_d*(Sigma_star + Sigma_d*(Rm + 0.5))
 
     a2 = B2_4pi*(bm+bs)*rs + A/2d0*Sigma_d*v0**2 &
         - pi*G*Sigma_d*(Sigma_star*bm + Sigma_d*(bs*Rm + 0.5*bm + 0.5*bs))*rs
 
-    a3 = B2_4pi - pi*G*Sigma_d*(Sigma_star + Sigma_d*(Rm + 0.5))
+    a1 = (B2_4pi - pi/2d0*G*Sigma_d**2)*rs**2*bm*bs &
+        + A/2d0 * Sigma_d * v0**2 * rs * (bm+bs)
+
+    a0 = A/2d0 * Sigma_d * v0**2 * rs**2 * bm * bs
 
     !Solves the cubic equation
     do i=1,size(r)
@@ -198,15 +204,19 @@ contains
     ! Computes missing scale heights (in kpc)
     h_star = rdisk * rs_to_r50 * p_stellarHeightToRadiusScale
     h_m = rdisk * rs_to_r50 * p_molecularHeightToRadiusScale
+
     ! Adjusts units of surface densities
     Sigma_star_SI = (Sigma_star*Msun_SI/kpc_SI/kpc_SI)
     Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
+
     ! Computes weighting associated with stars
-    weight_d = 2d0*h_d/(h_star+h_d)
+    weight_star = 2d0*h_d/(h_star+h_d)
+
     ! Computes weighting associated with diffuse gas
     weight_d = R_m*2d0*h_d/(h_m+h_d) + 1d0
+
     ! Finishes calculation
-    P = pi/2d0 * G_SI * Sigma_d_SI * (Sigma_d_SI*weight_d         &
+    P = pi/2d0 * G_SI * Sigma_d_SI * (Sigma_d_SI*weight_d   &
                     + Sigma_star_SI*weight_star) * convertPressureSItoGaussian
     return
   end function computes_midplane_ISM_pressure_using_scaleheight
@@ -216,7 +226,7 @@ contains
     ! (This helper function can be used for checking up the solution of
     !  other functions in this module)
     ! Input:  B   -> magnetic field (in microgauss)
-    !         rho -> density (in g/cm^3)
+    !         rho -> density of diffuse gas (in g/cm^3)
     ! Output: P -> midplane pressure (in erg/cm^3)
     use global_input_parameters
     double precision, dimension(:), intent(in) :: B, rho

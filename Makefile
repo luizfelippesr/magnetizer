@@ -12,13 +12,19 @@ OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters
 
 # Builds parallel version
 mpi: $(OBJ) ${srcdir}/mpicalldynamo.f90
-	$(FC) ${builddir}/$< $(FCFLAGS) -o magnetize_galform $(OBJ) mpicalldynamo.f90
+	$(FC) ${builddir}/$< $(FCFLAGS) -o magnetize_galform.exe $(OBJ) ${srcdir}/mpicalldynamo.f90
 
 # Builds serial version
-serial: $(OBJ) calldynamo.f90
-	$(FC)  -o magnetize_galform_serial $(OBJ) calldynamo.f90 $(FCFLAGS)
+serial: $(OBJ) ${srcdir}/calldynamo.f90
+	$(FC_nonMPI) ${builddir}/$< $(FCFLAGS) -o magnetize_galform_serial.exe $(OBJ) ${srcdir}/calldynamo.f90
 
-# Builds all objects/modules
+# Test programs
+testProfiles: pressureEquilibrium.o outflow.o tests.printProfiles.o
+	$(FC) ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/tests.printProfiles.o $(FCFLAGS) -o printProfiles.exe
+testRoots: root_finder.o tests.testRoots.o
+	$(FC) ${builddir}/root_finder.o ${builddir}/tests.testRoots.o $(FCFLAGS) -o testRoots.exe
+
+# Builds all objects/modules following
 %.o : ${srcdir}/%.f90 $(DEP)
 	$(FC) -I$(srcdir) $(FCFLAGS) -c $^ -o ${builddir}/$@
 
@@ -39,9 +45,3 @@ clean:
 	rm -fv ${builddir}/*.mod ${builddir}/*.o
 	rm -fv magnetize_galform_serial magnetize_galform
 	rm -fv *.exe
-
-# Test programs
-testProfiles: pressureEquilibrium.o outflow.o ${srcdir}/tests/printProfiles.f90
-	$(FC) -o printProfiles.exe ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o tests/printProfiles.f90 $(FCFLAGS)
-testRoots: root_finder.o ${srcdir}/tests/testRoot.f90
-	$(FC) -o testRoot.exe ${builddir}/root_finder.o ${srcdir}/tests/testRoot.f90 $(FCFLAGS)

@@ -129,7 +129,7 @@ contains
                              p_gamma, p_csi)
     n_cm3 = rho_cgs/Hmass
     n = n_cm3 / n0_cm3 * n0
-
+    print *, 'n', n_cm3
     ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE
     Beq = sqrt(4d0*pi*n) * v  !Formula for equiparition field strength
 
@@ -231,7 +231,13 @@ contains
     double precision, parameter :: TOO_SMALL=2e-7 ! chosen empirically
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, dimension(size(rx)) :: y
+    double precision :: rs, y50
     integer :: i
+
+    ! Scale radius
+    rs = r_disk*constDiskScaleToHalfMassRatio
+    ! (Half-mass radius) / (scale radius)
+    y50 = 1d0/constDiskScaleToHalfMassRatio
 
     ! Traps disks of negligible size
     if (r_disk < r_max_kpc*rmin_over_rmax) then
@@ -244,16 +250,17 @@ contains
     ! of the Bessel functions)
     where (rx > TOO_SMALL)
       ! The absolute value is taken to deal with the ghost zone
-      y = abs(rx) / (r_disk/rs_to_r50)
+      y = abs(rx) / rs
     elsewhere
-      y = TOO_SMALL / (r_disk/rs_to_r50)
+      y = TOO_SMALL / rs
     endwhere
 
     do i=1,size(rx)
       A(i) = (  I0(y(i)) * K0(y(i))            &
               - I1(y(i)) * K1(y(i)) )          &
-            / ( I0(rs_to_r50) * K0(rs_to_r50)  &
-              - I1(rs_to_r50) * K1(rs_to_r50))
+              ! Check this!
+            / ( I0(y50) * K0(y50)  &
+              - I1(y50) * K1(y50))
       A(i) = sqrt(A(i))
     end do
     Omega = A*v_disk/r_disk

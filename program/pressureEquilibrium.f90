@@ -3,7 +3,14 @@
 ! for the various pressure contributions.
 module pressureEquilibrium
   use math_constants
+  use fgsl
   implicit none
+
+    double precision, parameter, private :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
+    double precision, parameter, private :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
+    double precision, parameter, private :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
+    double precision, parameter,private :: density_SI_to_cgs = 1d-3
+    double precision, parameter :: convertPressureSItoGaussian=10
 
 contains
   subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B,  &
@@ -31,54 +38,53 @@ contains
     double precision, dimension(size(r)) :: Sigma_g_nonSI, Sigma_star_nonSI
     double precision, dimension(size(r)) :: Sigma_d, Sigma_star, Sigma_d_nonSI
     double precision, dimension(size(r)) :: B2_4pi, Rm
-    double precision :: rs, rs_g, A, bm, bs, v0
-    double precision, parameter :: G=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
-    double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
-    double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
+    double precision :: rs, rs_g_nonSI, A, bm, bs, v0, rs_nonSI
     double precision, parameter :: h_guess = 0.2d0*kpc_SI
-    double precision, parameter :: density_SI_to_cgs = 1d-3
     integer :: i
     ! Prepares constants
-    rs = constDiskScaleToHalfMassRatio * rdisk
-    rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs
+    rs_nonSI = constDiskScaleToHalfMassRatio * rdisk ! kpc
+    rs_g_nonSI = p_gasScaleRadiusToStellarScaleRadius_ratio * rs_nonSI ! kpc
+    rs = rs_nonSI * kpc_SI ! m
     A = (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma)
 
     ! Nicknames
     bm = p_molecularHeightToRadiusScale
     bs = p_stellarHeightToRadiusScale
-    v0 = p_ISM_csi
+    v0 = p_ISM_sound_speed_km_s * 1d3 ! m/s
 
     ! Another shorthand: (B_Gauss)^2/(4\pi)
-    B2_4pi = (B*1d6)**2/4d0/pi
+    B2_4pi = (B*1d-6)**2/4d0/pi * 0.1d0 ! 0.1 J/m^3 = 1 erg/cm^3
 
     ! Computes initial surface density profiles
-    Sigma_g_nonSI = exp_surface_density(rs_g, r, M_g)
-    Sigma_star_nonSI = exp_surface_density(rs, r, M_star)
+    Sigma_g_nonSI = exp_surface_density(rs_g_nonSI, r, M_g)
+    Sigma_star_nonSI = exp_surface_density(rs_nonSI, r, M_star)
 
     ! Computes R_mol
     Rm = molecular_to_diffuse_ratio(rdisk, Sigma_g_nonSI, Sigma_star_nonSI)
 
+    ! Computes diffuse gas surface density
+    Sigma_d_nonSI = Sigma_g_nonSI / (Rm+1d0)
     ! Adjusts units of stellar surface density (to SI!)
     Sigma_star = (Sigma_star_nonSI*Msun_SI/kpc_SI/kpc_SI)
-
-    ! Computes diffuse gas surface density (to SI!)
-    Sigma_d_nonSI = Sigma_g_nonSI / (Rm+1d0)
-
     ! Adjusts units of diffuse gas surface density (to SI!)
     Sigma_d = (Sigma_d_nonSI*Msun_SI/kpc_SI/kpc_SI)
 
     ! Computes the coefficients of the cubic equation
-    a3 = B2_4pi - pi*G*Sigma_d*(Sigma_star + Sigma_d*(Rm + 0.5))
+    a3 = pi*G_SI*Sigma_d*(Sigma_star + Sigma_d*(Rm + 0.5)) - B2_4pi
 
-    a2 = B2_4pi*(bm+bs)*rs + A/2d0*Sigma_d*v0**2 &
-        - pi*G*Sigma_d*(Sigma_star*bm + Sigma_d*(bs*Rm + 0.5*bm + 0.5*bs))*rs
+    a2 =  -B2_4pi*(bm+bs)*rs - A/2d0*Sigma_d*v0**2 &
+        + pi*G_SI*Sigma_d*(Sigma_star*bm + Sigma_d*(bs*Rm + 0.5*bm + 0.5*bs))*rs
 
-    a1 = (B2_4pi - pi/2d0*G*Sigma_d**2)*rs**2*bm*bs &
-        + A/2d0 * Sigma_d * v0**2 * rs * (bm+bs)
+    a1 = - (B2_4pi - pi/2d0*G_SI*Sigma_d**2)*rs**2*bm*bs &
+        - A/2d0 * Sigma_d * v0**2 * rs * (bm+bs)
 
-    a0 = A/2d0 * Sigma_d * v0**2 * rs**2 * bm * bs
+    a0 = -A/2d0 * Sigma_d * v0**2 * rs**2 * bm * bs
 
-    !Solves the cubic equation
+    ! Solves the cubic equation
+    ! (In the case of multiple solutions, considers only those with the
+    ! correct order of magnitude, i.e. close to h_guess=200pc. This is a quick
+    ! and dirty way of avoiding the unphysical solutions without having to
+    ! substitute back in the equation.)
     do i=1,size(r)
       h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess)
       rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
@@ -89,6 +95,7 @@ contains
     if (present(Rm_out)) Rm_out=Rm
     if (present(Sigma_star_out)) Sigma_star_out=Sigma_star_nonSI
     if (present(Sigma_d_out)) Sigma_d_out=Sigma_d_nonSI
+
     return
   end subroutine
 
@@ -143,10 +150,6 @@ contains
     double precision, dimension(size(Sigma_star)) :: Sigma_star_SI, Sigma_g_SI
     double precision :: h_star_SI, v_gas_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
-    double precision, parameter :: convertPressureSItoGaussian=10
-    double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
-    double precision, parameter :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
-    double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
 
     ! Computes the stellar scale-height
     h_star_SI = p_stellarHeightToRadiusScale*rs_to_r50*rdisk*kpc_SI
@@ -195,10 +198,6 @@ contains
     double precision, dimension(size(Sigma_star)) :: P
     double precision, dimension(size(Sigma_star)) :: Sigma_d_SI, Sigma_star_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
-    double precision, parameter :: convertPressureSItoGaussian=10
-    double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
-    double precision, parameter :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
-    double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
     double precision :: h_star, h_m
 
     ! Computes missing scale heights (in kpc)
@@ -232,9 +231,10 @@ contains
     double precision, dimension(:), intent(in) :: B, rho
     double precision, dimension(size(rho)) :: P
 
-    P = (B*1d6)**2/4d0/pi + (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma) &
-                            * p_ISM_sound_speed_km_s**2 * rho
+    P = (B*1d-6)**2/4d0/pi + (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma) &
+                            * (p_ISM_sound_speed_km_s*1d5)**2 * rho
     return
+
   end function computes_midplane_ISM_pressure_from_B_and_rho
 
 end module pressureEquilibrium

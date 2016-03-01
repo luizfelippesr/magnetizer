@@ -4,7 +4,7 @@ default=mpi
 IO=IO_hdf5
 FC=h5pfc
 FC_nonMPI=h5fc
-srcdir=program
+srcdir=src
 builddir=build
 
 FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g -Wall
@@ -50,5 +50,5 @@ $(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o
 # Tides up
 clean:
 	rm -fv ${builddir}/*.mod ${builddir}/*.o
-	rm -v python/*.pyc
+	rm -fv python/*.pyc
 	rm -fv *.exe

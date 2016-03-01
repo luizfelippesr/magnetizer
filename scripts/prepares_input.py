@@ -28,15 +28,15 @@ def turbulent_speed(*args):
 
 if __name__ == "__main__"  :
 
-    model_dir = 'test_SAM_output'
-    odir = '../input/test'
+    model_dir = 'test'
+    odir = '../input/test2'
 
     #model_dir = '/home/nlfsr/galform_models/FON'
     #odir = '../input/test'
 
     number_of_r50 = 5.0
 
-    data_dict = read_time_data(model_dir,
+    data_dict = read_time_data( model_dir,
                                 maximum_final_B_over_T=0.5,
                                 minimum_final_stellar_mass=1e10,
                                 minimum_final_gas_mass=1e7,

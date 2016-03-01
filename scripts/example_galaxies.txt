@@ -1,0 +1,40 @@
+# This file containg a set of galaxy parameters for testing.
+#
+# Obs:
+#   C, G are the half mass radii
+#   I is the virial radius
+#   D,F is the velocity at the half mass radius
+#   H is the virial velocity
+#   I is the NFW concentration
+#
+# References:
+#     M31
+#       A -
+#       B -
+#       C -
+#       D -
+#       F -
+#       G -
+#       H -
+#       I -
+#       J -
+#     MW
+#       A -
+#       B -
+#       C -
+#       D -
+#       F -
+#       G -
+#       H -
+#       I -
+#       J -
+#
+#
+#--------------------------------------------------------------------------------------------------
+#           DATA
+#--------------------------------------------------------------------------------------------------
+# Name      Mgas_disk  Mstars_disk  r_disk    v_disk   SFR         v_bul   r_bul   v_halo   virial_r_halo   1/cs
+# (units)   (Msun)     (Msun)       (kpc)     (km/s)   (Msun/yr)   (km/s)  (kpc)   (km/s)  (kpc)
+# ref       A          B            C         D        E           F       G       H       I               J
+   M31      7.7e8      1.4e11       1.711     200      1.0         50      1.0     75      1e3             0.0944
+   MW       8e9        2.85e10      5.035     200      1.5         100     2.0     75      1e3             0.0944

@@ -52,26 +52,25 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
         datasets = (
                     # Essential physical properties
                     'vdisk', 'mstars_disk', 'mstars_bulge', 'mcold', 'mhot',
-                    'mcold_burst','rdisk', 'rbulge', 'mstardot', 'mhalo',
+                    'mcold_burst','rdisk', 'rbulge', 'mstardot', #'mhalo',
                     'is_central', 'mstardot_average',
                     'vbulge','vchalo','halo_r_virial','strc',
-                    # Old-style indexing
-                    'ident_final', 'ident_next_output', 'index',
                     # New style indexing and extras
                     'FirstProgenitorID',
                     'EndMainBranchID','DescendantID',
                     'GalaxyID', 'LastProgenitorID',
                    )
 
-    # Gets the parameters (later this may be used...)
-    params = get_parameter_values(model_dir+'/'+ivol_dir)
-    h0     = params['h0']
 
     # Opens the hdf5 file
     if os.path.isfile( model_dir+'/'+ivol_dir+"/galaxies.hdf5.bz2" ):
         os.system("bunzip2 -f "+model_dir+'/'+ivol_dir+"/galaxies.hdf5.bz2")
     print model_dir+'/'+ivol_dir+"/galaxies.hdf5"
     f = h5py.File(model_dir+'/'+ivol_dir+"/galaxies.hdf5")
+
+    # Gets the parameters (later this may be used...)
+    #params = get_parameter_values(model_dir+'/'+ivol_dir)
+    h0     = f['Parameters']['h0'][()] #params['h0']
 
     # Gets the redshifts and times
     zout_array = f["Output_Times/zout"][:]
@@ -217,7 +216,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
     data_dict['tout'] = tout_array
     data_dict['zout'] = zout_array
     data_dict['h0'] = h0
-    data_dict['params'] = params
+    #data_dict['params'] = params
 
     return data_dict
 

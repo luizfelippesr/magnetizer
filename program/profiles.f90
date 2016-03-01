@@ -27,13 +27,12 @@ module profiles
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
 
 contains
-  subroutine construct_profiles(initial, B2)
+  subroutine construct_profiles(B)
     use outflow
     use pressureEquilibrium
     use input_constants
-    logical, optional, intent(in) :: initial
-    double precision, dimension(nx), intent(in), optional :: B2
-    double precision, dimension(nx) :: B2_actual
+    double precision, dimension(nx), intent(in), optional :: B
+    double precision, dimension(nx) :: B_actual
     double precision, dimension(nx) :: B_aux_muG, rho_cgs
     double precision :: rho_ref
     double precision, parameter :: INIT_RHO_TOL = 1d-6
@@ -41,16 +40,10 @@ contains
     logical :: initial_actual
     integer :: i_halfmass, i
 
-    if (present(initial)) then
-      initial_actual = initial
+    if (present(B)) then
+      B_actual = B
     else
-      initial_actual = .false.
-    endif
-
-    if (present(B2)) then
-      B2_actual = B2
-    else
-      B2_actual = 0.0
+      B_actual = 0.0
     endif
 
     ! Sets the 'reference radius' to the disk half-mass radius
@@ -97,49 +90,25 @@ contains
     endif
     l_kpc = l * h0_kpc / h0
 
-    ! RMS TURBULENT VELOCITY PROFILE
-!     if (.not.Var_v) then
-!       v = v_sol
-!       dvdr = 0.d0
-!     else
-!       v = v_sol * exp(-(r-r_sol)/r_v)
-!       dvdr = v / r_v
-!     endif
-!
-!     v_kms = v * h0_km / h0 / t0_s*t0
-    ! Using the sound speed as the turbulent velocity
-    v_kms = p_sound_speed_km_s
+    ! TURBULENT VELOCITY PROFILE
+    v_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     v = v_kms / h0_km * h0 * t0_s / t0
 
+    ! Solves for density and height
+    call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, r, &
+                                        B_actual, rho_cgs, h_kpc)
     ! NUMBER DENSITY PROFILE
-    if (initial_actual) then
-      ! Sets the procedures if it is the initial call
-      call set_density_procedures(p_density_procedure, p_pressure_procedure)
-    endif
-
-    ! Computes the midplane pressure
-    ! NB assuming the turbulent speed to be equal the sound speed
-    midplanePressure = midplane_pressure(r_kpc, r_disk, Mgas_disk, Mstars_disk)
-
-    B_aux_muG = sqrt(B2_actual)
-
-    ! Computes the density profile
-    rho_cgs = midplane_density(r_kpc, midplanePressure,         &
-                             B_aux_muG, p_sound_speed_km_s,     &
-                             p_gamma, p_csi)
     n_cm3 = rho_cgs/Hmass
     n = n_cm3 / n0_cm3 * n0
-    print *, 'n', n_cm3
+
     ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE
     Beq = sqrt(4d0*pi*n) * v  !Formula for equiparition field strength
-
     Beq_mkG = Beq * B0_mkG / B0
 
     ! SCALE HEIGHT PROFILE
-    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs)
     h = h_kpc*h0/h0_kpc
 
-    ! Vertical velocity profile
+    ! VERTICAL VELOCITY PROFILE
     Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, r_disk, SFR, Mgas_disk, Mstars_disk)
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
@@ -182,31 +151,6 @@ contains
       endif
 
   end subroutine construct_profiles
-
-  subroutine updates_profiles(B2)
-    use input_constants
-    use pressureEquilibrium
-    use outflow
-    ! Updates the density, scaleheight and outflow velocity profiles
-    ! NB assuming the turbulent speed to be equal the (constant) sound speed
-    ! NB2 The total midplane pressure is NOT recalculated here!
-    double precision, dimension(nx), intent(in) :: B2
-    double precision, dimension(nx)  :: rho_cgs
-
-    ! Updates density profile
-    rho_cgs = midplane_density(r_kpc, midplanePressure,       &
-                               sqrt(B2), p_sound_speed_km_s,  &
-                               p_gamma, p_csi)
-    n_cm3 = rho_cgs / Hmass
-    n = n_cm3 / n0_cm3 * n0
-    ! Updates density profile
-    h_kpc = scaleheight(r_kpc, r_disk, Mgas_disk, rho_cgs)
-    h = h_kpc*h0/h0_kpc
-    ! Updates Uz profile
-    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, r_disk, SFR, Mgas_disk, Mstars_disk)
-    Uz = Uz_kms/h0_km*h0*t0_s/t0
-
-  end subroutine updates_profiles
 
   subroutine disk_rotation_curve(rx, r_disk, v_disk, Omega, Shear)
     ! Computes the rotation curve associated with an exponential disk

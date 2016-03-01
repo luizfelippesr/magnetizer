@@ -275,9 +275,14 @@ module equ  !Contains the partial differential equations to be solved
 
       ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
       Bsqtot=Br**2 +Bp**2 +Bzmod**2
-
-      ! Updates the density and scaleheight
-      call updates_profiles(Bsqtot)
+      do i=1,size(Br)
+        print *, Br(i), Bp(i), Bzmod(i), h(i)
+      enddo
+      stop
+      ! Updates all profiles
+      call construct_profiles(sqrt(Bsqtot))
+      print *, 'updated profiles'
+      stop
 
       if (Alg_quench) then
         alp= alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching

@@ -27,6 +27,7 @@ module dynamo
       character(len=8) :: frmt
       character(len=8) :: gal_id_string
       integer, parameter :: MAX_FAILS=30
+      double precision, dimension(nx) :: Btmp
 
       
       frmt='(I8.8)'
@@ -53,7 +54,7 @@ module dynamo
       ! Sets other necessary parameters
       call set_calc_params  
       ! Constructs galaxy model for the initial snapshot
-      call construct_profiles(initial=.true.)
+      call construct_profiles()
       ! Adds a seed field to the f-array (uses the profile info)
       call init_seed(f)
       ! Calculates |Bz| (uses profile info)
@@ -69,7 +70,10 @@ module dynamo
         ! Initializes the number of steps to the global input value
         nsteps = nsteps_0 
         ! Constructs galaxy model for the present snapshot
-        if (it /= 1) call construct_profiles(B2 = f(:,2)**2 + f(:,1)**2 + Bzmod**2)
+        if (it /= 1) then
+          Btmp = sqrt(f(:,2)**2 + f(:,1)**2 + Bzmod**2)
+          call construct_profiles(Btmp)
+        endif
           
         ! Will try to solve the equations a few times, with different 
         ! timestep choices, if there is no success, aborts.

@@ -1,13 +1,17 @@
 program testPressure
+  use fgsl
   use pressureEquilibrium
 !   use outflow
   implicit none
 
-  integer, parameter :: n = 25
+  integer, parameter :: n = 10
   double precision, dimension(n) :: r
   double precision, dimension(n) :: rho_d, h_d, B, Sigma_d, Sigma_star, Rm
   double precision, dimension(n) :: Pgas, Pgrav
   double precision :: rdisk, M_star, M_g, cs, SFR
+  double precision, parameter :: G=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
+  double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
+  double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
   integer :: i
 
   ! Andromeda
@@ -27,29 +31,40 @@ program testPressure
   rdisk = 5.035 ! kpc
   !  450 arcsec * 0.784 Mpc                http://ned.ipac.caltech.edu/cgi-bin/nDistance?name=MESSIER+031
 
-
   do i=1,size(r)
     r(i) = 0.16*i*rdisk
   end do
-  B = 0.0
+  B = 1d0
+
+!
+!   print *, 'rho (cgs)', pi*G/2d0 *(Msun_SI/kpc_SI/kpc_SI)**2 / 1d4**2 /1.9333333333333 *1e-3
+!   print *, 'Pgas (cgs)', pi*G/2d0 *(Msun_SI/kpc_SI/kpc_SI)**2 / 1d4**2  *1e-3 * 1d6**2
+!   print *, 'Pgrav (cgs)', pi*G/2d0 *(Msun_SI/kpc_SI/kpc_SI)**2 * 10
+!
+!   print *, 'h (kpc)', 1d4**2*1.9333333333333/pi/G/(Msun_SI/kpc_SI/kpc_SI) /kpc_SI
 
   call solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B, rho_d, h_d, &
                                       Sigma_star, Sigma_d, Rm)
+!   print *, 'rho_comp=', rho_d(3)
+!   print *, 'h_d=', h_d(3)
 
-  Pgrav = computes_midplane_ISM_pressure_using_scaleheight(   &
+  Pgrav = computes_midplane_ISM_pressure_using_scaleheight(  &
                                           rdisk, Sigma_d, Sigma_star, Rm, h_d)
   Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B, rho_d)
-
-  print *, "#r/kpc     ",  &
-           "#(rho/m_H)/cm^-3 ",  &
+!   print *, 'Pgrav', Pgrav(3)
+!   print *, 'Pgas', Pgas(3)
+!   print *, Pgrav(3)/Pgas(3)
+!   stop
+  print *, "#r / kpc     ",  &
+           "#rho / g/cm^-3",  &
            "#h/pc      ",  &
            "#1/(1+Rm)  ",  &
-           "#P_grav/(erg/cm^2)",  &
-           "#P_gas/(erg/cm^2)",  &
-           "#Sigma_d/(Msun/pc^2)",  &
-           "#Sigma_s/(Msun/pc^2)"
+           "#P_grav / (erg/cm^3)",  &
+           "#P_gas / (erg/cm^3)",  &
+           "#Sigma_d / (Msun/kpc^2)",  &
+           "#Sigma_s / (Msun/kpc^2)"
   do i=1,size(r)
-    print *, r(i), rho_d(i)/1.67372d-24, h_d(i)*1d3, 1d0/(1d0+Rm(i)), Pgrav(i), Pgas(i), Sigma_d(i)/1d6, Sigma_star(i)/1d6
+    print *, r(i), rho_d(i), h_d(i)*1d3, 1d0/(1d0+Rm(i)), Pgrav(i), Pgas(i), Sigma_d(i), Sigma_star(i)
   end do
 
 end program testPressure

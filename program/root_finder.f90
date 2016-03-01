@@ -26,6 +26,7 @@ contains
     number_of_solutions = fgsl_poly_solve_cubic(A, B, C,   &
                                                 roots(1),roots(2),roots(3))
     previous_distance = huge(previous_distance)
+
     do i=1,number_of_solutions
       distance = (roots(i)-refpoint)**2
       if (distance < previous_distance) then
@@ -33,6 +34,7 @@ contains
         CubicRootClose = roots(i)
       endif
     end do
+
     return
   end function CubicRootClose
 end module root_finder

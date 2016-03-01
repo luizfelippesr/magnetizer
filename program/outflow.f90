@@ -50,7 +50,7 @@ contains
         stop 'outflow: Unknown outflow_type'
     end select
 
-    rs = r_disk/constDiskScaleToHalfMassRatio
+    rs = r_disk*constDiskScaleToHalfMassRatio
     n = rho/Hmass
 
     constant = 51.3 * (p_outflow_Lsn/1d38)**(1./3.) * p_outflow_fOB/0.7d0 &

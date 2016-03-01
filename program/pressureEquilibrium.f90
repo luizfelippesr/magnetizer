@@ -129,7 +129,7 @@ contains
     use global_input_parameters
     double precision, dimension(:), intent(in) :: Sigma_g, Sigma_star
     double precision, intent(in) :: rdisk
-    double precision, dimension(size(Sigma_g)) :: fmol, Rmol, Pnot
+    double precision, dimension(size(Sigma_g)) :: Rmol, Pnot
 
     Pnot = midplane_pressure_Elmegreen(rdisk, Sigma_g, Sigma_star)
     Rmol = (Pnot/p_Rmol_P0)**(p_Rmol_alpha)

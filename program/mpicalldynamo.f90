@@ -9,18 +9,17 @@ program mpicalldynamo
   implicit none 
 !
   logical, parameter :: master_participate= .false. 
-  integer :: igal, jgal, nmygals, nslaves, order, flag
-  integer, dimension(MPI_STATUS_SIZE) :: status
+  integer :: igal, jgal, nmygals, flag
   integer, parameter :: master=0
   integer, allocatable, dimension(:) :: mygals
   character(len=32) :: command_argument
   integer :: i
 
 !*****************************************************
-  real :: tstart,tfinish
+  double precision :: tstart,tfinish
   integer :: rank, nproc, ierr, rc, len
   character*(MPI_MAX_PROCESSOR_NAME) name
-! 
+!
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
     print*,'Error starting MPI program. Terminating.'
@@ -33,14 +32,18 @@ program mpicalldynamo
     print*,'Error getting processor name. Terminating.'
     call MPI_ABORT(MPI_COMM_WORLD, rc, ierr)
   endif
-  
+
+  if (rank== 0) then !Only the master (rank 0)
+    tstart= MPI_wtime()
+  endif
+
   call get_command_argument(1, command_argument)
   if (len_trim(command_argument) == 0) then
     write(*,*) 'No parameter file provided. Using standard global parameters.'
   else
     call read_global_parameters(trim(command_argument))
   endif
-  
+
   !*****************************************************
   !
   ! Assign a chunk of galaxies to each processor
@@ -71,7 +74,7 @@ program mpicalldynamo
 !       jgal=jgal+1
 !     endif
 !   enddo
-! 
+
 
 
   allocate(mygals(ngals))

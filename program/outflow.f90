@@ -4,7 +4,7 @@ module outflow
   private
   public outflow_speed
 contains
-  function outflow_speed(r, rho, h, vt, r_disk, SFR, Mgas, Mstars,outflow_type) result(v)
+  function outflow_speed(r, rho, h, vt, r_disk, SFR,outflow_type) result(v)
     ! Computes the pressure in midplane assuming that stars and gas
     ! follow an exponential disks and have the same vertical distribution
     ! Input: r -> radii array, in kpc
@@ -20,7 +20,7 @@ contains
     use input_constants
     use global_input_parameters
     implicit none
-    double precision, intent(in) :: r_disk, SFR, Mgas, Mstars
+    double precision, intent(in) :: r_disk, SFR
     double precision, dimension(:), intent(in) :: r, rho, h, vt
     double precision, dimension(size(r)) :: v, n
     double precision :: constant, rs

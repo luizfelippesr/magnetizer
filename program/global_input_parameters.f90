@@ -8,14 +8,14 @@ module global_input_parameters
   !Specifies run paths
   character (len=10) :: model_name = 'CE_010'
   character (len=10) :: path_to_input_directories = '../../..'
-  character (len=10) :: output_file_name = 'magnetic_galaxies.hdf5'
+  character (len=22) :: output_file_name = 'magnetic_galaxies.hdf5'
 
   integer :: ngals = 10
   integer :: info = 2
 
   ! PARAMETER INPUTS
   ! Number of timesteps used in the calculation between 2 snapshots
-  double precision :: nsteps_0 = 30
+  integer :: nsteps_0 = 30
 
   ! PARAMETER INPUTS
   ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
@@ -35,26 +35,6 @@ module global_input_parameters
   ! CLOSURE APPROXIMATION
   ! Set to T for FOSA, F for minimal tau approximation
   logical :: Damp= .false.
-
-  ! OUTFLOW VELOCITY
-  ! Set to T to make Uz decrease with radius; set to F to keep Uz constant with radius
-  logical :: Var_Uz= .false.
-
-  ! TURBULENT SCALE
-  ! Set to T to make l decrease with radius; set to F to keep l constant with radius
-  logical :: Var_l= .false.
-
-  ! TURBULENT VELOCITY
-  ! Set to T to make v decrease with radius; set to F to keep v constant with radius
-  logical :: Var_v= .false.
-
-  ! DENSITY
-  ! Set to T to make n decrease with radius; set to F to keep n constant with radius (Beq^2=4pi*n*mp*v^2)
-  logical :: Var_n= .true.
-
-  ! SCALE HEIGHT
-  ! Set to T to include variable scale height.
-  logical :: Flaring= .true.
 
   ! SEED MAGNETIC FIELD
   ! Set to F for random seed magnetic field, T for some other seed
@@ -99,6 +79,10 @@ module global_input_parameters
   double precision :: p_ISM_csi = 1d0
   ! Adiabatic index of the ISM
   double precision :: p_ISM_gamma = 5d0/3d0
+  ! Turbulent length (in kpc)
+  double precision :: p_ISM_turbulent_length = 0.1
+  ! Uses the scale height as an upper for the turbulent scale
+  logical :: p_limit_turbulent_scale = .false.
 
   ! Ratio between stellar scale-height and stellar scale-radius
   double precision :: p_stellarHeightToRadiusScale = 1d0/7.3
@@ -141,10 +125,6 @@ module global_input_parameters
     Dyn_quench, Alg_quench, &
     lFloor, &
     Damp, &
-    Var_Uz, &
-    Var_l, Var_v, &
-    Var_n, &
-    Flaring, &
     Rand_seed, &
     Alp_ceiling, &
     Om_Brandt, &
@@ -158,6 +138,8 @@ module global_input_parameters
     p_ISM_csi, &
     p_ISM_sound_speed_km_s, &
     p_ISM_gamma, &
+    p_ISM_turbulent_length, &
+    p_limit_turbulent_scale, &
     p_gasScaleRadiusToStellarScaleRadius_ratio, &
     p_stellarHeightToRadiusScale, &
     p_molecularHeightToRadiusScale, &

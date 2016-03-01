@@ -20,25 +20,23 @@ module profiles
   integer :: ialp_k
   double precision, dimension(nx) :: alp_k, alp_k_kms
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
-  double precision, dimension(nx), private :: G_d, G_b, G_h, B2
-  double precision, dimension(nx), private :: midplanePressure
+  double precision, dimension(nx), private :: G_d, G_b, G_h
   double precision :: rreg
   double precision, parameter :: RREG_TO_RDISK = 0.15
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
 
 contains
   subroutine construct_profiles(B)
+    use rotationCurves
     use outflow
     use pressureEquilibrium
     use input_constants
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: B_actual
-    double precision, dimension(nx) :: B_aux_muG, rho_cgs
-    double precision :: rho_ref
-    double precision, parameter :: INIT_RHO_TOL = 1d-6
-    integer, parameter :: I_REF = 4
-    logical :: initial_actual
-    integer :: i_halfmass, i
+    double precision, dimension(nx) :: rho_cgs
+    double precision, parameter :: rmin_over_rmax=0.005
+    double precision :: r_disk_min 
+    integer :: i_halfmass
 
     if (present(B)) then
       B_actual = B
@@ -47,11 +45,15 @@ contains
     endif
 
     ! Sets the 'reference radius' to the disk half-mass radius
+    ! (actually, the maximum half mass radius over history)
     r_sol = r_disk/r_max_kpc
+    ! Sets the minimum radius to be followed (for the disk rotation curve)
+    r_disk_min = r_max_kpc*rmin_over_rmax
+
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component
-    call disk_rotation_curve(r_kpc, r_disk, v_disk, Om_d, G_d)
+    call disk_rotation_curve(r_kpc, r_disk, r_disk_min, v_disk, Om_d, G_d)
     call bulge_rotation_curve(r_kpc, r_bulge, v_bulge, Om_b, G_b)
     call halo_rotation_curve(r_kpc, r_halo, v_halo, nfw_cs1, Om_h, G_h)
 
@@ -80,26 +82,41 @@ contains
 
     Ur_kms = Ur*h0_km/h0/t0_s*t0
 
-    ! TURBULENT SCALE PROFILE
-    if (.not.Var_l) then
-      l = l_sol
-      dldr = 0.d0
-    else
-      l = l_sol * exp((r-r_sol)/r_l)
-      dldr = l / r_l
-    endif
-    l_kpc = l * h0_kpc / h0
-
     ! TURBULENT VELOCITY PROFILE
     v_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     v = v_kms / h0_km * h0 * t0_s / t0
 
     ! Solves for density and height
-    call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, r, &
+    call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, abs(r_kpc), &
                                         B_actual, rho_cgs, h_kpc)
+    print *, 'r_disk',r_disk
+    print *, 'Mgas_disk',Mgas_disk/1e9
+    print *, 'Mstars_disk',Mstars_disk/1e9
+    print *, 'r_kpc(5)',r_kpc(5)
+    print *, 'B_actual(5)',B_actual(5)
+
     ! NUMBER DENSITY PROFILE
+    ! At some point, we have to improve this accounting for the metallicity of
+    ! of the galaxy (i.e. multiplying by the mean molecular weight)
     n_cm3 = rho_cgs/Hmass
     n = n_cm3 / n0_cm3 * n0
+    print *, n_cm3
+    stop
+
+    ! TURBULENT SCALE PROFILE
+    l_kpc = p_ISM_turbulent_length
+    if (.not.p_limit_turbulent_scale) then
+      l = l_kpc*h0/h0_kpc
+      dldr = 0.d0
+    else
+      ! Enforces l<=h
+      where (l_kpc>h_kpc)
+        l_kpc = h_kpc
+      endwhere
+      l = l_kpc*h0/h0_kpc
+      dldr = 0.d0 !TODO make this derivative work!?
+                  ! It is not clear that this would be a good idea...
+    endif
 
     ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE
     Beq = sqrt(4d0*pi*n) * v  !Formula for equiparition field strength
@@ -109,7 +126,7 @@ contains
     h = h_kpc*h0/h0_kpc
 
     ! VERTICAL VELOCITY PROFILE
-    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, r_disk, SFR, Mgas_disk, Mstars_disk)
+    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, r_disk, SFR)
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
     ! TURBULENT DIFFUSIVITY PROFILE
@@ -152,151 +169,6 @@ contains
 
   end subroutine construct_profiles
 
-  subroutine disk_rotation_curve(rx, r_disk, v_disk, Omega, Shear)
-    ! Computes the rotation curve associated with an exponential disk
-    ! Input:  rx -> the radii where the rotation curve will be computed
-    !         r_disk ->  the half mass radius of the disk
-    !         v_disk -> the circular velocity at r_disk
-    ! Output: Omega -> angular velocity profile
-    !         Shear  -> shear profile
-    ! Info:   V^2 \propto y^2 [I0(y)K0(y)-I1(y)K1(y)] where y=rx/r_s
-    !         r_s --> the scale radius
-    !         For the shear, see  http://is.gd/MnDKyS
-    ! Ref:    Binney & Tremaine or  Mo, Bosch & White
-
-    use Bessel_Functions
-    use input_constants
-    implicit none
-    double precision, intent(in) :: r_disk, v_disk
-    double precision, dimension(:), intent(in)  :: rx
-    double precision, dimension(size(rx)) :: A
-    double precision, dimension(size(rx)),intent(out) :: Omega, Shear
-    double precision, parameter :: rmin_over_rmax=0.1
-    double precision, parameter :: TOO_SMALL=2e-7 ! chosen empirically
-    double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
-    double precision, dimension(size(rx)) :: y
-    double precision :: rs, y50
-    integer :: i
-
-    ! Scale radius
-    rs = r_disk*constDiskScaleToHalfMassRatio
-    ! (Half-mass radius) / (scale radius)
-    y50 = 1d0/constDiskScaleToHalfMassRatio
-
-    ! Traps disks of negligible size
-    if (r_disk < r_max_kpc*rmin_over_rmax) then
-      Shear = 0
-      Omega = 0
-      return
-    end if
-
-    ! Sets y=r/rs, trapping r~0 (which breaks the evaluation
-    ! of the Bessel functions)
-    where (rx > TOO_SMALL)
-      ! The absolute value is taken to deal with the ghost zone
-      y = abs(rx) / rs
-    elsewhere
-      y = TOO_SMALL / rs
-    endwhere
-
-    do i=1,size(rx)
-      A(i) = (  I0(y(i)) * K0(y(i))            &
-              - I1(y(i)) * K1(y(i)) )          &
-              ! Check this!
-            / ( I0(y50) * K0(y50)  &
-              - I1(y50) * K1(y50))
-      A(i) = sqrt(A(i))
-    end do
-    Omega = A*v_disk/r_disk
-
-    do i=1,size(rx)
-      Shear(i) =    I1(y(i)) * K0(y(i))                       &
-                  - I0(y(i)) * K1(y(i))                       &
-                  -0.5d0 * K1(y(i)) *( I0(y(i)) + I2(y(i)) )  &
-                  +0.5d0 * I1(y(i)) *( K0(y(i)) + K2(y(i)) )
-    end do
-
-    Shear = Shear/A/2d0*v_disk/r_disk
-    return
-  end subroutine disk_rotation_curve
-
-  subroutine bulge_rotation_curve(rx, r_bulge, v_bulge, Omega, Shear)
-    ! Computes the rotation curve associated with an Hernquist profile
-    ! Input:  rx -> the radii where the rotation curve will be computed
-    !         r_bulge ->  the half mass radius of the spheroid
-    !         v_bulge -> the circular velocity at r_bulge
-    ! Output: Omega -> angular velocity profile
-    !         Shear  -> shear profile
-    ! Info:   V^2 \propto y/(y+1)^2  where y=r/a
-    ! Ref:    http://adsabs.harvard.edu/abs/1990ApJ...356..359H
-
-    implicit none
-    double precision, intent(in) :: r_bulge, v_bulge
-    double precision, dimension(:), intent(in)  :: rx
-    double precision, dimension(size(rx)) :: v, dvdr
-    double precision, dimension(size(rx)),intent(out) :: Omega, Shear
-    double precision, parameter :: a_to_r50 = 1.0d0/(sqrt(2.0d0)-1.0d0)
-    double precision, dimension(size(rx)) :: y
-    double precision :: A
-    integer :: i
-
-    y = abs(rx)/ (r_bulge/a_to_r50)
-
-    A = v_bulge * (1d0 + a_to_r50) / sqrt(a_to_r50)
-
-    ! v =  (y/a_to_r50) * (a_to_r50 +1d0)**2 * (y +1d0)**(-2)
-    ! v = v_bulge * sqrt(v)
-    v = A * sqrt(y)/(y+1d0)
-
-    Omega = v/abs(rx)
-
-    dvdr = A/2d0/((y+1d0)*sqrt(y)) - A*sqrt(y)/(1d0+y)**2
-
-
-    Shear = dvdr - Omega
-
-  end subroutine bulge_rotation_curve
-
-  subroutine halo_rotation_curve(rx, r_halo, v_halo, nfw_cs1, Omega, Shear)
-    ! Computes the rotation curve associated with an NFW halo
-    ! Warning: This ignores effects of adiabatic contraction!
-    !          It need to be accounted for later
-    ! Input: rx -> the radii where the rotation curve will be computed
-    !        r_halo -> the virial radius of the halo
-    !        v_halo -> the circular velocity at r_halo
-    !        nfw_cs1 -> 1/c_s -> inverse of the NFW concentration parameter
-    !                        i.e. (NFW scale radius)/(virial radius)
-    ! Output: Omega -> angular velocity profile
-    !         Shear  -> shear profile
-    ! Info:  V^2 \propto {ln[(cs1+y)/cs1] - y/(cs1+y)} /
-    !                    {ln[(cs1+1)/cs1] - 1/(cs1+1)} / y
-    ! Ref: NFW profile
-
-    implicit none
-    double precision, intent(in) :: r_halo, v_halo, nfw_cs1
-    double precision, dimension(:), intent(in)  :: rx
-    double precision, dimension(size(rx)), intent(out) :: Omega, Shear
-    double precision, dimension(size(rx)) :: v, dv
-    double precision, dimension(size(rx)) :: y
-    double precision, dimension(size(rx)) :: B
-    double precision :: A
-    integer :: i
-
-    y = abs(rx) / r_halo
-
-    A = 1.0 / ( log((nfw_cs1+1d0)/nfw_cs1) - 1d0/(nfw_cs1+1d0) )
-    A = sqrt(A)
-
-    B = (log((nfw_cs1+y)/nfw_cs1) - y/(nfw_cs1+y)) / y
-    v = A * v_halo * sqrt(B)
-
-    dv = 1.0/(nfw_cs1+y)**2-(log((nfw_cs1+y)/nfw_cs1)-y/(nfw_cs1+y))/y**2/2.0
-    dv = dv * A * v_halo
-
-    Omega = v/rx
-    Shear = dv - Omega
-
-  end subroutine halo_rotation_curve
 
   subroutine regularize(rx, r_xi, Omega, Shear)
     ! Regularizes the angular velocity and shear, making the centre of the
@@ -316,7 +188,7 @@ contains
     double precision, dimension(size(rx)) :: rxi_over_r_2
     double precision :: Omega_xi
     double precision, parameter :: small_factor=1e-10
-    integer i
+
     ! Finds the index of r=r_xi and sets Omega_xi
     Omega_xi = Omega( minloc(abs(rx-r_xi),1) )
 

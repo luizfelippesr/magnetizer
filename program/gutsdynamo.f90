@@ -292,7 +292,7 @@ module equ  !Contains the partial differential equations to be solved
         alp= alp_k
       endif
 !
-      detatdr= 1.d0/3*l*dvdr+1.d0/3*v*dldr
+      detatdr= 1.d0/3*l*dvdr + 1.d0/3*v*dldr
 !
 !     IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT FLUCTUATING MAGNETIC FIELD
 !
@@ -463,8 +463,7 @@ module diagnostic  !Writes diagnostic information to screen, file
         print*,''
         print*,'MODULES:'
         print*,'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
-        print*,'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
-        print*,'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
+        print*,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
 !         print*,'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
         print*,'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Advect=     ',Advect
         print*,'Turb_dif=   ',Turb_dif
@@ -506,8 +505,7 @@ module diagnostic  !Writes diagnostic information to screen, file
       write(20,*),''
       write(20,*),'MODULES:'
       write(20,*),'Dyn_quench=',Dyn_quench,'Alg_quench=   ',Alg_quench   ,'Damp=       ' ,Damp
-      write(20,*),'Var_Uz=     ',Var_Uz     ,'Var_l=     ',Var_l     ,'Var_v=        ',Var_v        ,'Var_n=      ',Var_n
-      write(20,*),'Flaring=    ',Flaring    ,'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
+      write(20,*),'Rand_seed= ',Rand_seed ,'Alp_ceiling=  ',Alp_ceiling  ,'Om_Brandt=  ',Om_Brandt
 !       write(20,*),'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Shear=        ',Shear        ,'Advect=     ',Advect
       write(20,*),'Alp_squared=',Alp_squared,'Krause=    ',Krause    ,'Advect=     ',Advect
       write(20,*),'Turb_dif=   ',Turb_dif

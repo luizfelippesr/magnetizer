@@ -7,9 +7,9 @@ FC_nonMPI=h5fc
 srcdir=program
 builddir=build
 
-FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g
+FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g -Wall
 
-_OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o
+_OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 # h5pfc bessel_functions.o -I. -I./program/ -J./build/ -fintrinsic-modules-path ./build -I./build/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g -o magnetize_galform.exe  program/mpicalldynamo.f90
@@ -44,11 +44,11 @@ $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o
 $(srcdir)/dynamo.f90: ${builddir}/output.o
 $(srcdir)/output.f90: ${builddir}/$(IO).o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o
 $(srcdir)/$(IO).f90: ${builddir}/grid.o
-$(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o
+$(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o
 $(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o
 
 # Tides up
 clean:
 	rm -fv ${builddir}/*.mod ${builddir}/*.o
-	rm -fv magnetize_galform_serial magnetize_galform
+	rm -v python/*.pyc
 	rm -fv *.exe

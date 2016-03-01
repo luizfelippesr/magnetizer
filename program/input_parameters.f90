@@ -125,21 +125,20 @@ module input_params
         last_output = .true.
       endif
       t_Gyr      = galaxy_data(iread,1)
-      l_sol_kpc  = galaxy_data(iread,2)
-      r_l_kpc    = galaxy_data(iread,3)
-      r_disk  = galaxy_data(iread,4)
-      v_disk  = galaxy_data(iread,5)
-      r_bulge = galaxy_data(iread,6)
-      v_bulge = galaxy_data(iread,7)
-      r_halo  = galaxy_data(iread,8)
-      v_halo  = galaxy_data(iread,9)
-      nfw_cs1 = galaxy_data(iread,10)
-      Mgas_disk = galaxy_data(iread,11)
-      Mstars_disk = galaxy_data(iread,12)
-      SFR = galaxy_data(iread,13)
+      r_disk  = galaxy_data(iread,2)
+      v_disk  = galaxy_data(iread,3)
+      r_bulge = galaxy_data(iread,4)
+      v_bulge = galaxy_data(iread,5)
+      r_halo  = galaxy_data(iread,6)
+      v_halo  = galaxy_data(iread,7)
+      nfw_cs1 = galaxy_data(iread,8)
+      Mgas_disk = galaxy_data(iread,9)
+      Mstars_disk = galaxy_data(iread,10)
+      SFR = galaxy_data(iread,11)
 
-      ! Temporarily setting v_sol_kms to the sound speed
-      v_sol_kms = p_ISM_sound_speed_km_s
+      ! Temporarily setting v_sol_kms to the turbulent speed
+      v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
+      l_sol_kpc = p_ISM_turbulent_length
       
       if (info> 0) then
         print *,''

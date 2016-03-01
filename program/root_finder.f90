@@ -29,12 +29,11 @@ contains
 
     do i=1,number_of_solutions
       distance = (roots(i)-refpoint)**2
-      if (distance < previous_distance) then
+      if (distance < previous_distance .and. roots(i)>0) then
         previous_distance = distance
         CubicRootClose = roots(i)
       endif
     end do
-
     return
   end function CubicRootClose
 end module root_finder

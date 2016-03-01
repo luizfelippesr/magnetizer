@@ -216,6 +216,8 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
     data_dict['tout'] = tout_array
     data_dict['zout'] = zout_array
+    data_dict['h0'] = h0
+    data_dict['params'] = params
 
     return data_dict
 

@@ -4,7 +4,7 @@ default=mpi
 IO=IO_hdf5
 FC=h5pfc
 FC_nonMPI=h5fc
-srcdir=src
+srcdir=source
 builddir=build
 
 FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g -Wall

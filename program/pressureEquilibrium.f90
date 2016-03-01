@@ -5,12 +5,17 @@ module pressureEquilibrium
   use math_constants
   use fgsl
   implicit none
+  private
 
-    double precision, parameter, private :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
-    double precision, parameter, private :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
-    double precision, parameter, private :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
-    double precision, parameter,private :: density_SI_to_cgs = 1d-3
-    double precision, parameter :: convertPressureSItoGaussian=10
+  public solves_hytrostatic_equilibrium
+  public computes_midplane_ISM_pressure_using_scaleheight
+  public computes_midplane_ISM_pressure_from_B_and_rho
+
+  double precision, parameter :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
+  double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
+  double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
+  double precision, parameter :: density_SI_to_cgs = 1d-3
+  double precision, parameter :: convertPressureSItoGaussian=10
 
 contains
   subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B,  &

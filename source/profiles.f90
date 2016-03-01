@@ -1,9 +1,6 @@
 ! Contains the subroutines which compute initial profiles used in the dynamo calculations
 module profiles
-  use global_input_parameters
-  use calc_params
   use grid
-
   implicit none
 
   double precision, dimension(nx) :: h, h_kpc
@@ -21,12 +18,19 @@ module profiles
   double precision, dimension(nx) :: alp_k, alp_k_kms
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
   double precision, dimension(nx), private :: G_d, G_b, G_h
-  double precision :: rreg
-  double precision, parameter :: RREG_TO_RDISK = 0.15
+  double precision, private :: rreg
+  double precision, parameter, private :: RREG_TO_RDISK = 0.15
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
 
 contains
   subroutine construct_profiles(B)
+    ! Computes the radial of variation of all relevant physical constants
+    ! Input: B -> magnetic field profile (if abscent, zero is used)
+    ! Other input variables are obtained from the public global variables
+    ! defined in the input_parameters module.
+    ! The output is written in public global variables
+    use global_input_parameters
+    use calc_params
     use rotationCurves
     use outflow
     use pressureEquilibrium
@@ -35,6 +39,8 @@ contains
     double precision, dimension(nx) :: B_actual
     double precision, dimension(nx) :: rho_cgs
     double precision, parameter :: rmin_over_rmax=0.005
+    double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
+    double precision, parameter :: P_TOL=1e-10
     double precision :: r_disk_min 
     integer :: i_halfmass
 
@@ -49,7 +55,6 @@ contains
     r_sol = r_disk/r_max_kpc
     ! Sets the minimum radius to be followed (for the disk rotation curve)
     r_disk_min = r_max_kpc*rmin_over_rmax
-
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component
@@ -87,21 +92,30 @@ contains
     v = v_kms / h0_km * h0 * t0_s / t0
 
     ! Solves for density and height
-    call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, abs(r_kpc), &
-                                        B_actual, rho_cgs, h_kpc)
-    print *, 'r_disk',r_disk
-    print *, 'Mgas_disk',Mgas_disk/1e9
-    print *, 'Mstars_disk',Mstars_disk/1e9
-    print *, 'r_kpc(5)',r_kpc(5)
-    print *, 'B_actual(5)',B_actual(5)
+    if (.not.p_check_hydro_solution) then
+      call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
+                                        abs(r_kpc), B_actual, rho_cgs, h_kpc)
+    else
+      ! If required, checks the solution.
+      ! (This is a slow step. Should be used for debugging only.)
+      call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
+                abs(r_kpc), B_actual, rho_cgs, h_kpc, Sigma_star, Sigma_d, Rm)
+      ! Computes the midplane pressure, from gravity
+      Pgrav = computes_midplane_ISM_pressure_using_scaleheight(  &
+                                      r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
+      ! Computes the midplane pressure, from the density
+      Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
+
+      if (all(abs(Pgrav-Pgas)/Pgas<P_TOL)) then
+        error stop 'Error: invalid solution for the hydrostatic equilibrium.'
+      end if
+    end if
 
     ! NUMBER DENSITY PROFILE
     ! At some point, we have to improve this accounting for the metallicity of
     ! of the galaxy (i.e. multiplying by the mean molecular weight)
     n_cm3 = rho_cgs/Hmass
     n = n_cm3 / n0_cm3 * n0
-    print *, n_cm3
-    stop
 
     ! TURBULENT SCALE PROFILE
     l_kpc = p_ISM_turbulent_length

@@ -114,6 +114,8 @@ module global_input_parameters
   ! Density of the hot gas (in g/cm^3)
   double precision :: p_outflow_hot_gas_density = 1.7d-27
 
+  ! Check whether the hydrostatic equilibrium solution is correct
+  logical :: p_check_hydro_solution = .false.
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -130,7 +132,6 @@ module global_input_parameters
     Om_Brandt, &
     Alp_squared, &
     Krause, &
-!     Shear, &
     Advect, &
     Turb_dif, &
     p_pressure_procedure, &
@@ -151,8 +152,8 @@ module global_input_parameters
     p_outflow_etaSN, &
     p_tOB, &
     p_N_SN1OB, &
-    p_outflow_hot_gas_density
-
+    p_outflow_hot_gas_density, &
+    p_check_hydro_solution
   contains
 
   subroutine read_global_parameters(global_pars_filename)

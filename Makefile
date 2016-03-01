@@ -42,7 +42,7 @@ $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o
 $(srcdir)/dynamo.f90: ${builddir}/output.o
 $(srcdir)/output.f90: ${builddir}/$(IO).o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o
 $(srcdir)/$(IO).f90: ${builddir}/grid.o
-$(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o
+$(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o
 $(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o
 
 # Tides up

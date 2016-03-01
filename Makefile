@@ -12,8 +12,6 @@ FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddi
 _OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
-# h5pfc bessel_functions.o -I. -I./program/ -J./build/ -fintrinsic-modules-path ./build -I./build/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g -o magnetize_galform.exe  program/mpicalldynamo.f90
-
 # Builds parallel version
 mpi: $(OBJ) ${builddir}/mpicalldynamo.o
 	$(FC) $^ $(FCFLAGS) -o magnetize_galform.exe

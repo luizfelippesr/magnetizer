@@ -46,9 +46,15 @@ if __name__ == "__main__"  :
                                 ivol_dir='ivol0')
     ts = data_dict['tout']
     IDs = data_dict[ts[0]]['ID']
+    names = data_dict[ts[0]]['names']
 
     for i, ID in enumerate(IDs):
         f_gal_id = '{0:8d}'.format(i+1).replace(' ','0')
+        name_input_file = '{1}/name_{0}.in'.format(f_gal_id, odir)
+        with open(name_input_file, 'w+') as f:
+            f.write(names[i])
+
+
         t_dep_input_file = '{1}/time_dep_params_{0}.in'.format(f_gal_id, odir)
         t_indep_input_file='{1}/time_indep_params_{0}.in'.format(f_gal_id, odir)
         header =('time        |'

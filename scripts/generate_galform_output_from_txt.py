@@ -1,6 +1,7 @@
 import numpy as N
 import h5py
 
+# Warning: order is important
 columns = ('mcold', 'mstars_disk', 'rdisk', 'vdisk','mstardot', 'vbulge', 'rbulge', 'vchalo', 'halo_r_virial', 'strc')
 
 def add_dataset(storage, dataset_name, dataset, compression=False):
@@ -74,8 +75,6 @@ def make_galaxies_file(data_dict, t0, tf, nt,
 
     gals = sorted(data_dict.keys())
     gals_ID = N.arange(len(gals))
-    for gal in gals:
-      add_dataset(f, 'Names', N.array([gal,]))
 
     for i, zidx in enumerate(z_indices[:]):
         output_id = "Output%.3i" % (zidx+1) # outputs labeled Fortran style.
@@ -92,15 +91,22 @@ def make_galaxies_file(data_dict, t0, tf, nt,
             add_dataset(output, 'mcold', N.array([mcold,]))
             add_dataset(output, 'mstars_disk', N.array([mstars,]))
 
+            # Radii information has to have their units tweaked
+            for rname in ('rdisk','rbulge','halo_r_virial'):
+                r = data_dict[gal]['rdisk']*1e-3 # kpc -> Gpc
+                add_dataset(output, rname, N.array([r,]))
+
             # Saves all other physical properties
             for c in columns:
-                if c in ('mcold', 'mstars_disk', 'mstardot'):
+                if c in ('mcold', 'mstars_disk', 'mstardot','rdisk','rbulge','halo_r_virial'):
                     continue
                 add_dataset(output, c, N.array([data_dict[gal][c],]))
-            # Saves the galaxy name on all ID-related fields
+
+            # Saves all ID-related fields
             for c in ('FirstProgenitorID','EndMainBranchID','DescendantID',
                       'GalaxyID','LastProgenitorID'):
                 add_dataset(output, c, N.array([ID,]))
+            add_dataset(output, 'names', N.array([gal,]))
 
             # Manual adjustments
             add_dataset(output, 'mstardot_average', N.array([data_dict[gal]['mstardot'],]))

@@ -127,8 +127,15 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             galaxy_weight = f[output_id+"/galaxy_weight"]
 
         data_dict[t]['weight'] = galaxy_weight
-        
-        print 'Galaxies read:',len(galaxy_weight)
+
+        if 'names' in f[output_id]:
+            # If there is a list of galaxy names (as in the fake output) use it
+            data_dict[t]['names'] = f[output_id+'/names']
+        else:
+            # Otherwise, just copy the galaxy ID
+            data_dict[t]['names'] = data_dict[t]['GalaxyID']
+
+        print 'Galaxies read:', len(galaxy_weight)
         if i==0:
             print "Pre-sampling {0} galaxies based on weight".format(
                                                         10.0*number_of_galaxies)

@@ -160,7 +160,11 @@ contains
     if (.not.Krause) then
       alp_k = C_alp  !No variation of alpha
     else
-      alp_k = C_alp*l**2/h*Om  !Decreasing with radius
+      where (h>1e-20)
+        alp_k = C_alp*l**2/h*Om  !Decreasing with radius
+      elsewhere
+        alp_k = C_alp ! Check with Luke!!
+      endwhere
     endif
     if (Alp_ceiling) then
       do ialp_k=1,nx
@@ -177,9 +181,9 @@ contains
         etat=0.d0
       endif
 
-      if (.not.Advect) then
-        om=0.d0
-      endif
+    if (.not.Advect) then
+      om=0.d0
+    endif
 
   end subroutine construct_profiles
 

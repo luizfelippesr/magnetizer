@@ -61,8 +61,8 @@ contains
     B2_4pi = (B*1d-6)**2/4d0/pi * 0.1d0 ! 0.1 J/m^3 = 1 erg/cm^3
 
     ! Computes initial surface density profiles
-    Sigma_g_nonSI = exp_surface_density(rs_g_nonSI, r, M_g)
-    Sigma_star_nonSI = exp_surface_density(rs_nonSI, r, M_star)
+    Sigma_g_nonSI = exp_surface_density(rs_g_nonSI, abs(r), M_g)
+    Sigma_star_nonSI = exp_surface_density(rs_nonSI, abs(r), M_star)
 
     ! Computes R_mol
     Rm = molecular_to_diffuse_ratio(rdisk, Sigma_g_nonSI, Sigma_star_nonSI)
@@ -92,10 +92,13 @@ contains
     ! substitute back in the equation.)
     do i=1,size(r)
       h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess)
-      rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
+      if (h_d(i)>1d-10) then
+        rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
+      else
+        rho_d(i) = 0d0
+      end if
       h_d(i) = h_d(i)/kpc_SI
     end do
-
     ! Outputs optional quantities
     if (present(Rm_out)) Rm_out=Rm
     if (present(Sigma_star_out)) Sigma_star_out=Sigma_star_nonSI

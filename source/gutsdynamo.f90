@@ -278,11 +278,9 @@ module equ  !Contains the partial differential equations to be solved
       do i=1,size(Br)
         print *, Br(i), Bp(i), Bzmod(i), h(i)
       enddo
-      stop
+
       ! Updates all profiles
       call construct_profiles(sqrt(Bsqtot))
-      print *, 'updated profiles'
-      stop
 
       if (Alg_quench) then
         alp= alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching

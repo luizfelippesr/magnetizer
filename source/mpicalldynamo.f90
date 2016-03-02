@@ -96,7 +96,8 @@ program mpicalldynamo
   ! Call dynamo code for each galaxy in mygals
   if (nmygals > 0) then
     do jgal=1,nmygals
-      call dynamo_run(info, mygals(jgal), flag)
+      call dynamo_run(info, mygals(jgal), flag, &
+                      p_no_magnetic_fields_test_run)
       print*,'flag',flag,'obtained by processor',rank,'for galaxy',mygals(jgal)
     enddo
   endif

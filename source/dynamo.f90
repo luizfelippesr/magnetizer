@@ -19,8 +19,9 @@ module dynamo
   public dynamo_run
   
   contains
-    subroutine dynamo_run(info, gal_id, flag)
+    subroutine dynamo_run(info, gal_id, flag, test_run)
       integer, intent(in) :: info, gal_id
+      logical, intent(in) :: test_run
       integer, intent(out) :: flag
       logical :: ok
       integer :: fail_count
@@ -74,7 +75,13 @@ module dynamo
           Btmp = sqrt(f(:,2)**2 + f(:,1)**2 + Bzmod**2)
           call construct_profiles(Btmp)
         endif
-          
+
+        ! If a run without magnetic fields was requested
+        if (test_run) then
+          ok = .true.
+          exit
+        endif
+
         ! Will try to solve the equations a few times, with different 
         ! timestep choices, if there is no success, aborts.
         do fail_count=0, MAX_FAILS

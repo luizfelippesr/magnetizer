@@ -117,6 +117,9 @@ module global_input_parameters
   ! Check whether the hydrostatic equilibrium solution is correct
   logical :: p_check_hydro_solution = .false.
 
+  ! Runs without solving the dynamo equations
+  logical :: p_no_magnetic_fields_test_run = .false.
+
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
     nsteps_0, &
@@ -153,7 +156,8 @@ module global_input_parameters
     p_tOB, &
     p_N_SN1OB, &
     p_outflow_hot_gas_density, &
-    p_check_hydro_solution
+    p_check_hydro_solution, &
+    p_no_magnetic_fields_test_run
   contains
 
   subroutine read_global_parameters(global_pars_filename)

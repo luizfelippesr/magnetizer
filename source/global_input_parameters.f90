@@ -81,8 +81,8 @@ module global_input_parameters
   double precision :: p_ISM_gamma = 5d0/3d0
   ! Turbulent length (in kpc)
   double precision :: p_ISM_turbulent_length = 0.1
-  ! Uses the scale height as an upper for the turbulent scale
-  logical :: p_limit_turbulent_scale = .false.
+  ! Uses the scale height as an upper limit for the turbulent scale
+  logical :: p_limit_turbulent_scale = .true.
 
   ! Ratio between stellar scale-height and stellar scale-radius
   double precision :: p_stellarHeightToRadiusScale = 1d0/7.3
@@ -119,6 +119,8 @@ module global_input_parameters
 
   ! Runs without solving the dynamo equations
   logical :: p_no_magnetic_fields_test_run = .false.
+  ! Runs without solving the dynamo equations
+  logical :: p_output_all_profiles = .false.
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -157,7 +159,8 @@ module global_input_parameters
     p_N_SN1OB, &
     p_outflow_hot_gas_density, &
     p_check_hydro_solution, &
-    p_no_magnetic_fields_test_run
+    p_no_magnetic_fields_test_run, &
+    p_output_all_profiles
   contains
 
   subroutine read_global_parameters(global_pars_filename)

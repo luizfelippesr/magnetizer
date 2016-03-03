@@ -44,6 +44,7 @@ $(srcdir)/output.f90: ${builddir}/$(IO).o ${builddir}/gutsdynamo.o ${builddir}/t
 $(srcdir)/$(IO).f90: ${builddir}/grid.o
 $(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o
 $(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o
+$(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o
 
 # Tides up
 clean:

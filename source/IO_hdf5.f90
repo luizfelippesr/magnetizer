@@ -90,12 +90,14 @@ contains
   end subroutine IO_start_galaxy
 
   
-  subroutine IO_write_dataset_scalar(dataset_name, gal_id, info, data)
+  subroutine IO_write_dataset_scalar(dataset_name, gal_id, info, data, &
+                                     units, description)
     ! Writes a dataset to disk - scalar version
-    
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id, info
     double precision, dimension(:), intent(in) :: data
+    character(len=*), optional, intent(in) :: units
+    character(len=*), optional, intent(in) :: description
     integer ::  idx, error
     integer, parameter :: rank = 2
     integer(hssize_t), dimension(2) :: offset 
@@ -105,8 +107,15 @@ contains
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
       idx = create_dset(dataset_name, scalar=.true.)
-      call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error) 
+      ! Also writes the attributes (if needed)
+      if (present(units)) &
+        call add_text_attribute(dset_ids(idx), 'Units', units)
+      if (present(description)) &
+        call add_text_attribute(dset_ids(idx), 'Description', description)
+
+      call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+
     end if
     
     ! Selects hyperslab in the file.
@@ -123,12 +132,14 @@ contains
   end subroutine IO_write_dataset_scalar
     
     
-  subroutine IO_write_dataset_vector(dataset_name, gal_id, info, data)
-    ! Writes a dataset to disk
-
+  subroutine IO_write_dataset_vector(dataset_name, gal_id, info, data, &
+                                     units, description)
+    ! Writes a dataset to disk - vector version
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id, info
     double precision, dimension(:,:), intent(in) :: data
+    character(len=*), optional, intent(in) :: units
+    character(len=*), optional, intent(in) :: description
     integer ::  idx, error
     integer, parameter :: rank = 3
     integer(hssize_t), dimension(3) :: offset 
@@ -138,6 +149,12 @@ contains
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
       idx = create_dset(dataset_name)
+      ! Also writes the attributes (if needed)
+      if (present(units)) &
+        call add_text_attribute(dset_ids(idx), 'Units', units)
+      if (present(description)) &
+        call add_text_attribute(dset_ids(idx), 'Description', description)
+
       call h5screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error) 
       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
     end if
@@ -186,7 +203,50 @@ contains
 
   end subroutine IO_end  
   
-  
+  subroutine add_text_attribute(dset_id, attribute_name, attribute)
+    ! Adds new text attributes to an existing dataset
+    ! Input: dset_id -> id of an opened dataset
+    !        attribute_name -> string with the name
+    !        attribute -> strig with the value
+    character(len=*), intent(in) ::  attribute_name ! attribute name
+    character(len=*), intent(in) ::  attribute ! attribute data
+    integer(hid_t) :: dset_id       ! Dataset identifier
+    integer(hid_t) :: attr_id       ! attribute identifier
+    integer(hid_t) :: aspace_id     ! attribute dataspace identifier
+    integer(hid_t) :: atype_id      ! attribute dataspace identifier
+    integer(hsize_t), dimension(1) :: adims = (/1/) ! attribute dimension
+    integer     ::   arank = 1                      ! attribute rank
+    integer(size_t) :: attrlen    ! length of the attribute string
+    integer     ::   error ! error flag
+    integer(hsize_t), dimension(1) :: data_dims
+
+
+    attrlen = len(attribute)
+    data_dims(1) = 1
+
+    ! Creates scalar data space for the attribute.
+    call h5screate_simple_f(arank, adims, aspace_id, error)
+
+    ! Creates datatype for the attribute.
+    call h5tcopy_f(H5T_NATIVE_CHARACTER, atype_id, error)
+    call h5tset_size_f(atype_id, attrlen, error)
+
+    ! Creates dataset attribute.
+    call h5acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
+                     error)
+
+    ! Writes the attribute data.
+    call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
+    print *, 'wrote it'
+    ! Closes the attribute.
+    call h5aclose_f(attr_id, error)
+
+    ! Terminates access to the data space.
+    call h5sclose_f(aspace_id, error)
+
+  end subroutine add_text_attribute
+
+
   function create_dset(dataset_name, scalar) result(idx)
     ! Creates a hdf5 dataspace, a namespace and dataset
     ! Returns the index

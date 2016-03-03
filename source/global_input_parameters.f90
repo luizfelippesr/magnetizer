@@ -67,10 +67,6 @@ module global_input_parameters
   ! TURBULENT DIFFUSION
   logical :: Turb_dif= .true.  !Set to F to turn off turbulent diffusion
 
-  ! Pressure and density calculations
-  character(len=6) :: p_pressure_procedure = 'simple'
-  character(len=6) :: p_density_procedure = 'simple'
-
   ! Sound speed (in km/s)
   double precision :: p_ISM_sound_speed_km_s = 10d0
   ! Ratio between turbulent velocity and sound speed
@@ -119,8 +115,6 @@ module global_input_parameters
 
   ! Runs without solving the dynamo equations
   logical :: p_no_magnetic_fields_test_run = .false.
-  ! Runs without solving the dynamo equations
-  logical :: p_output_all_profiles = .false.
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -139,8 +133,6 @@ module global_input_parameters
     Krause, &
     Advect, &
     Turb_dif, &
-    p_pressure_procedure, &
-    p_density_procedure, &
     p_ISM_csi, &
     p_ISM_sound_speed_km_s, &
     p_ISM_gamma, &
@@ -159,8 +151,7 @@ module global_input_parameters
     p_N_SN1OB, &
     p_outflow_hot_gas_density, &
     p_check_hydro_solution, &
-    p_no_magnetic_fields_test_run, &
-    p_output_all_profiles
+    p_no_magnetic_fields_test_run
   contains
 
   subroutine read_global_parameters(global_pars_filename)

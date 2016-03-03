@@ -83,7 +83,7 @@ module dynamo
           ok = .true.
           ! If a run without magnetic field evolution was requested
           if (test_run) exit
-          
+
           ! Loops through the timesteps
           do jt=1,nsteps
             if (info>2) then
@@ -134,7 +134,7 @@ module dynamo
           ! Estimates the value of |B_z| using Div B =0 condition
           call estimate_Bzmod(f)  
           ! Then, stores simulation output in arrays containing the time series
-          call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)  
+          call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
         else
           print *, 'FAIL'
           stop

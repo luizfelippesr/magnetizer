@@ -79,10 +79,13 @@ contains
   end subroutine IO_start_galaxy
     
     
-  subroutine IO_write_dataset_scalar(dataset_name, gal_id, info, data)
+  subroutine IO_write_dataset_scalar(dataset_name, gal_id, info, data, &
+                                     units, description))
     ! Writes a dataset to disk - scalar version
     ! This is a wrapper that calls the vector version
     
+    character(len=*), optional, intent(in) :: units
+    character(len=*), optional, intent(in) :: description
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id, info
     double precision, dimension(:), intent(in) :: data
@@ -94,10 +97,13 @@ contains
   end subroutine IO_write_dataset_scalar
     
     
-  subroutine IO_write_dataset_vector(dataset_name, gal_id, info, data)
+  subroutine IO_write_dataset_vector(dataset_name, gal_id, info, data, &
+                                     units, description))
     ! Writes a dataset to disk
 
     character(len=*), intent(in) :: dataset_name
+    character(len=*), optional, intent(in) :: units
+    character(len=*), optional, intent(in) :: description
     integer, intent(in) :: gal_id, info
     double precision, dimension(:,:), intent(in) :: data
     

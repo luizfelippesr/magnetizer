@@ -14,6 +14,7 @@ module grid
   double precision :: dx
   double precision, dimension(nx) :: x
   double precision, dimension(nx) :: r
+  double precision, dimension(nx) :: r_kpc
 !
   contains
     subroutine construct_grid

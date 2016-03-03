@@ -106,7 +106,7 @@ contains
       ! Computes the midplane pressure, from the density
       Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 
-      if (all(abs(Pgrav-Pgas)/Pgas<P_TOL)) then
+      if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
         error stop 'Error: invalid solution for the hydrostatic equilibrium.'
       end if
     end if
@@ -163,7 +163,7 @@ contains
       where (h>1e-20)
         alp_k = C_alp*l**2/h*Om  !Decreasing with radius
       elsewhere
-        alp_k = C_alp ! Check with Luke!!
+        alp_k = alpceil*v ! Check with Luke!!
       endwhere
     endif
     if (Alp_ceiling) then

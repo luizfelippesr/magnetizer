@@ -160,18 +160,16 @@ contains
     if (.not.Krause) then
       alp_k = C_alp  !No variation of alpha
     else
-      where (h>1e-20)
-        alp_k = C_alp*l**2/h*Om  !Decreasing with radius
+      where (h>1e-100) ! Just to avoid numerical problems
+        alp_k = C_alp*l**2/h*Om
       elsewhere
-        alp_k = alpceil*v ! Check with Luke!!
+        alp_k = alpceil*v ! Same ceiling as below
       endwhere
     endif
     if (Alp_ceiling) then
-      do ialp_k=1,nx
-        if (alp_k(ialp_k) > alpceil*v(ialp_k)) then
-          alp_k(ialp_k) = alpceil*v(ialp_k)
-        endif
-      enddo
+      where (alp_k > alpceil*v)
+        alp_k = alpceil*v
+      endwhere
     endif
     alp_k_kms = alp_k*h0_km/h0/t0_s*t0
 

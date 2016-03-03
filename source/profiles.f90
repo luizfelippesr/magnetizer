@@ -160,7 +160,7 @@ contains
     if (.not.Krause) then
       alp_k = C_alp  !No variation of alpha
     else
-      where (h>1e-100) ! Just to avoid numerical problems
+      where (h>1d-70) ! Just to avoid numerical problems
         alp_k = C_alp*l**2/h*Om
       elsewhere
         alp_k = alpceil*v ! Same ceiling as below

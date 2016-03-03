@@ -76,16 +76,14 @@ module dynamo
           call construct_profiles(Btmp)
         endif
 
-        ! If a run without magnetic fields was requested
-        if (test_run) then
-          ok = .true.
-          exit
-        endif
 
-        ! Will try to solve the equations a few times, with different 
+        ! Will try to solve the equations a few times, with different
         ! timestep choices, if there is no success, aborts.
         do fail_count=0, MAX_FAILS
           ok = .true.
+          ! If a run without magnetic field evolution was requested
+          if (test_run) exit
+          
           ! Loops through the timesteps
           do jt=1,nsteps
             if (info>2) then

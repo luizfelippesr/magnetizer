@@ -14,7 +14,6 @@ module profiles
   double precision, dimension(nx) :: tau, tau_Gyr, tau_s
   double precision :: tau_sol, tau_sol_Gyr, tau_sol_s
   double precision, dimension(nx) :: Beq, Beq_mkG
-  integer :: ialp_k
   double precision, dimension(nx) :: alp_k, alp_k_kms
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
   double precision, dimension(nx), private :: G_d, G_b, G_h
@@ -38,7 +37,7 @@ contains
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: B_actual
     double precision, dimension(nx) :: rho_cgs
-    double precision, parameter :: rmin_over_rmax=0.005
+    double precision, parameter :: rmin_over_rmax=0.001
     double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
     double precision, parameter :: P_TOL=1e-10
     double precision :: r_disk_min 
@@ -68,7 +67,14 @@ contains
 
     ! Regularises
     rreg = r_kpc(minloc(abs(r_kpc - RREG_TO_RDISK*r_disk),1))
-    call regularize(r_kpc, rreg, Om_kmskpc, G_kmskpc)
+    call regularize(abs(r_kpc), rreg, Om_kmskpc, G_kmskpc)
+
+    ! If required, avoid bumps in the shear
+    if (.not.p_allow_positive_shears) then
+      where (G_kmskpc>0d0)
+        G_kmskpc = 0d0
+      end where
+    endif
 
     ! Adjusts units to code units (set in units module)
     Om = Om_kmskpc/h0_km*h0_kpc*t0_s/t0
@@ -201,12 +207,13 @@ contains
     double precision, intent(in)  :: r_xi
     double precision, dimension(size(rx)), intent(inout) :: Omega, Shear
     double precision, dimension(size(rx)) :: exp_minus_rxi_over_r
+!     double precision, dimension(size(rx)) :: exp_things
     double precision, dimension(size(rx)) :: rxi_over_r_2
     double precision :: Omega_xi
     double precision, parameter :: small_factor=1e-10
-
+    double precision, parameter :: s=1d0
     ! Finds the index of r=r_xi and sets Omega_xi
-    Omega_xi = Omega( minloc(abs(rx-r_xi),1) )
+    Omega_xi = 1.5d0*Omega( minloc(abs(rx-r_xi),1) )
 
     ! Be cautious about very small radii
     ! (to avoid NaNs still keeping Omega -> Omega_xi for r->0)
@@ -224,6 +231,10 @@ contains
     elsewhere
       exp_minus_rxi_over_r =0
     endwhere
+
+!     exp_things = exp(s*(rx-r_xi)**2)
+!     exp_things = exp(-r_xi/2d0/rx)
+!     Omega = (Omega*exp_things+Omega_xi)/(1d0+exp_things)
 
     ! Regularises Shear
     Shear = exp_minus_rxi_over_r*(2.0*rxi_over_r_2*(Omega-Omega_xi)+Shear)

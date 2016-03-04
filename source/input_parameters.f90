@@ -200,6 +200,7 @@ module calc_params
 
 !     PHYSICAL GRID
       r_kpc=r*r_max_kpc
+
   endsubroutine set_calc_params
 end module calc_params
 

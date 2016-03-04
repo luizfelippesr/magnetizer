@@ -116,6 +116,9 @@ module global_input_parameters
   ! Runs without solving the dynamo equations
   logical :: p_no_magnetic_fields_test_run = .false.
 
+  !
+  logical :: p_allow_positive_shears = .true.
+
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
     nsteps_0, &
@@ -151,7 +154,8 @@ module global_input_parameters
     p_N_SN1OB, &
     p_outflow_hot_gas_density, &
     p_check_hydro_solution, &
-    p_no_magnetic_fields_test_run
+    p_no_magnetic_fields_test_run, &
+    p_allow_positive_shears 
   contains
 
   subroutine read_global_parameters(global_pars_filename)

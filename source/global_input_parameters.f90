@@ -20,7 +20,6 @@ module global_input_parameters
   ! PARAMETER INPUTS
   ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
   logical :: Time_evol= .true.
-  integer, parameter :: max_number_of_redshifts = 10 ! lfsr: this will became a variable later... (TODO)
 
   ! ALPHA QUENCHING
   ! Works with alg_quench=F; Set to T for dynamical quenching (d_alpha_m/dt eqn incl in sim)
@@ -125,7 +124,6 @@ module global_input_parameters
     Time_evol, &
     info, &
     ngals, &
-!     max_number_of_redshifts, & ! lfsr: this will be added later  (TODO)
     Dyn_quench, Alg_quench, &
     lFloor, &
     Damp, &

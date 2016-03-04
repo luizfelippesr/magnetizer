@@ -13,7 +13,7 @@ module input_params
   logical :: last_output = .false.
 
   ! Time-stepping parameters
-  integer, parameter :: n1= max_number_of_redshifts!420   !Number of snapshots
+  integer :: n1 = -1 !Total number of snapshots (set to -1 to flag it is uninitialized)
   double precision :: tsnap !Time between successive snapshots
   integer :: nsteps=20  !Number of timesteps in between snapshots
   double precision :: dt,t=0,first=0.d0 !Timestep variables (lfsr: a very bad place to define them, indeed)
@@ -33,7 +33,8 @@ module input_params
   double precision :: Mstars_disk, Mgas_disk, SFR
 
   ! All galaxy data (private!)
-  integer, private, parameter :: number_of_columns=13 ! Maximum umber of columns in the galaxy input files
+  integer, parameter :: max_number_of_redshifts = 100 ! This is the maximum possible number of redshifts in the input data
+  integer, private, parameter :: number_of_columns=11 ! Maximum umber of columns in the galaxy input files
   double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
   character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
 
@@ -86,6 +87,8 @@ module input_params
         endif
       enddo
       close(u_dep)
+      ! Sets n1, the counter of snapshots
+      n1 = i-1
       ! Flags abscence of any other values with negatives
       galaxy_data(i:max_number_of_redshifts,:) = -1
     endsubroutine read_input_parameters

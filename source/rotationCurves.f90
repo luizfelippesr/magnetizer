@@ -119,44 +119,43 @@ contains
 
   end subroutine bulge_rotation_curve
 
-  subroutine halo_rotation_curve(r, r_halo, v_halo, nfw_cs1, Omega, Shear)
+
+  subroutine halo_rotation_curve(rx, r_halo, v_halo, nfw_cs1, Omega, Shear)
     ! Computes the rotation curve associated with an NFW halo
     ! Warning: This ignores effects of adiabatic contraction!
     !          It need to be accounted for later
     ! Input: r -> the radii where the rotation curve will be computed
-    !        r_halo -> the virial radius of the halo
-    !        v_halo -> the circular velocity at r_halo
+    !        r_halo -> the virial radius of the halo (r_200)
+    !        v_halo -> the circular velocity at r_halo (V_200)
     !        nfw_cs1 -> 1/c_s -> inverse of the NFW concentration parameter
     !                        i.e. (NFW scale radius)/(virial radius)
     ! Output: Omega -> angular velocity profile
     !         Shear  -> shear profile
-    ! Info:  V^2 \propto {ln[(cs1+y)/cs1] - y/(cs1+y)} /
-    !                    {ln[(cs1+1)/cs1] - 1/(cs1+1)} / y
+    ! Info:  V^2 = V_200^2 * {ln(1+cy) - cy/(1+cy)} /
+    !                    {ln(1+c) - 1/(1+c)} / y
     ! Ref: NFW profile
-
+    use deriv
     implicit none
     double precision, intent(in) :: r_halo, v_halo, nfw_cs1
-    double precision, dimension(:), intent(in)  :: r
-    double precision, dimension(size(r)), intent(out) :: Omega, Shear
-    double precision, dimension(size(r)) :: v, dv
-    double precision, dimension(size(r)) :: y
-    double precision, dimension(size(r)) :: B
-    double precision :: A
+    double precision, dimension(:), intent(in)  :: rx
+    double precision, dimension(size(rx)), intent(out) :: Omega, Shear
+    double precision, dimension(size(rx)) :: v, dvdr, dv2dy
+    double precision, dimension(size(rx)) :: y, B
+    double precision :: A, c
 
-    y = abs(r) / r_halo
+    y = abs(rx) / r_halo
+    c = 1d0/nfw_cs1
 
-    A = 1.0 / ( log((nfw_cs1+1d0)/nfw_cs1) - 1d0/(nfw_cs1+1d0) )
-    A = sqrt(A)
+    A = v_halo**2 / (log(1d0+c)-c/(1d0+c))
+    B = (log(1d0+c*y) - c*y/(1d0+c*y))/y
 
-    B = (log((nfw_cs1+y)/nfw_cs1) - y/(nfw_cs1+y)) / y
-    v = A * v_halo * sqrt(B)
+    v = sqrt(A*B)
 
-    dv = 1.0/(nfw_cs1+y)**2-(log((nfw_cs1+y)/nfw_cs1)-y/(nfw_cs1+y))/y**2/2.0
-    dv = dv * A * v_halo
+    dv2dy = A*(-B +  (1d0-c)/(1d0+c*y) +c**2*y/(1d0+c*y)**2 )/y
+    dvdr = dv2dy/2d0/v/r_halo
 
-    Omega = v/r
-    Shear = dv - Omega
-
+    Omega = v/rx
+    Shear = dvdr - Omega
   end subroutine halo_rotation_curve
 
 end module rotationCurves

@@ -202,9 +202,6 @@ module equ  !Contains the partial differential equations to be solved
 
       ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
       Bsqtot=Br**2 +Bp**2 +Bzmod**2
-      do i=1,size(Br)
-        print *, Br(i), Bp(i), Bzmod(i), h(i)
-      enddo
 
       ! Updates all profiles
       call construct_profiles(sqrt(Bsqtot))

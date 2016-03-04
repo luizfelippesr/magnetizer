@@ -20,7 +20,8 @@ module pressureEquilibrium
 contains
   subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B,  &
                                           rho_d, h_d, &
-                                          Sigma_star_out, Sigma_d_out, Rm_out)
+                                          Sigma_star_out, Sigma_d_out, Rm_out,&
+                                          all_roots)
     ! Computes the mid-plane density and scale height under the assumption of
     ! hydrostatic equilibrium
     ! Input:  rdisk -> half mass radius of the disk (kpc)
@@ -37,6 +38,7 @@ contains
     double precision, intent(in) :: rdisk, M_g, M_star
     double precision, dimension(:), intent(in) :: r, B
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d
+    double precision, dimension(size(r),3), intent(out),optional :: all_roots
     double precision, dimension(size(r)), intent(out), optional ::    &
                                           Rm_out, Sigma_d_out, Sigma_star_out
     double precision, dimension(size(r)) :: a0, a1, a2, a3
@@ -45,6 +47,7 @@ contains
     double precision, dimension(size(r)) :: B2_4pi, Rm
     double precision :: rs, rs_g_nonSI, A, bm, bs, v0, rs_nonSI
     double precision, parameter :: h_guess = 0.2d0*kpc_SI
+    double precision, dimension(3) :: roots
     integer :: i
     ! Prepares constants
     rs_nonSI = constDiskScaleToHalfMassRatio * rdisk ! kpc
@@ -91,13 +94,16 @@ contains
     ! and dirty way of avoiding the unphysical solutions without having to
     ! substitute back in the equation.)
     do i=1,size(r)
-      h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess)
+      h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess, roots)
       if (h_d(i)>1d-10) then
         rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
       else
+        h_d(i) = 0d0
         rho_d(i) = 0d0
       end if
       h_d(i) = h_d(i)/kpc_SI
+      ! Outputs all roots if required
+      if (present(all_roots)) all_roots(i,:) = roots(:)/kpc_SI
     end do
     ! Outputs optional quantities
     if (present(Rm_out)) Rm_out=Rm

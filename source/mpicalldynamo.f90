@@ -106,9 +106,9 @@ program mpicalldynamo
   ! Finalizes IO
   call IO_end()
   print*,'rank=',rank,'    IO finished'
-  
+
   !Tell the MPI library to release all resources it is using
-  call MPI_FINALIZE(ierr) 
+  call MPI_FINALIZE(ierr)
   
   print*,'rank=',rank,'    MPI finished'
   

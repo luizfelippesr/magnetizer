@@ -36,5 +36,5 @@
 # Name      Mgas_disk  Mstars_disk  r_disk    v_disk   SFR         v_bul   r_bul   v_halo  virial_r_halo   1/cs
 # (units)   (Msun)     (Msun)       (kpc)     (km/s)   (Msun/yr)   (km/s)  (kpc)   (km/s)  (kpc)
 # ref       A          B            C         D        E           F       G       H       I               J
-   M31      7.7e8      1.4e11       1.711     200      1.0         50      1.0     75      1e3             0.0944
+#   M31      7.7e8      1.4e11       1.711     200      1.0         50      1.0     75      1e3             0.0944
    MW       8e9        2.85e10      5.035     200      1.5         100     2.0     75      1e3             0.0944

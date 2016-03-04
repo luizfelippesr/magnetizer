@@ -24,11 +24,6 @@ module IO
   integer(hid_t), dimension(max_number_of_datasets) :: dataspace_ids
   integer(hid_t), dimension(max_number_of_datasets) :: memspace_ids
   
-  integer(hsize_t), dimension(3) :: dimsf_vec
-  integer(hsize_t), dimension(2) :: dimsf_sca
-  integer(hsize_t), dimension(3) :: dimsf_vec_1gal
-  integer(hsize_t), dimension(2) :: dimsf_sca_1gal
-  
   integer :: ndsets = 0 ! number of datasets
   logical :: Initialized = .false. ! Initialisation flag
   
@@ -103,18 +98,21 @@ contains
     integer(hssize_t), dimension(2) :: offset 
     integer, dimension(1) :: data_shape
 
+    integer(hsize_t), dimension(2) :: dimsf_sca
+    integer(hsize_t), dimension(2) :: dimsf_sca_1gal
+
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
     dimsf_sca = (/data_shape(1),gals_number/)
     ! Sets the dimensions associated with writing a single galaxy
     dimsf_sca_1gal = (/data_shape(1),1/)
-
+    print *, 'IO_write_dataset'
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      idx = create_dset(dataset_name, scalar=.true.)
+      idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca)
       ! Also writes the attributes (if needed)
       if (present(units)) &
         call add_text_attribute(dset_ids(idx), 'Units', units)
@@ -152,6 +150,8 @@ contains
     integer, parameter :: rank = 3
     integer(hssize_t), dimension(3) :: offset
     integer, dimension(2) :: data_shape
+    integer(hsize_t), dimension(3) :: dimsf_vec
+    integer(hsize_t), dimension(3) :: dimsf_vec_1gal
 
     data_shape = shape(data)
 
@@ -164,7 +164,7 @@ contains
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      idx = create_dset(dataset_name)
+      idx = create_dset(dataset_name, dimsf_vec=dimsf_vec)
       ! Also writes the attributes (if needed)
       if (present(units)) &
         call add_text_attribute(dset_ids(idx), 'Units', units)
@@ -263,10 +263,12 @@ contains
   end subroutine add_text_attribute
 
 
-  function create_dset(dataset_name, scalar) result(idx)
+  function create_dset(dataset_name, scalar, dimsf_vec, dimsf_sca) result(idx)
     ! Creates a hdf5 dataspace, a namespace and dataset
     ! Returns the index
     ! NB This is a collective procedure
+    integer(hsize_t), dimension(3), intent(in), optional :: dimsf_vec
+    integer(hsize_t), dimension(2), intent(in), optional :: dimsf_sca
     character(len=*), intent(in) :: dataset_name
     logical, intent(in), optional :: scalar
     integer(hid_t) :: dataspace ! dataspace identifier (temporary)

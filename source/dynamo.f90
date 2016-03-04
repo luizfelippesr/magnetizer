@@ -66,16 +66,17 @@ module dynamo
       
       ! Loops through the SAM's snapshots
       do it=1,n1  
+
         if (info>0) print *, 'Main loop: Galaxy ',gal_id_string, ' it=',it
 
         ! Initializes the number of steps to the global input value
-        nsteps = nsteps_0 
+        nsteps = nsteps_0
+        call set_ts_params()
         ! Constructs galaxy model for the present snapshot
         if (it /= 1) then
           Btmp = sqrt(f(:,2)**2 + f(:,1)**2 + Bzmod**2)
           call construct_profiles(Btmp)
         endif
-
 
         ! Will try to solve the equations a few times, with different
         ! timestep choices, if there is no success, aborts.
@@ -89,12 +90,13 @@ module dynamo
             if (info>2) then
               print *, 'Inner loop: Galaxy ',gal_id_string, ' jt=',jt, &
                       'nsteps=',nsteps, ' fail_count=',fail_count
+              print *, '            t',t_Gyr +dt*t0_Gyr*jt
             endif
             ! Runs Runge-Kutta time-stepping routine
             call rk(f, dfdt)  
             
-            print *, 't_Gyr',t_Gyr, 'jt',jt, f(nxghost+1+nxphys/2,1), f(nxghost+1+nxphys/2,2)
-            write (*,"(E8.2)") maxval(f)
+!             print *, 't_Gyr',t_Gyr, 'jt',jt, f(nxghost+1+nxphys/2,1), f(nxghost+1+nxphys/2,2)
+!             write (*,"(E8.2)") maxval(f)
             
             ! If the magnetic field blows up or something else blows up
             ! flags and exit the loop

@@ -44,6 +44,8 @@ module input_params
 
       tsnap = time_between_inputs/t0_Gyr
       dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
+      print *, 'set_ts_params  ','dt=',dt*t0_Gyr,'Gyr', time_between_inputs/100.
+      print *, nsteps
       
     endsubroutine set_ts_params
 
@@ -123,7 +125,6 @@ module input_params
       if ( next_time_input > 0 ) then
         time_between_inputs = next_time_input-current_time_input
         t = 0 ! At each snapshot, reset the time variable
-        call set_ts_params()
       else
         last_output = .true.
       endif

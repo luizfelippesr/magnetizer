@@ -10,6 +10,9 @@ module IO
   
   private
   
+  ! Number of galaxies
+  integer :: gals_number, grid_points
+
   ! Parameter setting the maximum possible number of datasets
   integer, parameter :: max_number_of_datasets=25
   
@@ -17,9 +20,9 @@ module IO
   
   ! The following store dataset names and ids
   character(len=15), dimension(max_number_of_datasets) :: dset_names = ''
-  integer(hid_t), dimension(max_number_of_datasets) :: dset_ids 
-  integer(hid_t), dimension(max_number_of_datasets) :: dataspace_ids   
-  integer(hid_t), dimension(max_number_of_datasets) :: memspace_ids     
+  integer(hid_t), dimension(max_number_of_datasets) :: dset_ids
+  integer(hid_t), dimension(max_number_of_datasets) :: dataspace_ids
+  integer(hid_t), dimension(max_number_of_datasets) :: memspace_ids
   
   integer(hsize_t), dimension(3) :: dimsf_vec
   integer(hsize_t), dimension(2) :: dimsf_sca
@@ -44,6 +47,10 @@ contains
     integer(hid_t) :: plist_id      ! property list identifier 
     integer :: error
     
+    ! Reads some properties from the global variable at the grid module
+    gals_number = ngals
+    grid_points = nx
+
     if (.not.present(mpi_comm)) then
       error stop 'Fatal Error: start_IO, trying to initialize parallel hdf5 IO without a communicator.'
     endif
@@ -64,14 +71,7 @@ contains
                      access_prp=plist_id)
     ! Creates property list
     call h5pclose_f(plist_id, error)
-    
-    ! Sets dataset dimensions.
-    dimsf_vec = (/max_number_of_redshifts,nx,ngals/)
-    dimsf_sca = (/max_number_of_redshifts,ngals/)
-    ! Sets the dimensions associated with writing a single galaxy
-    dimsf_vec_1gal = (/max_number_of_redshifts,nx,1/)
-    dimsf_sca_1gal = (/max_number_of_redshifts,1/)
-    
+
     Initialized = .true.
     
     return    
@@ -101,6 +101,14 @@ contains
     integer ::  idx, error
     integer, parameter :: rank = 2
     integer(hssize_t), dimension(2) :: offset 
+    integer, dimension(1) :: data_shape
+
+    data_shape = shape(data)
+
+    ! Sets dataset dimensions.
+    dimsf_sca = (/data_shape(1),gals_number/)
+    ! Sets the dimensions associated with writing a single galaxy
+    dimsf_sca_1gal = (/data_shape(1),1/)
 
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
@@ -120,7 +128,7 @@ contains
     
     ! Selects hyperslab in the file.
     offset = (/0,gal_id-1/) ! Means: in second dimension, start from gal_id-1
-    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, & 
+    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
     ! At last, writes the dataset
     call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
@@ -142,7 +150,15 @@ contains
     character(len=*), optional, intent(in) :: description
     integer ::  idx, error
     integer, parameter :: rank = 3
-    integer(hssize_t), dimension(3) :: offset 
+    integer(hssize_t), dimension(3) :: offset
+    integer, dimension(2) :: data_shape
+
+    data_shape = shape(data)
+
+    ! Sets dataset dimensions.
+    dimsf_vec = (/data_shape(1),data_shape(2),gals_number/)
+    ! Sets the dimensions associated with writing a single galaxy
+    dimsf_vec_1gal = (/data_shape(1),data_shape(2),1/)
 
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
@@ -161,7 +177,7 @@ contains
     
     ! Selects hyperslab in the file.
     offset = (/0,0,gal_id-1/) ! Means: in third dimension, start from gal_id-1
-    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, & 
+    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_vec_1gal, error)
     ! At last, writes the dataset
     call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error, &

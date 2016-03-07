@@ -115,8 +115,13 @@ module global_input_parameters
   ! Runs without solving the dynamo equations
   logical :: p_no_magnetic_fields_test_run = .false.
 
-  !
-  logical :: p_allow_positive_shears = .true.
+  ! When set to false, this substitutes any positive shear by 0
+  ! (NB positive shears can only arise from the regularisation)
+  logical :: p_allow_positive_shears = .false.
+
+  ! Debug mode: all timesteps are included in the output, but
+  ! only 1 snapshot is used.
+  logical :: p_oneSnaphotDebugMode = .false.
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -153,7 +158,8 @@ module global_input_parameters
     p_outflow_hot_gas_density, &
     p_check_hydro_solution, &
     p_no_magnetic_fields_test_run, &
-    p_allow_positive_shears 
+    p_allow_positive_shears, &
+    p_oneSnaphotDebugMode
   contains
 
   subroutine read_global_parameters(global_pars_filename)

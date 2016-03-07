@@ -22,12 +22,13 @@ module profiles
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
 
 contains
-  subroutine construct_profiles(B)
+  logical function construct_profiles(B)
     ! Computes the radial of variation of all relevant physical constants
     ! Input: B -> magnetic field profile (if abscent, zero is used)
     ! Other input variables are obtained from the public global variables
     ! defined in the input_parameters module.
     ! The output is written in public global variables
+    ! Returns True if succesful. False otherwise.
     use global_input_parameters
     use calc_params
     use rotationCurves
@@ -50,6 +51,8 @@ contains
     else
       B_actual = 0.0
     endif
+
+    construct_profiles = .true.
 
     ! Sets the 'reference radius' to the disk half-mass radius
     ! (actually, the maximum half mass radius over history)
@@ -103,6 +106,10 @@ contains
     if (.not.p_check_hydro_solution) then
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
                                         abs(r_kpc), B_actual, rho_cgs, h_kpc)
+      if (any(h_kpc<0)) then
+        print *, 'construct_profiles: Error. Negative scaleheight detected.'
+        construct_profiles = .false.
+      endif
     else
       ! If required, checks the solution.
       ! (This is a slow step. Should be used for debugging only.)
@@ -129,36 +136,35 @@ contains
 !             print *, 'Sigma_star', Sigma_star(i_halfmass)/1d6
           endif
         end do
-        print *,
-        print *,
-        print *, 'TRying with 80% field'
-        B_actual =B_actual*0.0
-        call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-                abs(r_kpc), B_actual, rho_cgs, h_kpc, Sigma_star, Sigma_d, Rm, all_roots)
-        ! Computes the midplane pressure, from gravity
-        Pgrav_alt = computes_midplane_ISM_pressure_using_scaleheight(  &
-                                      r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
-        ! Computes the midplane pressure, from the density
-        Pgas_alt = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
-        do i_halfmass=1, size(Pgrav)
-          if (abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass)>P_TOL) then
-            print *,
-            print *, 'i', i_halfmass
-            print *, all_roots(i_halfmass,:)
-            print *, 'Perr', abs(Pgrav_alt(i_halfmass)-Pgas_alt(i_halfmass))/Pgas_alt(i_halfmass), 'r',r_kpc(i_halfmass)
-!             print *, 'B', B_actual(i_halfmass), 'Sigma_d',Sigma_d(i_halfmass)
-            print *, 'rho', rho_cgs(i_halfmass), 'h_kpc', h_kpc(i_halfmass)
-!             print *, 'Beq', Beq_mkG(i_halfmass)
-!             print *, 'G_kmskpc', G_kmskpc(i_halfmass),G_kmskpc(i_halfmass)/ Om_kmskpc(i_halfmass)
-!             print *, 'Sigma_d', Sigma_d(i_halfmass)/1d6
-!             print *, 'f_m', Rm(i_halfmass)/(1d0+Rm(i_halfmass))
-!             print *, 'Sigma_star', Sigma_star(i_halfmass)/1d6
-          endif
-        end do
+!         print *,
+!         print *,
+!         print *, 'TRying with 80% field'
+!         B_actual =B_actual*0.8
+!         call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
+!                 abs(r_kpc), B_actual, rho_cgs, h_kpc, Sigma_star, Sigma_d, Rm, all_roots)
+!         ! Computes the midplane pressure, from gravity
+!         Pgrav_alt = computes_midplane_ISM_pressure_using_scaleheight(  &
+!                                       r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
+!         ! Computes the midplane pressure, from the density
+!         Pgas_alt = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
+!         do i_halfmass=1, size(Pgrav)
+!           if (abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass)>P_TOL) then
+!             print *,
+!             print *, 'i', i_halfmass
+!             print *, all_roots(i_halfmass,:)
+!             print *, 'Perr', abs(Pgrav_alt(i_halfmass)-Pgas_alt(i_halfmass))/Pgas_alt(i_halfmass), 'r',r_kpc(i_halfmass)
+! !             print *, 'B', B_actual(i_halfmass), 'Sigma_d',Sigma_d(i_halfmass)
+!             print *, 'rho', rho_cgs(i_halfmass), 'h_kpc', h_kpc(i_halfmass)
+! !             print *, 'Beq', Beq_mkG(i_halfmass)
+! !             print *, 'G_kmskpc', G_kmskpc(i_halfmass),G_kmskpc(i_halfmass)/ Om_kmskpc(i_halfmass)
+! !             print *, 'Sigma_d', Sigma_d(i_halfmass)/1d6
+! !             print *, 'f_m', Rm(i_halfmass)/(1d0+Rm(i_halfmass))
+! !             print *, 'Sigma_star', Sigma_star(i_halfmass)/1d6
+!           endif
+!         end do
 
-!         print *, B_actual, rho_cgs
-        error stop 'Error: invalid solution for the hydrostatic equilibrium.'
-
+        print *, 'construct_profiles: Error. Invalid solution for the hydrostatic equilibrium.'
+        construct_profiles = .false.
       end if
     end if
 
@@ -234,7 +240,7 @@ contains
       om=0.d0
     endif
 
-  end subroutine construct_profiles
+  end function construct_profiles
 
 
   subroutine regularize(rx, r_xi, Omega, Shear)

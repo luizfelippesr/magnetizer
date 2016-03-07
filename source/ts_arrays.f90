@@ -35,12 +35,12 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, allocatable, dimension(:,:),public :: ts_rkpc
 
 contains
-  subroutine make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+  subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
     implicit none
     integer, intent(in) :: it
-    double precision, intent(in) :: t
+    double precision, intent(in) :: this_t
     double precision, intent(in) :: rmax
     double precision, intent(in) :: delta_r
     double precision, dimension(nx,nvar), intent(in) :: f
@@ -63,7 +63,7 @@ contains
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
 
-    ts_t_Gyr(it) = t_Gyr
+    ts_t_Gyr(it) = this_t
     ts_Dt(it) = t*t0_Gyr
     ts_rmax(it) = rmax
     ts_delta_r(it) = delta_r
@@ -96,31 +96,39 @@ contains
   subroutine allocate_ts_arrays()
     ! Initial allocation / initialization
     implicit none
-    integer :: choose_n1
-    choose_n1 = n1 ! Gets it from the global variables
+    integer :: max_outputs
+    if (.not. p_oneSnaphotDebugMode) then
+      ! Default mode: only times corresponding to snapshots are included
+      ! in the output.
+      max_outputs = n1+1 ! Gets it from the global variables
+    else
+      ! In the oneSnaphotDebugMode, all timesteps are included in the output
+      ! but only one galform output is used.
+      max_outputs = nsteps_0+1
+    endif
 
-    allocate(ts_t_Gyr(choose_n1))
-    allocate(ts_Dt(choose_n1))
-    allocate(ts_rmax(choose_n1))
-    allocate(ts_delta_r(choose_n1))
-    allocate(ts_Br(choose_n1,nx))
-    allocate(ts_Bp(choose_n1,nx))
-    allocate(ts_alp_m(choose_n1,nx))
-    allocate(ts_h(choose_n1,nx))
-    allocate(ts_om(choose_n1,nx))
-    allocate(ts_G(choose_n1,nx))
-    allocate(ts_l(choose_n1,nx))
-    allocate(ts_v(choose_n1,nx))
-    allocate(ts_etat(choose_n1,nx))
-    allocate(ts_tau(choose_n1,nx))
-    allocate(ts_alp_k(choose_n1,nx))
-    allocate(ts_alp(choose_n1,nx))
-    allocate(ts_Uz(choose_n1,nx))
-    allocate(ts_Ur(choose_n1,nx))
-    allocate(ts_n(choose_n1,nx))
-    allocate(ts_Beq(choose_n1,nx))
-    allocate(ts_Bzmod(choose_n1,nx))
-    allocate(ts_rkpc(choose_n1,nx))
+    allocate(ts_t_Gyr(max_outputs))
+    allocate(ts_Dt(max_outputs))
+    allocate(ts_rmax(max_outputs))
+    allocate(ts_delta_r(max_outputs))
+    allocate(ts_Br(max_outputs,nx))
+    allocate(ts_Bp(max_outputs,nx))
+    allocate(ts_alp_m(max_outputs,nx))
+    allocate(ts_h(max_outputs,nx))
+    allocate(ts_om(max_outputs,nx))
+    allocate(ts_G(max_outputs,nx))
+    allocate(ts_l(max_outputs,nx))
+    allocate(ts_v(max_outputs,nx))
+    allocate(ts_etat(max_outputs,nx))
+    allocate(ts_tau(max_outputs,nx))
+    allocate(ts_alp_k(max_outputs,nx))
+    allocate(ts_alp(max_outputs,nx))
+    allocate(ts_Uz(max_outputs,nx))
+    allocate(ts_Ur(max_outputs,nx))
+    allocate(ts_n(max_outputs,nx))
+    allocate(ts_Beq(max_outputs,nx))
+    allocate(ts_Bzmod(max_outputs,nx))
+    allocate(ts_rkpc(max_outputs,nx))
 
     ts_t_Gyr = INVALID
     ts_Dt = INVALID
@@ -211,7 +219,7 @@ contains
     if (present(length)) then
       how_long = length
     else
-      how_long = 1
+      how_long = 10
     endif
 
     old_shape = shape(ar)

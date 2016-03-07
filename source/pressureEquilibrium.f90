@@ -98,7 +98,6 @@ contains
       if (h_d(i)>1d-10) then
         rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
       else
-        h_d(i) = 0d0
         rho_d(i) = 0d0
       end if
       h_d(i) = h_d(i)/kpc_SI

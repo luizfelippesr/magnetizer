@@ -102,21 +102,6 @@ module galaxy_model
 !
   implicit none
 !
-  contains
-    subroutine construct_galaxy_model(gal_id_string,info)
-!
-      character (len=8), intent(in) :: gal_id_string
-      integer, intent(in) :: info
-!
-!     SET UP NUMERICS AND PLOTTING
-!
-      if (Time_evol) then
-        call set_input_params(gal_id_string,info)  !read in model parameters
-        call set_calc_params  !set other parameters
-      endif
-!
-      call construct_profiles  !construct profiles of h(r), om(r), Uz(r), Ur(r), l(r), v(r), etat(r), tau(r), n(r), Beq(r), alp_k(r)
-    end subroutine construct_galaxy_model
 end module galaxy_model
 !*****************************************************
 module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
@@ -202,9 +187,6 @@ module equ  !Contains the partial differential equations to be solved
 
       ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
       Bsqtot=Br**2 +Bp**2 +Bzmod**2
-
-      ! Updates all profiles
-      call construct_profiles(sqrt(Bsqtot))
 
       if (Alg_quench) then
         alp= alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching

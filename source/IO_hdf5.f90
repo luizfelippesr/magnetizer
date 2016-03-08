@@ -107,7 +107,7 @@ contains
     dimsf_sca = (/data_shape(1),gals_number/)
     ! Sets the dimensions associated with writing a single galaxy
     dimsf_sca_1gal = (/data_shape(1),1/)
-    print *, 'IO_write_dataset'
+
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
@@ -204,13 +204,13 @@ contains
     ! Closes all dataspaces, namespaces and datasets
     ! (this may be moved to IO_finish_galaxy, if necessary)
     do i=1,ndsets
-      print *, 'Closing dataspace ', i
+!       print *, 'Closing dataspace ', i
       call h5sclose_f(dataspace_ids(i), error)
       
-      print *, 'Closing memspace ', i
+!       print *, 'Closing memspace ', i
       call h5sclose_f(memspace_ids(i), error)
       
-      print *, 'Closing dset ', i
+!       print *, 'Closing dset ', i
       call h5dclose_f(dset_ids(i), error)
     end do
     ndsets = 0
@@ -253,7 +253,7 @@ contains
 
     ! Writes the attribute data.
     call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
-    print *, 'wrote it'
+
     ! Closes the attribute.
     call h5aclose_f(attr_id, error)
 

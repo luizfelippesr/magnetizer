@@ -39,6 +39,9 @@ module global_input_parameters
   ! Set to F for random seed magnetic field, T for some other seed
   logical :: Rand_seed= .false.
 
+  !Seed field amplitude as a fraction of equipartition magnetic field strength
+  double precision :: frac_seed= 0.01d0
+
   ! CEILING ON ALPHA EFFECT
   ! Set to T to put a ceiling for alpha at alpceil*v
   logical :: Alp_ceiling= .true.
@@ -123,6 +126,9 @@ module global_input_parameters
   ! only 1 snapshot is used.
   logical :: p_oneSnaphotDebugMode = .false.
 
+  double precision :: p_turbulent_to_scaleheight_ratio = 0.25
+  logical :: p_use_fixed_turbulent_to_scaleheight_ratio = .false.
+
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
     nsteps_0, &
@@ -159,7 +165,11 @@ module global_input_parameters
     p_check_hydro_solution, &
     p_no_magnetic_fields_test_run, &
     p_allow_positive_shears, &
-    p_oneSnaphotDebugMode
+    p_oneSnaphotDebugMode, &
+    p_turbulent_to_scaleheight_ratio, &
+    p_use_fixed_turbulent_to_scaleheight_ratio, &
+    frac_seed
+
   contains
 
   subroutine read_global_parameters(global_pars_filename)

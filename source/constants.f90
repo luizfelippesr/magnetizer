@@ -71,8 +71,6 @@ module input_constants  ! Contains physical, model-dependent, constants
   ! SEED FIELD
   !Only relevant if Rand_seed=F
   double precision, parameter :: r1_kpc= 15.0d0
-  !Seed field amplitude as a fraction of equipartition magnetic field strength
-  double precision, parameter :: frac_seed= 0.01d0
   integer, parameter :: nn=2 !Only relevant if Rand_seed=F
   ! DIFFUSIVE MAGNETIC HELICITY FLUX
   !No-z correction term for terms involving diffusive flux
@@ -84,7 +82,7 @@ module input_constants  ! Contains physical, model-dependent, constants
   !Factor determining strength of alpha effect
   double precision, parameter :: C_alp=   1.0d0
    !Relevant only if module Alp_ceiling=1; Limits maximum value of alpha to ceiling*v_kms
-  double precision, parameter :: alpceil= 0.5d0
+  double precision, parameter :: alpceil= 1d0 !0.5d0
   ! RANDOM MAGNETIC FIELD
   !Strength of the rms random magnetic field brms in units of Beq
   double precision, parameter :: fmag= 0.5d0

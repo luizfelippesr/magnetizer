@@ -115,17 +115,19 @@ module dynamo
             endif
 
             ! Runs Runge-Kutta time-stepping routine
-            call rk(f, dfdt)  
-
+            call rk(f, dfdt)
+            ! Impose boundary conditions
+            call impose_bc(f)
             ! If the magnetic field blows up, flags and exits the loop
-            if (isnan(f(nxghost+1+nxphys/2,1)) .or. maxval(f)>1.d10) then  
+            if (isnan(f(nxghost+1+nxphys/2,1)) .or. maxval(f)>1.d10) then
               ok = .false.
-              exit 
+              ! Stores the bogus profiles
+              ! NB the magnetic field info is out of date
+              call make_ts_arrays(i,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              exit
             endif
 
             if (p_oneSnaphotDebugMode) then
-              ! Estimates the value of |B_z| using Div B =0 condition
-
               ! Then, stores simulation output in arrays containing the time series
               call make_ts_arrays(jt,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
             endif

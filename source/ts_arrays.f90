@@ -35,7 +35,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, allocatable, dimension(:,:),public :: ts_rkpc
 
 contains
-  subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+  subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
     implicit none
@@ -58,17 +58,26 @@ contains
     double precision, dimension(nx), intent(in) :: Ur
     double precision, dimension(nx), intent(in) :: n
     double precision, dimension(nx), intent(in) :: Beq
+    logical, optional, intent(in) :: invalid_run
     print *, 'updating ts', t, t_Gyr, iread
     
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
 
     ts_t_Gyr(it) = this_t
+
+    if (present(invalid_run)) then
+      print *, 'INVALID RUN'
+      print *, it
+      if (invalid_run) return
+    endif
+
     ts_Dt(it) = t*t0_Gyr
     ts_rmax(it) = rmax
     ts_delta_r(it) = delta_r
     ts_Br(it,:) = f(:,1)
     ts_Bp(it,:) = f(:,2)
+
     if (Dyn_quench) then   
       if (.not.Damp) then
         ts_alp_m(it,:) = f(:,3)

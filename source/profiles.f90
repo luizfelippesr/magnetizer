@@ -40,7 +40,6 @@ contains
     double precision, dimension(nx) :: rho_cgs
     double precision, parameter :: rmin_over_rmax=0.001
     double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
-    double precision, dimension(nx) :: Pgrav_alt, Pgas_alt
     double precision, dimension(nx,3) :: all_roots
     double precision, parameter :: P_TOL=1e-10
     double precision :: r_disk_min 
@@ -122,47 +121,14 @@ contains
       Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 
       if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
-        do i_halfmass=1, size(Pgrav)
-          if (abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass)>P_TOL) then
-            print *,
-            print *, all_roots(i_halfmass,:)
-            print *, 'Perr', abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass), 'r',r_kpc(i_halfmass)
-!             print *, 'B', B_actual(i_halfmass), 'Sigma_d',Sigma_d(i_halfmass)
-            print *, 'rho', rho_cgs(i_halfmass), 'h_kpc', h_kpc(i_halfmass)
-!             print *, 'Beq', Beq_mkG(i_halfmass)
-!             print *, 'G_kmskpc', G_kmskpc(i_halfmass),G_kmskpc(i_halfmass)/ Om_kmskpc(i_halfmass)
-!             print *, 'Sigma_d', Sigma_d(i_halfmass)/1d6
-!             print *, 'f_m', Rm(i_halfmass)/(1d0+Rm(i_halfmass))
-!             print *, 'Sigma_star', Sigma_star(i_halfmass)/1d6
-          endif
-        end do
-!         print *,
-!         print *,
-!         print *, 'TRying with 80% field'
-!         B_actual =B_actual*0.8
-!         call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-!                 abs(r_kpc), B_actual, rho_cgs, h_kpc, Sigma_star, Sigma_d, Rm, all_roots)
-!         ! Computes the midplane pressure, from gravity
-!         Pgrav_alt = computes_midplane_ISM_pressure_using_scaleheight(  &
-!                                       r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
-!         ! Computes the midplane pressure, from the density
-!         Pgas_alt = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 !         do i_halfmass=1, size(Pgrav)
 !           if (abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass)>P_TOL) then
 !             print *,
-!             print *, 'i', i_halfmass
 !             print *, all_roots(i_halfmass,:)
-!             print *, 'Perr', abs(Pgrav_alt(i_halfmass)-Pgas_alt(i_halfmass))/Pgas_alt(i_halfmass), 'r',r_kpc(i_halfmass)
-! !             print *, 'B', B_actual(i_halfmass), 'Sigma_d',Sigma_d(i_halfmass)
+!             print *, 'Perr', abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass), 'r',r_kpc(i_halfmass)
 !             print *, 'rho', rho_cgs(i_halfmass), 'h_kpc', h_kpc(i_halfmass)
-! !             print *, 'Beq', Beq_mkG(i_halfmass)
-! !             print *, 'G_kmskpc', G_kmskpc(i_halfmass),G_kmskpc(i_halfmass)/ Om_kmskpc(i_halfmass)
-! !             print *, 'Sigma_d', Sigma_d(i_halfmass)/1d6
-! !             print *, 'f_m', Rm(i_halfmass)/(1d0+Rm(i_halfmass))
-! !             print *, 'Sigma_star', Sigma_star(i_halfmass)/1d6
 !           endif
 !         end do
-
         print *, 'construct_profiles: Error. Invalid solution for the hydrostatic equilibrium.'
         construct_profiles = .false.
       end if
@@ -175,18 +141,26 @@ contains
     n = n_cm3 / n0_cm3 * n0
 
     ! TURBULENT SCALE PROFILE
-    l_kpc = p_ISM_turbulent_length
-    if (.not.p_limit_turbulent_scale) then
-      l = l_kpc*h0/h0_kpc
-      dldr = 0.d0
-    else
-      ! Enforces l<=h
-      where (l_kpc>h_kpc)
-        l_kpc = h_kpc
-      endwhere
+    if (p_use_fixed_turbulent_to_scaleheight_ratio) then
+      l_kpc = h_kpc * p_turbulent_to_scaleheight_ratio
+
       l = l_kpc*h0/h0_kpc
       dldr = 0.d0 !TODO make this derivative work!?
-                  ! It is not clear that this would be a good idea...
+                ! It is not clear that this would be a good idea...
+    else
+      l_kpc = p_ISM_turbulent_length
+      if (.not.p_limit_turbulent_scale) then
+        l = l_kpc*h0/h0_kpc
+        dldr = 0.d0
+      else
+        ! Enforces l<=h
+        where (l_kpc>h_kpc)
+          l_kpc = h_kpc
+        endwhere
+        l = l_kpc*h0/h0_kpc
+        dldr = 0.d0 !TODO make this derivative work!?
+                ! It is not clear that this would be a good idea...
+      endif
     endif
 
     ! EQUIPARTITION MAGNETIC FIELD STRENGTH PROFILE

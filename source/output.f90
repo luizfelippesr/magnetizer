@@ -17,7 +17,7 @@ contains
     ! Writes any meta information about the run
     call IO_start_galaxy(gal_id, info)
     if (info>2) print *, 'Galaxy',gal_id,' -> IO initialised'
-    
+
     call IO_write_dataset('t', gal_id, info,                     &
                           ts_t_Gyr,                              &
                           units='Gyr',                           &

@@ -123,7 +123,7 @@ module dynamo
               ok = .false.
               ! Stores the bogus profiles
               ! NB the magnetic field info is out of date
-              call make_ts_arrays(i,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              call make_ts_arrays(it+1,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               exit
             endif
 

@@ -30,7 +30,9 @@ def get_parameter_values(model_dir):
     return d
 
 def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
-                   minimum_final_stellar_mass=1e6, minimum_final_gas_mass=1e5,
+                   max_z = 1000.0,
+                   minimum_final_stellar_mass=1e6,
+                   maximum_final_stellar_mass=1e14, minimum_final_gas_mass=1e5,
                    number_of_galaxies=100, empirical_disks=True, ivol_dir='',
                    minimum_final_disk_size=0.0,datasets=None):
     """Reads data from the galaxies.hdf5 file inside model_dir/ivol_dir (for
@@ -52,9 +54,9 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
         datasets = (
                     # Essential physical properties
                     'vdisk', 'mstars_disk', 'mstars_bulge', 'mcold', 'mhot',
-                    'mcold_burst','rdisk', 'rbulge', 'mstardot', #'mhalo',
+                    'mcold_burst','rdisk', 'rbulge', 'mstardot', 'mhalo',
                     'is_central', 'mstardot_average',
-                    'vbulge','vchalo','halo_r_virial','strc',
+                    'vbulge','vhalo','halo_r_virial','strc',
                     # New style indexing and extras
                     'FirstProgenitorID',
                     'EndMainBranchID','DescendantID',
@@ -75,12 +77,14 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
     # Gets the redshifts and times
     zout_array = f["Output_Times/zout"][:]
     tout_array = f["Output_Times/tout"][:]
-    z_indices = N.arange(len(zout_array))
+    z_indices = N.arange(len(zout_array[zout_array<max_z]))
+
 
     data_dict = {}
 
     for i, zidx in enumerate(z_indices[:]):
         t = tout_array[zidx]
+
         print('Working on redshift {0}, time {1}'.format(zout_array[zidx],t))
 
         data_dict[t] = {}
@@ -88,7 +92,10 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
         # read the data from the hdf5 file.
         for k in datasets:
-            data_dict[t][k] = f[output_id][k]
+            if k in f[output_id]:
+                data_dict[t][k] = f[output_id][k]
+            else:
+                print k, 'not present'
 
         if "galaxy_weight" not in f[output_id]:
             print('Adding weights, jm and jtree (this may take some time).')
@@ -137,16 +144,16 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
         print 'Galaxies read:', len(galaxy_weight)
         if i==0:
-            print "Pre-sampling {0} galaxies based on weight".format(
-                                                        10.0*number_of_galaxies)
+            #print "Pre-sampling {0} galaxies based on weight".format(
+                                                        #100.0*number_of_galaxies)
 
-            randm = random( len(galaxy_weight) )
-            # select a number of galaxies based on weight
-            if 10*number_of_galaxies < len(galaxy_weight) :
-                rfac = (10.0*number_of_galaxies) / N.sum(galaxy_weight)
-                ok = ( randm / data_dict[t]['weight'] < rfac )
+            #randm = random( len(galaxy_weight) )
+            ## select a number of galaxies based on weight
+            #if 100*number_of_galaxies < len(galaxy_weight) :
+                #rfac = (10.0*number_of_galaxies) / N.sum(galaxy_weight)
+                #ok = ( randm / data_dict[t]['weight'] < rfac )
 
-                filter_dictionary_inplace(ok,data_dict[t])
+                #filter_dictionary_inplace(ok,data_dict[t])
 
             data_dict[t]['BoT'] = (data_dict[t]['mstars_bulge'][:]+
                                     data_dict[t]['mcold_burst'][:]) / (
@@ -159,6 +166,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             # bulge to total mass ratio
             ok  = data_dict[t]['BoT'][:] < maximum_final_B_over_T
             ok *= data_dict[t]['mstars_disk'][:] > minimum_final_stellar_mass
+            ok *= data_dict[t]['mstars_disk'][:] < maximum_final_stellar_mass
             ok *= data_dict[t]['mcold'][:] > minimum_final_gas_mass
             ok *= data_dict[t]['rdisk'][:] > minimum_final_disk_size
             filter_dictionary_inplace(ok,data_dict[t])
@@ -211,8 +219,6 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             previous_ID = data_dict[t]['ID']
             previous_t = t
 
-
-
     if empirical_disks: # TODO not working yet
         pass
         # Deep copy of data_dict_z0, to be used in the empirical_disk function
@@ -220,8 +226,8 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
         #for t in data_dict:
             #data_dict[t] = empirical_disk(data_dict[t],data_dict_z0)
 
-    data_dict['tout'] = tout_array
-    data_dict['zout'] = zout_array
+    data_dict['tout'] = tout_array[zout_array<max_z]
+    data_dict['zout'] = zout_array[zout_array<max_z]
     data_dict['h0'] = h0
     #data_dict['params'] = params
 

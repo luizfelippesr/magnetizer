@@ -2,7 +2,7 @@ import numpy as N
 import h5py
 
 # Warning: order is important
-columns = ('mcold', 'mstars_disk', 'rdisk', 'vdisk','mstardot', 'vbulge', 'rbulge', 'vchalo', 'halo_r_virial', 'strc')
+columns = ('mcold', 'mstars_disk', 'rdisk', 'vdisk','mstardot', 'vbulge', 'rbulge', 'vhalo', 'halo_r_virial', 'strc')
 
 def add_dataset(storage, dataset_name, dataset, compression=False):
     """ Concatenates a matrix (dataset) called dataset_name to an openned HDF5 file (storage), creating if necessary """

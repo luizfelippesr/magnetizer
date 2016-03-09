@@ -8,7 +8,7 @@ module global_input_parameters
   !Specifies run paths
   character (len=10) :: model_name = 'CE_010'
   character (len=10) :: path_to_input_directories = '../../..'
-  character (len=55) :: output_file_name = 'magnetic_galaxies.hdf5'
+  character (len=60) :: output_file_name = 'magnetic_galaxies.hdf5'
 
   integer :: ngals = 10
   integer :: info = 2

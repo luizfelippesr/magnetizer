@@ -24,10 +24,10 @@ module dynamo
       logical, intent(in) :: test_run
       integer, intent(out) :: flag
       logical :: ok, able_to_construct_profiles
-      integer :: fail_count, i
+      integer :: fail_count
       character(len=8) :: frmt
       character(len=8) :: gal_id_string
-      integer, parameter :: MAX_FAILS=30
+      integer, parameter :: MAX_FAILS=3
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
 
@@ -110,6 +110,7 @@ module dynamo
             able_to_construct_profiles = construct_profiles(sqrt(Btmp))
             ! If not able to construct profiles, flags and exit the loop
             if (.not.able_to_construct_profiles) then
+              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               ok = .false.
               exit
             endif
@@ -123,7 +124,7 @@ module dynamo
               ok = .false.
               ! Stores the bogus profiles
               ! NB the magnetic field info is out of date
-              call make_ts_arrays(it+1,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               exit
             endif
 
@@ -161,24 +162,19 @@ module dynamo
           f_old = f
           dfdt_old = dfdt
           ! Impose boundary conditions before writing output
-          call impose_bc(f)  
+          call impose_bc(f)
           ! Estimates the value of |B_z| using Div B =0 condition
-          call estimate_Bzmod(f)  
-
+          call estimate_Bzmod(f)
           ! Then, stores simulation output in arrays containing the time series
-          if (p_oneSnaphotDebugMode) then
-            i = jt
-          else
-            i = it
-          endif
-          call make_ts_arrays(i,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+          call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
         else
 !           print *, 'FAIL'
 !           stop
           ! If the run was unsuccessful, leaves the ts arrays with INVALID 
           ! values, except for ts_t (so that one knows when did things break)
-          ts_t_Gyr(it) = t_Gyr !lfsr: actually, this very ugly... this variable 
-                           !shouldn't be accessible at all!
+          if (.not.p_oneSnaphotDebugMode) &
+            call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
+                              alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run=.true.)
           ! Resets the f array and adds a seed field 
           dfdt = 0.0  ! lfsr: Ugly as well... 
           f = 0.0  ! lfsr: Same here...

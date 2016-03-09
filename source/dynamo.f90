@@ -75,14 +75,15 @@ module dynamo
         ! Constructs galaxy model for the present snapshot
         if (it /= 1) then
           if (p_oneSnaphotDebugMode) exit
-          Btmp = sqrt(f(:,2)**2 + f(:,1)**2 + Bzmod**2)
-          able_to_construct_profiles = construct_profiles(Btmp)
-        endif
-        ! If unable to construct the profiles, exit and write output
-        if (.not. able_to_construct_profiles) then
-          last_output = .true.
-          call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
-          exit
+          if (simplified_pressure) then
+            able_to_construct_profiles = construct_profiles()
+            ! If unable to construct the profiles, exit and write output
+            if (.not. able_to_construct_profiles) then
+              last_output = .true.
+              call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              exit
+            endif
+          endif
         endif
 
         ! Will try to solve the equations a few times, with different
@@ -103,18 +104,21 @@ module dynamo
             endif
 
             call estimate_Bzmod(f)
-            ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
-            Btmp = sqrt(f(:,2)**2 + f(:,1)**2 + Bzmod**2)
-
-            ! Updates all profiles
-            able_to_construct_profiles = construct_profiles(sqrt(Btmp))
-            ! If not able to construct profiles, flags and exit the loop
-            if (.not.able_to_construct_profiles) then
-              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
-              ok = .false.
-              exit
+            ! If not using the simplified pressure, all profiles need to be
+            ! recomputed at each timestep, since they depend on the large
+            ! scale field.
+            if (.not.simplified_pressure) then
+              ! Computes the total magnetic field at this timestep
+              Btmp = sqrt(f(:,2)**2 + f(:,1)**2 + Bzmod**2)
+              ! Updates all profiles
+              able_to_construct_profiles = construct_profiles(sqrt(Btmp))
+              ! If not able to construct profiles, flags and exit the loop
+              if (.not.able_to_construct_profiles) then
+                call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+                ok = .false.
+                exit
+              endif
             endif
-
             ! Runs Runge-Kutta time-stepping routine
             call rk(f, dfdt)
             ! Impose boundary conditions

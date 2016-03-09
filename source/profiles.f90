@@ -42,7 +42,7 @@ contains
     double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
     double precision, dimension(nx,3) :: all_roots
     double precision, parameter :: P_TOL=1e-10
-    double precision :: r_disk_min 
+    double precision :: r_disk_min
     integer :: i_halfmass
 
     if (present(B)) then
@@ -104,7 +104,7 @@ contains
     ! Solves for density and height
     if (.not.p_check_hydro_solution) then
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-                                        abs(r_kpc), B_actual, rho_cgs, h_kpc)
+                          abs(r_kpc), B_actual, rho_cgs, h_kpc)
       if (any(h_kpc<0)) then
         print *, 'construct_profiles: Error. Negative scaleheight detected.'
         construct_profiles = .false.
@@ -113,7 +113,7 @@ contains
       ! If required, checks the solution.
       ! (This is a slow step. Should be used for debugging only.)
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-                abs(r_kpc), B_actual, rho_cgs, h_kpc, Sigma_star, Sigma_d, Rm, all_roots)
+          abs(r_kpc), B_actual, rho_cgs, h_kpc, Sigma_star, Sigma_d, Rm, all_roots)
       ! Computes the midplane pressure, from gravity
       Pgrav = computes_midplane_ISM_pressure_using_scaleheight(  &
                                       r_disk, Sigma_d, Sigma_star, Rm, h_kpc)

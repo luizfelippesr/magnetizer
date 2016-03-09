@@ -53,7 +53,7 @@ contains
     rs_nonSI = constDiskScaleToHalfMassRatio * rdisk ! kpc
     rs_g_nonSI = p_gasScaleRadiusToStellarScaleRadius_ratio * rs_nonSI ! kpc
     rs = rs_nonSI * kpc_SI ! m
-    A = (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma)
+    A = (p_ISM_xi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma)
 
     ! Nicknames
     bm = p_molecularHeightToRadiusScale
@@ -244,7 +244,7 @@ contains
     double precision, dimension(:), intent(in) :: B, rho
     double precision, dimension(size(rho)) :: P
 
-    P = (B*1d-6)**2/4d0/pi + (p_ISM_csi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma) &
+    P = (B*1d-6)**2/4d0/pi + (p_ISM_xi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma) &
                             * (p_ISM_sound_speed_km_s*1d5)**2 * rho
     return
 

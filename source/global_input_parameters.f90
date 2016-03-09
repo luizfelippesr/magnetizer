@@ -74,7 +74,9 @@ module global_input_parameters
   ! Ratio between turbulent velocity and sound speed
   double precision :: p_ISM_kappa = 1d0
   ! Ratio between turbulent pressure and turbulent magnetic field pressure
-  double precision :: p_ISM_csi = 1d0
+  ! NB if simplified_pressure is on, this correspond to the ratio between
+  ! turbulent pressure and _total_ magnetic field pressure
+  double precision :: p_ISM_xi = 1d0
   ! Adiabatic index of the ISM
   double precision :: p_ISM_gamma = 5d0/3d0
   ! Turbulent length (in kpc)
@@ -125,9 +127,14 @@ module global_input_parameters
   ! Debug mode: all timesteps are included in the output, but
   ! only 1 snapshot is used.
   logical :: p_oneSnaphotDebugMode = .false.
-
-  double precision :: p_turbulent_to_scaleheight_ratio = 0.25
+  ! If true: uses a fixed l/h ratio, setting it with
+  ! l = p_turbulent_to_scaleheight_ratio * h
   logical :: p_use_fixed_turbulent_to_scaleheight_ratio = .false.
+  double precision :: p_turbulent_to_scaleheight_ratio = 0.25
+  ! Uses a (very) simplified calculation for the mid-plane pressure
+  ! where P_B + P_b = \xi P_{turb}
+  ! (alternatively, P_B uses the actual B from the dynamo calculation).
+  logical :: simplified_pressure = .true.
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -145,7 +152,7 @@ module global_input_parameters
     Krause, &
     Advect, &
     Turb_dif, &
-    p_ISM_csi, &
+    p_ISM_xi, &
     p_ISM_sound_speed_km_s, &
     p_ISM_gamma, &
     p_ISM_turbulent_length, &
@@ -168,7 +175,8 @@ module global_input_parameters
     p_oneSnaphotDebugMode, &
     p_turbulent_to_scaleheight_ratio, &
     p_use_fixed_turbulent_to_scaleheight_ratio, &
-    frac_seed
+    frac_seed, &
+    simplified_pressure
 
   contains
 

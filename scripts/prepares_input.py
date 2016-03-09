@@ -31,22 +31,24 @@ if __name__ == "__main__"  :
     model_dir = 'test'
     odir = '../input/test2'
 
-    #model_dir = '/home/nlfsr/galform_models/FON'
-    #odir = '../input/test'
+    model_dir = '/home/nlfsr/galform_models/GON'
+    odir = '../input/test_small'
 
     number_of_r50 = 2.5
 
     data_dict = read_time_data( model_dir,
+                                max_z = 0.5,
                                 maximum_final_B_over_T=0.5,
-                                minimum_final_stellar_mass=1e10,
+                                minimum_final_stellar_mass=2e9,
+                                maximum_final_stellar_mass=1e10,
                                 minimum_final_gas_mass=1e7,
-                                number_of_galaxies=20,
+                                number_of_galaxies=100,
                                 minimum_final_disk_size=5e-4, # Gpc, i.e. 0.5 kpc
                                 empirical_disks=False,
-                                ivol_dir='ivol0')
+                                ivol_dir='ivol1')
     ts = data_dict['tout']
     IDs = data_dict[ts[0]]['ID']
-    names = data_dict[ts[0]]['names']
+    names = data_dict[ts[0]]['names'].astype(str)
 
     for i, ID in enumerate(IDs):
         f_gal_id = '{0:8d}'.format(i+1).replace(' ','0')
@@ -73,6 +75,7 @@ if __name__ == "__main__"  :
             t_dep_input = header
             r_disk_max = 0
             for t in sorted(ts):
+                #print 't = {0} Gyr'.format(t)
                 select = data_dict[t]['ID'] == ID
                 # Skips missing times..
                 if not select.any():
@@ -100,10 +103,20 @@ if __name__ == "__main__"  :
 
                 v_bulge = data_dict[t]['vbulge'][select][0]
 
-                r_halo  = data_dict[t]['halo_r_virial'][select][0]
+                v_halo = data_dict[t]['vhalo'][select][0]
+                if 'halo_r_virial' in data_dict[t]:
+                    r_halo  = data_dict[t]['halo_r_virial'][select][0]
+                else:
+                    G_SI=6.67259e-11
+                    MSOLAR=1.9891e30 # The mass of the Sun in kg
+                    KM2M=1.0e3 # km to m
+                    MPC2M=3.0856775807e22 # The number of metres in a Mpc
+                    G=G_SI*MSOLAR/MPC2M/(KM2M**2) # The gravitational constant
+                                                  # in units of (km/s)^2 Mpc/Msun.
+                    mhalo = data_dict[t]['mhalo'][select][0]
+                    r_halo = G*mhalo/(v_halo**2)
                 r_halo *= Mpc_to_kpc/data_dict['h0']
 
-                v_halo = data_dict[t]['vchalo'][select][0]
 
                 nfw_cs1 = data_dict[t]['strc'][select][0]
 

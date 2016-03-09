@@ -3,29 +3,35 @@
 # Obs:
 #   C, G are the half mass radii
 #   I is the virial radius
-#   D,F is the velocity at the half mass radius
-#   H is the virial velocity
-#   I is the NFW concentration
+#   D,F is the circular velocity at the half mass radius
+#   H is the virial velocity (circular velocity at virial radius)
+#   I is the velocity at the virial radius parameter for the NFW profile (V_200)
+#   J is the NFW concentration
 #
 # References:
 #     M31
-#       A -
-#       B -
-#       C -
-#       D -
-#       F -
-#       G -
-#       H -
-#       I -
-#       J -
+#       A - Chemin+09 pages 1401 (main HI component) and 1408 (molecular component), sum these to get disk gas mass
+#       B - Chemin+09 page 1408
+#       C - Chemin+09 page 1407 r_halfmass= 1.68 R_D with r_D= 5.6 kpc
+#       D - Chemin+09 Fig. 17 (bottom left model "HYB") *Note could instead choose top left panel with different bulge model
+#       E - Rahmani+16 Abstract; see also Table 2 for a compilation of results from this work and past literature
+#       F - Chemin+09 Fig. 17 (bottom left model "HYB") *Note could instead choose top left panel with different bulge model
+#       G - Chemin+09 page 1407 r_halfmass= R_e/(sqrt(2)-1) with Sersic profile parameter R_e= 1.3 kpc
+#       H - Chemin+09 Fig. 17 (bottom left model "HYB") *Note could instead choose top left panel with different bulge model
+#       I - Chemin+09 Table 5 (NFW 2nd column, model "HYB")
+#       J - Chemin+09 page 1413 computed as 1/(20.1+/-2.0)
 #     MW
 #       A -
 #       B -
-#       C -
-#       D -
-#       F -
-#       G -
-#       H -
+#       C - average of models I and II of BT08, Table 2.3: r_halfmass= 1.68 R_D with r_D= 2.6 kpc (avg of 2.0 and 3.2)
+            Table 1.2 of BT08: r_halfmass= 1.68 R_D with r_D= 2.5 kpc 
+            average of models I and II of BT08, Table 2.3: r_halfmass= 1.68 R_D with r_D= 2.6 kpc 
+            Alternate: Widrow+08 Table 2 r_halfmass= 1.68 R_D with r_D= 2.8 kpc
+#       D - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 175 and 120 km/s) 
+#       E - 
+#       F - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 65 and 55 km/s) 
+#       G - Widrow+08 Table 2 r_halfmass= R_e/(sqrt(2)-1) with Sersic profile parameter R_e= 0.64 kpc
+#       H - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 90 and 175 km/s)
 #       I -
 #       J -
 #
@@ -33,8 +39,10 @@
 #-----------------------------------------------------------------------------------------------------------------
 #           DATA
 #-----------------------------------------------------------------------------------------------------------------
-# Name      Mgas_disk  Mstars_disk  r_disk    v_disk   SFR         v_bul   r_bul   v_halo  virial_r_halo   1/cs
-# (units)   (Msun)     (Msun)       (kpc)     (km/s)   (Msun/yr)   (km/s)  (kpc)   (km/s)  (kpc)
+# Name      Mgas_disk  Mstars_disk  r_disk    v_disk   SFR         v_bul   r_bul   v_halo  virial_velocity 1/cs
+# (units)   (Msun)     (Msun)       (kpc)     (km/s)   (Msun/yr)   (km/s)  (kpc)   (km/s)  (km/s)
 # ref       A          B            C         D        E           F       G       H       I               J
-#   M31      7.7e8      1.4e11       1.711     200      1.0         50      1.0     75      1e3             0.0944
-   MW       8e9        2.85e10      5.035     200      1.5         100     2.0     75      1e3             0.0944
+   M31      2.84e9     7.1e10       9.4       110.     0.4         90.     3.1     200.    146.            0.05
+   MW                               4.4       150.                 60.     1.5     130.                                         
+#Old values:
+#   MW       8e9        2.85e10      5.035     200      1.5         100     2.0     75      1e3             0.0944

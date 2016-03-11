@@ -113,6 +113,14 @@ module global_input_parameters
   double precision :: p_N_SN1OB = 40
   ! Density of the hot gas (in g/cm^3)
   double precision :: p_outflow_hot_gas_density = 1.7d-27
+  ! Inverse of the depletion timescale of molecular gas (H2+He) in units of Gyr-1
+  double precision :: p_outflow_nu0 = 0.5
+  ! Exponent in Galform's parametrization of the mass loading
+  double precision :: p_outflow_alphahot = -3.2
+  ! Velocity scale in Galform's parametrization of the mass loading
+  double precision :: p_outflow_Vhot = 425 !
+
+
 
   ! Check whether the hydrostatic equilibrium solution is correct
   logical :: p_check_hydro_solution = .false.
@@ -135,6 +143,8 @@ module global_input_parameters
   ! where P_B + P_b = \xi P_{turb}
   ! (alternatively, P_B uses the actual B from the dynamo calculation).
   logical :: simplified_pressure = .true.
+
+  double precision :: p_rreg_to_rdisk = 0.15
 
   namelist /global_pars/ &
     path_to_input_directories, model_name, output_file_name, &
@@ -166,6 +176,9 @@ module global_input_parameters
     p_outflow_Lsn, &
     p_outflow_fOB, &
     p_outflow_etaSN, &
+    p_outflow_alphahot, &
+    p_outflow_Vhot, &
+    p_outflow_nu0, &
     p_tOB, &
     p_N_SN1OB, &
     p_outflow_hot_gas_density, &
@@ -176,7 +189,8 @@ module global_input_parameters
     p_turbulent_to_scaleheight_ratio, &
     p_use_fixed_turbulent_to_scaleheight_ratio, &
     frac_seed, &
-    simplified_pressure
+    simplified_pressure, &
+    p_rreg_to_rdisk
 
   contains
 

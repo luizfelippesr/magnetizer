@@ -5,7 +5,7 @@ module grid
 !
   implicit none
 !
-  integer, parameter :: nxphys= 41!201!61!91  !Resolution in r (excluding ghost zones) (for convenience should be N*r_max_kpc+1)
+  integer, parameter :: nxphys= 51!201!61!91  !Resolution in r (excluding ghost zones) (for convenience should be N*r_max_kpc+1)
   integer, parameter :: nxghost= 3  !Number of ghost cells at each end in r
   integer, parameter :: nx= nxphys +2*nxghost  !Resolution in r
   double precision, parameter :: len_phi= 2*pi !phi domain

@@ -16,7 +16,8 @@ module IO
   ! Parameter setting the maximum possible number of datasets
   integer, parameter :: max_number_of_datasets=25
   
-  integer(hid_t) :: file_id       ! hdf5 file identifier 
+  integer(hid_t) :: file_id          ! hdf5 file identifier
+  integer(hid_t) :: output_group_id  ! hdf5 group identifier
   
   ! The following store dataset names and ids
   character(len=15), dimension(max_number_of_datasets) :: dset_names = ''
@@ -64,7 +65,10 @@ contains
     ! Creates the file collectively.
     call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error, &
                      access_prp=plist_id)
-    ! Creates property list
+    ! Creates a group!
+    CALL h5gcreate_f(file_id, 'Output', output_group_id, error)
+
+    ! Closes property list
     call h5pclose_f(plist_id, error)
 
     Initialized = .true.
@@ -214,6 +218,9 @@ contains
       call h5dclose_f(dset_ids(i), error)
     end do
     ndsets = 0
+    ! Closes output group
+    call h5gclose_f(output_group_id, error)
+
     ! Closes file
     call h5fclose_f(file_id, error)    
 
@@ -300,7 +307,7 @@ contains
     endif
     
     ! Creates the dataset with default properties.
-    call h5dcreate_f(file_id, dataset_name, H5T_NATIVE_DOUBLE, dataspace, &
+    call h5dcreate_f(output_group_id, dataset_name, H5T_NATIVE_DOUBLE, dataspace, &
                      dset_ids(idx), error)
     ! Closes dataspace
     call h5sclose_f(dataspace, error)

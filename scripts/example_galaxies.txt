@@ -17,16 +17,16 @@
 #       E - Rahmani+16 Abstract; see also Table 2 for a compilation of results from this work and past literature
 #       F - Chemin+09 Fig. 17 (bottom left model "HYB") *Note could instead choose top left panel with different bulge model
 #       G - Chemin+09 page 1407 r_halfmass= R_e/(sqrt(2)-1) with Sersic profile parameter R_e= 1.3 kpc
-#       H - Chemin+09 Fig. 17 (bottom left model "HYB") *Note could instead choose top left panel with different bulge model
-#       I - Chemin+09 Table 5 (NFW 2nd column, model "HYB")
+#       H - Chemin+09 Table 5 (NFW 2nd column, model "HYB")
+#       I - Chemin+09 Virial mass reported in section 8.6.3
 #       J - Chemin+09 page 1413 computed as 1/(20.1+/-2.0)
 #     MW
 #       A -
 #       B -
 #       C - average of models I and II of BT08, Table 2.3: r_halfmass= 1.68 R_D with r_D= 2.6 kpc (avg of 2.0 and 3.2)
-            Table 1.2 of BT08: r_halfmass= 1.68 R_D with r_D= 2.5 kpc 
-            average of models I and II of BT08, Table 2.3: r_halfmass= 1.68 R_D with r_D= 2.6 kpc 
-            Alternate: Widrow+08 Table 2 r_halfmass= 1.68 R_D with r_D= 2.8 kpc
+#            Table 1.2 of BT08: r_halfmass= 1.68 R_D with r_D= 2.5 kpc
+#            average of models I and II of BT08, Table 2.3: r_halfmass= 1.68 R_D with r_D= 2.6 kpc
+#            Alternate: Widrow+08 Table 2 r_halfmass= 1.68 R_D with r_D= 2.8 kpc
 #       D - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 175 and 120 km/s) 
 #       E - 
 #       F - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 65 and 55 km/s) 
@@ -39,10 +39,11 @@
 #-----------------------------------------------------------------------------------------------------------------
 #           DATA
 #-----------------------------------------------------------------------------------------------------------------
-# Name      Mgas_disk  Mstars_disk  r_disk    v_disk   SFR         v_bul   r_bul   v_halo  virial_velocity 1/cs
-# (units)   (Msun)     (Msun)       (kpc)     (km/s)   (Msun/yr)   (km/s)  (kpc)   (km/s)  (km/s)
+# Name      Mgas_disk  Mstars_disk  r_disk    v_disk   SFR         v_bul   r_bul   v_halo  M_halo        1/cs
+# (units)   (Msun)     (Msun)       (kpc)     (km/s)   (Msun/yr)   (km/s)  (kpc)   (km/s)  (Msun)
 # ref       A          B            C         D        E           F       G       H       I               J
-   M31      2.84e9     7.1e10       9.4       110.     0.4         90.     3.1     200.    146.            0.05
-   MW                               4.4       150.                 60.     1.5     130.                                         
+   M31      2.84e9     7.1e10       9.4       110.     0.4         90.     3.1     146     1e12            0.05
+   M31b      2.84e9     7.1e10       9.4       110.     0.4         90.     3.1     146.    1e12            0.05
+#   MW                               4.4       150.                60.     1.5
 #Old values:
 #   MW       8e9        2.85e10      5.035     200      1.5         100     2.0     75      1e3             0.0944

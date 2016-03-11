@@ -2,7 +2,7 @@ import numpy as N
 import h5py
 
 # Warning: order is important
-columns = ('mcold', 'mstars_disk', 'rdisk', 'vdisk','mstardot', 'vbulge', 'rbulge', 'vhalo', 'halo_r_virial', 'strc')
+columns = ('mcold', 'mstars_disk', 'rdisk', 'vdisk','mstardot', 'vbulge', 'rbulge', 'vhalo', 'mhalo', 'strc')
 
 def add_dataset(storage, dataset_name, dataset, compression=False):
     """ Concatenates a matrix (dataset) called dataset_name to an openned HDF5 file (storage), creating if necessary """
@@ -63,7 +63,7 @@ def make_galaxies_file(data_dict, t0, tf, nt,
     f = h5py.File(output_filename,'w')
 
     tout_array = N.linspace(tf, t0, nt)
-    zout_array = tout_array*N.NaN # This is not really being used...
+    zout_array = tout_array*0.0 
 
     params = f.create_group('Parameters')
     params['h0'] = 1.0
@@ -92,8 +92,8 @@ def make_galaxies_file(data_dict, t0, tf, nt,
             add_dataset(output, 'mstars_disk', N.array([mstars,]))
 
             # Radii information has to have their units tweaked
-            for rname in ('rdisk','rbulge','halo_r_virial'):
-                r = data_dict[gal]['rdisk']*1e-3 # kpc -> Gpc
+            for rname in ('rdisk','rbulge'): #,'halo_r_virial'):
+                r = data_dict[gal][rname]*1e-3 # kpc -> Gpc
                 add_dataset(output, rname, N.array([r,]))
 
             # Saves all other physical properties

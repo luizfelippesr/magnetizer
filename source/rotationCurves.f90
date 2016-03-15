@@ -45,7 +45,7 @@ contains
 
     ! Sets y=r/rs, trapping r~0 (which breaks the evaluation
     ! of the Bessel functions)
-    where (r > TOO_SMALL)
+    where (abs(r) > TOO_SMALL)
       ! The absolute value is taken to deal with the ghost zone
       y = abs(r) / rs
     elsewhere

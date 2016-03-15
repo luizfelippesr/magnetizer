@@ -18,7 +18,6 @@ module profiles
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
   double precision, dimension(nx), private :: G_d, G_b, G_h
   double precision, private :: rreg
-  double precision, parameter, private :: RREG_TO_RDISK = 0.15
   double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
 
 contains
@@ -70,7 +69,7 @@ contains
     G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om_kmskpc
 
     ! Regularises
-    rreg = r_kpc(minloc(abs(r_kpc - RREG_TO_RDISK*r_disk),1))
+    rreg = r_kpc(minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1))
     call regularize(abs(r_kpc), rreg, Om_kmskpc, G_kmskpc)
 
     ! If required, avoid bumps in the shear
@@ -104,7 +103,7 @@ contains
     ! Solves for density and height
     if (.not.p_check_hydro_solution) then
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-                          abs(r_kpc), B_actual, rho_cgs, h_kpc)
+                          abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
       if (any(h_kpc<0)) then
         print *, 'construct_profiles: Error. Negative scaleheight detected.'
         construct_profiles = .false.
@@ -171,7 +170,8 @@ contains
     h = h_kpc*h0/h0_kpc
 
     ! VERTICAL VELOCITY PROFILE
-    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, r_disk, SFR)
+    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, &
+                                                  r_disk, v_disk, SFR, Rm)
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
     ! TURBULENT DIFFUSIVITY PROFILE

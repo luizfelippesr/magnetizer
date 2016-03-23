@@ -13,6 +13,15 @@ module global_input_parameters
   integer :: ngals = 10
   integer :: info = 2
 
+  ! Chunking and compression options
+  ! NB currently, March/2016, the HDF5 library does not support filters
+  ! (including compression) when using parallel IO. Therefore this options
+  ! have limited use.
+  logical :: p_IO_chunking = .false.
+  integer :: p_IO_number_of_galaxies_in_chunks = 10
+  logical :: p_IO_compression = .false. ! requires chunking!
+  logical :: p_IO_compression_level = 6
+
   ! PARAMETER INPUTS
   ! Number of timesteps used in the calculation between 2 snapshots
   integer :: nsteps_0 = 30
@@ -190,7 +199,11 @@ module global_input_parameters
     p_use_fixed_turbulent_to_scaleheight_ratio, &
     frac_seed, &
     simplified_pressure, &
-    p_rreg_to_rdisk
+    p_rreg_to_rdisk, &
+    p_IO_chunking, &
+    p_IO_number_of_galaxies_in_chunks, &
+    p_IO_compression, &
+    p_IO_compression_level
 
   contains
 

@@ -27,9 +27,10 @@ module IO
   
   integer :: ndsets = 0 ! number of datasets
   logical :: Initialized = .false. ! Initialisation flag
-  
+  logical :: lchunking, lcompression
+  integer :: chunksize, compression_level
   public IO_start, IO_start_galaxy, IO_finish_galaxy, IO_write_dataset, IO_end
-        
+
 contains
 
   subroutine IO_start(path_to_model, output_file, mpi_comm, mpi_info)
@@ -40,12 +41,18 @@ contains
     character(len=*), intent(in) :: path_to_model, output_file
     character(len=40) :: filename
     integer, intent(in), optional :: mpi_comm, mpi_info
-    integer(hid_t) :: plist_id      ! property list identifier 
+    integer(hid_t) :: plist_id      ! property list identifier
     integer :: error
     
     ! Reads some properties from the global variable at the grid module
     gals_number = ngals
     grid_points = nx
+    ! Reads properties from the global parameters module
+    lchunking = p_IO_chunking
+    lcompression = p_IO_compression
+    compression_level = p_IO_compression_level
+    chunksize = p_IO_number_of_galaxies_in_chunks
+
 
     if (.not.present(mpi_comm)) then
       error stop 'Fatal Error: start_IO, trying to initialize parallel hdf5 IO without a communicator.'
@@ -276,12 +283,18 @@ contains
     ! NB This is a collective procedure
     integer(hsize_t), dimension(3), intent(in), optional :: dimsf_vec
     integer(hsize_t), dimension(2), intent(in), optional :: dimsf_sca
+    integer(hsize_t), dimension(3), target :: chunkdim_vec
+    integer(hsize_t), dimension(2), target :: chunkdim_sca
+    integer, pointer :: chunkdim
     character(len=*), intent(in) :: dataset_name
     logical, intent(in), optional :: scalar
+    integer(hid_t) :: plist_id      ! property list identifier
     integer(hid_t) :: dataspace ! dataspace identifier (temporary)
     logical :: scalar_actual 
     integer :: idx
     integer :: rank, error    
+
+
     
     ! Increments ndsets and sets idx
     ndsets = ndsets+1
@@ -299,16 +312,35 @@ contains
       ! "scalar" here, means no variation with radius
       ! thus, 2 dimensions: galaxy id and time 
       rank = 2
+      if (lchunking) &
+          chunkdim_sca = (/ dimsf_sca(1), min(dimsf_sca(2), chunksize) /)
       call h5screate_simple_f(rank, dimsf_sca, dataspace, error)
     else
       ! 3 dimensions: galaxy id, time and radius
       rank = 3
+
+      if (lchunking) chunkdim_vec = &
+              (/ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) /)
       call h5screate_simple_f(rank, dimsf_vec, dataspace, error)
     endif
     
-    ! Creates the dataset with default properties.
-    call h5dcreate_f(output_group_id, dataset_name, H5T_NATIVE_DOUBLE, dataspace, &
-                     dset_ids(idx), error)
+    ! Creates a dataset property list
+    call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+    if (lchunking) then
+      ! Sets the size of the chunks
+      if (scalar_actual) then
+        call h5pset_chunk_f(plist_id, rank, chunkdim_sca, error)
+      else
+        call h5pset_chunk_f(plist_id, rank, chunkdim_vec, error)
+      endif
+      if (lcompression) then
+        ! Sets compression
+        call h5pset_deflate_f(plist_id, compression_level, error)
+      endif
+    endif
+    ! Creates the dataset
+    call h5dcreate_f(output_group_id, dataset_name, H5T_NATIVE_DOUBLE, &
+                    dataspace, dset_ids(idx), error,  dcpl_id=plist_id)
     ! Closes dataspace
     call h5sclose_f(dataspace, error)
   

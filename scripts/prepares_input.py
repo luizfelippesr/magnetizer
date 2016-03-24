@@ -5,6 +5,35 @@ import numpy as N
 Mpc_to_kpc = 1000
 
 
+description_dictionary = {
+        't':'Time since the Big Bang.',
+        'SFR' : 'Star formation rate',
+        'Mstars_disk':'Stelar mass of the galaxy disc',
+        'Mgas_disk': 'Total gas mass of the galaxy disc',
+        'r_disk': 'Half mass radius of the galaxy disc',
+        'v_disk': 'Circular velocity at the half-mass radius of the galaxy disc',
+        'r_bulge': 'Half mass radius of the galaxy bulge',
+        'v_bulge': 'Circular velocity at the half-mass radius of the galaxy bulge',
+        'r_halo': 'Virial radius of the dark matter halo',
+        'v_halo': 'Circular velocity at the virial radius of the dark matter halo',
+        'nfw_cs1': 'Inverse of the NFW concentration parameter',
+        'r_max': 'Maximum radius considered'
+        }
+
+units_dictionary = {
+        't' :'Gyr',
+        'SFR': 'Msun/yr',
+        'Mstars_disk': 'Msun',
+        'Mgas_disk': 'Msun',
+        'r_disk' : 'kpc',
+        'v_disk' : 'km/s',
+        'r_bulge': 'kpc',
+        'v_bulge': 'km/s',
+        'r_halo' : 'kpc',
+        'v_halo' : 'km/s',
+        'r_max' : 'kpc'
+        }
+
 def prepares_text_input(model_dir, odir):
 
     number_of_r50 = 2.5
@@ -136,7 +165,7 @@ def prepares_hdf5_input(data_dict, output_file):
     IDs = data_dict[ts[0]]['ID']
     names = data_dict[ts[0]]['names'].astype(str)
 
-    datasets =('t',
+    datasets =(
                'r_disk',
                'v_disk',
                'r_bulge',
@@ -147,6 +176,11 @@ def prepares_hdf5_input(data_dict, output_file):
                'Mgas_disk',
                'Mstars_disk',
                'SFR')
+
+    add_dataset(input_grp, 't', [sorted(ts),])
+    input_grp['t'].attrs['Description'] = description_dictionary['t']
+    input_grp['t'].attrs['Units'] = units_dictionary['t']
+
 
     for i, ID in enumerate(IDs):
 
@@ -206,13 +240,19 @@ def prepares_hdf5_input(data_dict, output_file):
 
             tmp['nfw_cs1'][j] = data_dict[t]['strc'][select][0]
 
-            tmp['t'][j] = t
-
         tmp['r_max'] = r_disk_max
-        tmp['t'] = sorted(ts)
+
+
         for dataset_name in tmp:
             add_dataset(input_grp, dataset_name, [tmp[dataset_name],])
 
+
+        for dataset_name in tmp:
+            input_grp[dataset_name].attrs['Description'] = \
+                                          description_dictionary[dataset_name]
+            if dataset_name in units_dictionary:
+                input_grp[dataset_name].attrs['Units'] = \
+                                                units_dictionary[dataset_name]
 
 
 

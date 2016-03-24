@@ -18,6 +18,7 @@ module IO
   
   integer(hid_t) :: file_id          ! hdf5 file identifier
   integer(hid_t) :: output_group_id  ! hdf5 group identifier
+  integer(hid_t) :: input_group_id  ! hdf5 group identifier
   
   ! The following store dataset names and ids
   character(len=15), dimension(max_number_of_datasets) :: dset_names = ''

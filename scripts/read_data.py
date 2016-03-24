@@ -82,6 +82,10 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
     data_dict = {}
 
+    data_dict['Galform Parameters'] = dict()
+    for param in f['Parameters']:
+        data_dict['Galform Parameters'][param] = f['Parameters'][param][()]
+
     for i, zidx in enumerate(z_indices[:]):
         t = tout_array[zidx]
 
@@ -94,8 +98,8 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
         for k in datasets:
             if k in f[output_id]:
                 data_dict[t][k] = f[output_id][k]
-            else:
-                print k, 'not present'
+            #else:
+                #print k, 'not present'
 
         if "galaxy_weight" not in f[output_id]:
             print('Adding weights, jm and jtree (this may take some time).')
@@ -229,7 +233,6 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
     data_dict['tout'] = tout_array[zout_array<max_z]
     data_dict['zout'] = zout_array[zout_array<max_z]
     data_dict['h0'] = h0
-    #data_dict['params'] = params
 
     return data_dict
 

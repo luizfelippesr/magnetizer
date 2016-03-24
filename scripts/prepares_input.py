@@ -1,52 +1,26 @@
 """ Contains routines which prepare galaxy input files for the magnetic field
     evolution code. """
-import computes_quantities as cq
 from read_data import read_time_data
-
-rs_to_r50 = 1.678 # half-mass to scale-radius conversion
+import numpy as N
 Mpc_to_kpc = 1000
 
-def turbulent_scale(*args):
-    """ Returns a fit to l = l_sol * exp(r/r_l)
-        WARNING At the moment, this is a dummy for testing.
-        Output: l_sol (kpc), r_l (kpc)
-    """
-    l_sol = 0.1 # kpc
-    r_l = 1000 # Something big to kill the spatial dependence...
-    return l_sol, r_l
 
-
-def turbulent_speed(*args):
-    """ Returns a fit to v = v_sol * exp(r/r_v)
-        WARNING At the moment, this is a dummy for testing.
-        Output: v_sol (km/s), r_v (kpc)
-    """
-    v_sol = 10 # km\s
-    r_v = 1000 # Something big to kill the spatial dependence...
-    return v_sol, r_v
-
-
-if __name__ == "__main__"  :
-
-    model_dir = 'test'
-    odir = '../input/test2'
-
-    model_dir = '/home/nlfsr/galform_models/GON'
-    odir = '../input/test_small'
+def prepares_text_input(model_dir, odir):
 
     number_of_r50 = 2.5
 
     data_dict = read_time_data( model_dir,
-                                max_z = 0.5,
+                                max_z = 10,
                                 maximum_final_B_over_T=0.5,
                                 minimum_final_stellar_mass=2e9,
-                                maximum_final_stellar_mass=1e10,
+                                maximum_final_stellar_mass=1e14,
                                 minimum_final_gas_mass=1e7,
                                 number_of_galaxies=100,
                                 minimum_final_disk_size=5e-4, # Gpc, i.e. 0.5 kpc
                                 empirical_disks=False,
-                                ivol_dir='ivol1')
+                                ivol_dir='ivol0')
     ts = data_dict['tout']
+
     IDs = data_dict[ts[0]]['ID']
     names = data_dict[ts[0]]['names'].astype(str)
 
@@ -144,7 +118,123 @@ if __name__ == "__main__"  :
             findep.write(t_indep_input_file)
 
 
+def prepares_hdf5_input(data_dict, output_file):
+    from hdf5_util import add_dataset
+    import h5py
+
+    number_of_r50 = 2.5
+
+    h5file = h5py.File(output_file)
+    input_grp = h5file.create_group('Input')
+
+    galform_grp = h5file.create_group('Galform Parameters')
+    for param in data_dict['Galform Parameters']:
+        galform_grp[param] = data_dict['Galform Parameters'][param]
+
+    ts = data_dict['tout']
+
+    IDs = data_dict[ts[0]]['ID']
+    names = data_dict[ts[0]]['names'].astype(str)
+
+    datasets =('t',
+               'r_disk',
+               'v_disk',
+               'r_bulge',
+               'v_bulge',
+               'r_halo',
+               'v_halo',
+               'nfw_cs1',
+               'Mgas_disk',
+               'Mstars_disk',
+               'SFR')
+
+    for i, ID in enumerate(IDs):
+
+        # Constructs a temporary dictionary to store the time series
+        # extracted from galform
+        tmp = dict()
+        r_disk_max = 0
+        for d in datasets:
+            tmp[d] = N.ones_like(ts)*(-999999)
+        #tmp['t']= N.ones_like(ts)*N.NaN
+
+        for j, t in enumerate(sorted(ts)):
+            select = data_dict[t]['ID'] == ID
+            # Skips missing times..
+            if not select.any():
+                continue
+
+            # Loads what is necessary (and removes the little-h dependence)
+            tmp['Mstars_disk'][j] = data_dict[t]['mstars_disk'][select][0]/data_dict['h0']
+
+            tmp['Mgas_disk'][j] = data_dict[t]['mcold'][select][0]/data_dict['h0']
+
+            tmp['SFR'][j] = data_dict[t]['mstardot'][select][0]
+            tmp['SFR'][j] *= 1e-9 /data_dict['h0'] # Msun/Gyr/h -> Msun/yr
+
+            r_disk = data_dict[t]['rdisk'][select][0]/data_dict['h0']
+            r_disk *= Mpc_to_kpc/data_dict['h0']
+
+            tmp['r_disk'][j] = r_disk
+
+            r_disk_max = max(r_disk, r_disk_max)
+
+            tmp['v_disk'][j] = data_dict[t]['vdisk'][select][0]
+            # NB mstars_bulge and mcold_burst not considered
+            #    they would need different profiles...
+
+
+            tmp['r_bulge'][j] = data_dict[t]['rbulge'][select][0]
+            tmp['r_bulge'][j] *= Mpc_to_kpc/data_dict['h0']
+
+            tmp['v_bulge'][j] = data_dict[t]['vbulge'][select][0]
+
+            tmp['v_halo'][j] = data_dict[t]['vhalo'][select][0]
+            if 'halo_r_virial' in data_dict[t]:
+                r_halo  = data_dict[t]['halo_r_virial'][select][0]
+            else:
+                G_SI=6.67259e-11
+                MSOLAR=1.9891e30 # The mass of the Sun in kg
+                KM2M=1.0e3 # km to m
+                MPC2M=3.0856775807e22 # The number of metres in a Mpc
+                G=G_SI*MSOLAR/MPC2M/(KM2M**2) # The gravitational constant
+                                              # in units of (km/s)^2 Mpc/Msun.
+                mhalo = data_dict[t]['mhalo'][select][0]
+                r_halo = G*mhalo/(tmp['v_halo'][j]**2)
+            r_halo *= Mpc_to_kpc/data_dict['h0']
+            tmp['r_halo'][j] = r_halo
+
+            tmp['nfw_cs1'][j] = data_dict[t]['strc'][select][0]
+
+            tmp['t'][j] = t
+
+        tmp['r_max'] = r_disk_max
+        tmp['t'] = sorted(ts)
+        for dataset_name in tmp:
+            add_dataset(input_grp, dataset_name, [tmp[dataset_name],])
 
 
 
 
+if __name__ == "__main__"  :
+    import argparse
+
+    model_dir = 'test'
+    odir = '../input/real'
+
+    model_dir = '/home/nlfsr/galform_models/GON'
+    odir = '../input/GON/ivol0'
+
+    data_dict = read_time_data( model_dir,
+                                max_z = 10,
+                                maximum_final_B_over_T=0.5,
+                                minimum_final_stellar_mass=2e9,
+                                maximum_final_stellar_mass=1e14,
+                                minimum_final_gas_mass=1e7,
+                                number_of_galaxies=10,
+                                minimum_final_disk_size=5e-4, # Gpc, i.e. 0.5 kpc
+                                empirical_disks=False,
+                                ivol_dir='ivol1')
+
+    #prepares_text_input(data_dict, odir)
+    prepares_hdf5_input(data_dict, 'test.hdf5')

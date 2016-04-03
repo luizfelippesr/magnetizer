@@ -14,11 +14,12 @@ module IO
   integer :: gals_number, grid_points
 
   ! Parameter setting the maximum possible number of datasets
-  integer, parameter :: max_number_of_datasets=25
+  integer, parameter :: max_number_of_datasets=55
   
   integer(hid_t) :: file_id          ! hdf5 file identifier
+  integer(hid_t) :: file_id_out      ! hdf5 file identifier
   integer(hid_t) :: output_group_id  ! hdf5 group identifier
-  integer(hid_t) :: input_group_id  ! hdf5 group identifier
+  integer(hid_t) :: input_group_id   ! hdf5 group identifier
   
   ! The following store dataset names and ids
   character(len=15), dimension(max_number_of_datasets) :: dset_names = ''
@@ -28,19 +29,18 @@ module IO
   
   integer :: ndsets = 0 ! number of datasets
   logical :: Initialized = .false. ! Initialisation flag
-  logical :: lchunking, lcompression
+  logical :: lchunking, lcompression, lseparate_output
   integer :: chunksize, compression_level
   public IO_start, IO_start_galaxy, IO_finish_galaxy, IO_write_dataset, IO_end
+  public IO_read_dataset_scalar, IO_read_dataset_single
 
 contains
 
-  subroutine IO_start(path_to_model, output_file, mpi_comm, mpi_info)
+  subroutine IO_start(mpi_comm, mpi_info)
     use grid
     use global_input_parameters
     ! Initializes IO
-    ! NB at the moment, MPI is required (will be relaxed later)
-    character(len=*), intent(in) :: path_to_model, output_file
-    character(len=40) :: filename
+    character(len=40) :: filepath
     integer, intent(in), optional :: mpi_comm, mpi_info
     integer(hid_t) :: plist_id      ! property list identifier
     integer :: error
@@ -53,7 +53,7 @@ contains
     lcompression = p_IO_compression
     compression_level = p_IO_compression_level
     chunksize = p_IO_number_of_galaxies_in_chunks
-
+    lseparate_output = p_IO_separate_output
 
     if (.not.present(mpi_comm)) then
       error stop 'Fatal Error: start_IO, trying to initialize parallel hdf5 IO without a communicator.'
@@ -62,31 +62,40 @@ contains
     if (Initialized) then
       error stop 'Fatal Error: start_IO trying to initialize already initialized IO'
     endif
-
-    filename = path_to_model // '/' // output_file
     
     ! Initializes predefined datatypes
     call h5open_f(error) 
     ! Setup file access property list with parallel I/O access.
     call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
     call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
-    ! Creates the file collectively.
-    call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, error, &
-                     access_prp=plist_id)
-    ! Creates a group!
-    CALL h5gcreate_f(file_id, 'Output', output_group_id, error)
+    ! Opens the file collectively.
+    call h5fopen_f(trim(input_file_name), H5F_ACC_RDWR_F, &
+                    file_id, error, access_prp=plist_id)
+
+    if (lseparate_output) then
+      ! Creates the file collectively.
+      call h5fcreate_f(trim(output_file_name), H5F_ACC_TRUNC_F, &
+                        file_id_out, error, access_prp=plist_id)
+    else
+      file_id_out = file_id
+    endif
+
+    ! Creates output group
+    call h5gcreate_f(file_id_out, 'Output', output_group_id, error)
+    ! Opens input group
+    call h5gopen_f(file_id, 'Input', input_group_id, error)
 
     ! Closes property list
     call h5pclose_f(plist_id, error)
 
     Initialized = .true.
-    
     return    
     
   end subroutine IO_start
   
+
   subroutine IO_start_galaxy(gal_id, info)
-    ! Initializes galaxy 
+    ! Initializes galaxy
     ! At the moment, this is a dummy
     integer, intent(in) :: gal_id, info
 
@@ -96,7 +105,7 @@ contains
 
   end subroutine IO_start_galaxy
 
-  
+
   subroutine IO_write_dataset_scalar(dataset_name, gal_id, info, data, &
                                      units, description)
     ! Writes a dataset to disk - scalar version
@@ -107,7 +116,7 @@ contains
     character(len=*), optional, intent(in) :: description
     integer ::  idx, error
     integer, parameter :: rank = 2
-    integer(hssize_t), dimension(2) :: offset 
+    integer(hssize_t), dimension(2) :: offset
     integer, dimension(1) :: data_shape
 
     integer(hsize_t), dimension(2) :: dimsf_sca
@@ -135,7 +144,7 @@ contains
       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
 
     end if
-    
+
     ! Selects hyperslab in the file.
     offset = (/0,gal_id-1/) ! Means: in second dimension, start from gal_id-1
     call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
@@ -144,12 +153,109 @@ contains
     call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
-                    
-    return    
-    
+
+    return
+
   end subroutine IO_write_dataset_scalar
+
+subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
+    ! Writes a dataset to disk - scalar version
+    character(len=*), intent(in) :: dataset_name
+    integer, intent(in) :: gal_id, info
+    integer, intent(in), optional :: nrows
+    logical :: full
+    double precision, dimension(:), intent(out) :: data
+    integer ::  idx, error, nrows_actual
+    integer, parameter :: rank = 2
+    integer(hssize_t), dimension(2) :: offset
+    integer, dimension(1) :: data_shape
+    integer(hsize_t), dimension(2) :: dimsf_sca
+    integer(hsize_t), dimension(2) :: dimsf_sca_1gal
     
-    
+    if (present(nrows)) then
+        nrows_actual = nrows
+        full = .true.
+    else
+        nrows_actual = gals_number
+        full = .false.
+    endif
+    data_shape = shape(data)
+    ! Sets dataset dimensions.
+    dimsf_sca = (/data_shape(1),gals_number/)
+    ! Sets the dimensions associated with reading a single galaxy
+    dimsf_sca_1gal = (/data_shape(1),1/)
+
+    ! Tries to find a previously opened dataset (-1 signals new)
+    idx = find_dset(dataset_name)
+    ! If it wasn't previously opened, creates it (collectively)
+    if (idx < 0) then
+      idx = open_dset(dataset_name)
+      if (full) then
+        dimsf_sca = (/nrows_actual,1/)
+        call h5screate_simple_f(rank, dimsf_sca, memspace_ids(idx), error)
+      else
+        call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
+      endif
+      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+    end if
+
+    ! Selects hyperslab in the file.
+    offset = (/0,gal_id-1/) ! Means: in second dimension, start from gal_id-1
+    if (.not.full) &
+      call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+                                 offset, dimsf_sca_1gal, error)
+    ! At last, reads the dataset
+    if (full) then
+      call h5dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error)
+    else
+      call h5dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
+                      file_space_id=dataspace_ids(idx), &
+                      mem_space_id=memspace_ids(idx))
+    endif
+    return
+
+  end subroutine IO_read_dataset_scalar
+
+  subroutine IO_read_dataset_single(dataset_name, gal_id, info, data)
+    ! Writes a dataset to disk - scalar version
+    character(len=*), intent(in) :: dataset_name
+    integer, intent(in) :: gal_id, info
+    double precision, intent(out) :: data
+    integer ::  idx, error
+    integer, parameter :: rank = 2
+    integer(hssize_t), dimension(2) :: offset
+
+    integer(hsize_t), dimension(2) :: dimsf_sca
+    integer(hsize_t), dimension(2) :: dimsf_sca_1gal
+
+    ! Sets dataset dimensions.
+    dimsf_sca = (/1,gals_number/)
+    ! Sets the dimensions associated with writing a single galaxy
+    dimsf_sca_1gal = (/1,1/)
+
+    ! Tries to find a previously opened dataset (-1 signals new)
+    idx = find_dset(dataset_name)
+
+    ! If it wasn't previously opened, creates it (collectively)
+    if (idx < 0) then
+      idx = open_dset(dataset_name)
+      call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
+      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+    end if
+
+    ! Selects hyperslab in the file.
+    offset = (/0,gal_id-1/) ! Means: in second dimension, start from gal_id-1
+    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+                               offset, dimsf_sca_1gal, error)
+    ! At last, reads the dataset
+    call h5dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
+                    file_space_id=dataspace_ids(idx), &
+                    mem_space_id=memspace_ids(idx))
+    return
+
+  end subroutine IO_read_dataset_single
+
+
   subroutine IO_write_dataset_vector(dataset_name, gal_id, info, data, &
                                      units, description)
     ! Writes a dataset to disk - vector version
@@ -209,13 +315,15 @@ contains
   end subroutine IO_finish_galaxy
   
   
-  subroutine IO_end()  
+  subroutine IO_end(info)
     ! Finishes IO (closing everything)
+    integer, intent(in) :: info
     integer :: i, error
 
     ! Closes all dataspaces, namespaces and datasets
     ! (this may be moved to IO_finish_galaxy, if necessary)
     do i=1,ndsets
+      if (info>2) print *, 'Closing ', dset_names(i)
 !       print *, 'Closing dataspace ', i
       call h5sclose_f(dataspace_ids(i), error)
       
@@ -227,11 +335,19 @@ contains
     end do
     ndsets = 0
     ! Closes output group
+    if (info>2) print *, "Closing Output group"
     call h5gclose_f(output_group_id, error)
-
+    ! Closes input group
+    if (info>2) print *, "Closing input group"
+    call h5gclose_f(input_group_id, error)
     ! Closes file
-    call h5fclose_f(file_id, error)    
-
+    if (info>2) print *, "Closing input file"
+    call h5fclose_f(file_id, error)
+    ! Closes file
+    if (lseparate_output) then
+        if (info>2) print *, "Closing Output file"
+      call h5fclose_f(file_id_out, error)
+    endif
   end subroutine IO_end  
   
   subroutine add_text_attribute(dset_id, attribute_name, attribute)
@@ -291,27 +407,25 @@ contains
     logical, intent(in), optional :: scalar
     integer(hid_t) :: plist_id      ! property list identifier
     integer(hid_t) :: dataspace ! dataspace identifier (temporary)
-    logical :: scalar_actual 
+    logical :: scalar_actual
     integer :: idx
-    integer :: rank, error    
+    integer :: rank, error
 
-
-    
     ! Increments ndsets and sets idx
     ndsets = ndsets+1
     idx = ndsets
     ! Adds name to the list
     dset_names(idx) = dataset_name
-    
+
     if (present(scalar)) then
       scalar_actual = scalar
     else
       scalar_actual = .false.
     endif
-    
-    if (scalar_actual) then 
+
+    if (scalar_actual) then
       ! "scalar" here, means no variation with radius
-      ! thus, 2 dimensions: galaxy id and time 
+      ! thus, 2 dimensions: galaxy id and time
       rank = 2
       if (lchunking) &
           chunkdim_sca = (/ dimsf_sca(1), min(dimsf_sca(2), chunksize) /)
@@ -324,7 +438,7 @@ contains
               (/ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) /)
       call h5screate_simple_f(rank, dimsf_vec, dataspace, error)
     endif
-    
+
     ! Creates a dataset property list
     call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
     if (lchunking) then
@@ -344,11 +458,33 @@ contains
                     dataspace, dset_ids(idx), error,  dcpl_id=plist_id)
     ! Closes dataspace
     call h5sclose_f(dataspace, error)
-  
-    return  
+
+    return
   end function create_dset
-  
-  
+
+
+  function open_dset(dataset_name) result(idx)
+    ! Creates a hdf5 dataspace, a namespace and dataset
+    ! Returns the index
+    ! NB This is a collective procedure
+    character(len=*), intent(in) :: dataset_name
+    integer(hid_t) :: dataspace ! dataspace identifier (temporary)
+    integer :: idx
+    integer :: rank, error
+
+    ! Increments ndsets and sets idx
+    ndsets = ndsets+1
+    idx = ndsets
+    ! Adds name to the list
+    dset_names(idx) = dataset_name
+
+    ! Opens the dataset
+    call h5dopen_f(input_group_id, dataset_name, dset_ids(idx), error)
+
+    return
+  end function open_dset
+
+
   function find_dset(dset_name) result(idx)
     ! Returns index for a dataset given its name
     character(len=*), intent(in) :: dset_name

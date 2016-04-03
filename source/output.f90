@@ -108,9 +108,13 @@ contains
                           ts_rkpc,                                  &
                           units='kpc',                              &
                           description='Radius')
-    
-    if (info>2) print *, 'Galaxy',gal_id,' -> datasets written'
 
+    if (info>2) print *, 'Galaxy  ',gal_id,' -> datasets written'
+    print *, 'Galaxy  ',gal_id,' -> datasets written'
+    print *, 'Galaxy  ',gal_id,' -> datasets written'
+    print *, 'Galaxy  ',gal_id,' -> datasets written'
+    print *, 'Galaxy  ',gal_id,' -> datasets written'
+    print *, 'Galaxy  ',gal_id,' -> datasets written'
     call IO_finish_galaxy(gal_id, info)
     
     ! Writes specific values to screen for a quick check

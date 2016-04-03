@@ -14,6 +14,7 @@ module input_params
 
   ! Time-stepping parameters
   integer :: n1 = -1 !Total number of snapshots (set to -1 to flag it is uninitialized)
+  integer :: init_it = -1 ! Index of the initial snapshot (set to -1 to flag it is uninitialized)
   double precision :: tsnap !Time between successive snapshots
   integer :: nsteps=20  !Number of timesteps in between snapshots
   double precision :: dt,t=0,first=0.d0 !Timestep variables (lfsr: a very bad place to define them, indeed)
@@ -33,10 +34,10 @@ module input_params
   double precision :: Mstars_disk, Mgas_disk, SFR
 
   ! All galaxy data (private!)
-  integer, parameter :: max_number_of_redshifts = 100 ! This is the maximum possible number of redshifts in the input data
   integer, private, parameter :: number_of_columns=11 ! Maximum umber of columns in the galaxy input files
-  double precision, dimension(max_number_of_redshifts,number_of_columns), private :: galaxy_data
-  character(len=8), private :: current_gal_id_string = 'xxxxxxxx'
+  double precision, allocatable, dimension(:,:),private :: galaxy_data
+  double precision, allocatable, dimension(:), private :: output_times
+  integer, private ::  current_gal_id
 
   contains
    subroutine set_ts_params()
@@ -50,49 +51,57 @@ module input_params
     endsubroutine set_ts_params
 
 
-    subroutine read_input_parameters(gal_id_string)
+    subroutine read_input_parameters(gal_id)
       ! Reads the input parameters file to RAM
       use iso_fortran_env
-      character (len=8), intent(in) :: gal_id_string
-      integer, parameter :: u_dep = 30
-      integer, parameter :: u_indep = 29
-      integer i
-      integer             :: stat
+      use IO
+      integer, intent(in) :: gal_id
+      integer :: i
+
+      if (.not.allocated(galaxy_data)) then
+        allocate(galaxy_data(number_of_redshifts,number_of_columns))
+        allocate(output_times(number_of_redshifts+1))
+        output_times = 0
+        ! Reads the output times
+        call IO_read_dataset_scalar('t', gal_id, info, output_times, &
+                                    nrows=number_of_redshifts)
+      endif
 
       ! Saves current galaxy identifier
-      current_gal_id_string = gal_id_string
+      current_gal_id = gal_id
       ! Resets galaxy data array
       galaxy_data(:,:) = -1
-      
-      ! Reads time-dependent parameter values
-      open(u_indep, file = trim(path_to_input_directories) // '/input/'  &
-                            // trim(model_name) // '/time_indep_params_' &
-                            // gal_id_string // '.in', status="old")
-      read(u_indep,*) header_time_indep  !Header gives time-independent parameters in order
-      read(u_indep,*) r_max_kpc  !Read time-independent parameter values
-      close(u_indep)  !Close file containing time-independent parameter values
+      print *,
+      print *, '----------------------'
+      print *, output_times
+      print *, '----------------------'
+      print *,
+      ! Reads time dependent parameters for this galaxy
+      call IO_read_dataset_scalar('r_disk', gal_id, info, galaxy_data(:,1))
+      call IO_read_dataset_scalar('v_disk', gal_id, info, galaxy_data(:,2))
+      call IO_read_dataset_scalar('r_bulge', gal_id, info, galaxy_data(:,3))
+      call IO_read_dataset_scalar('v_bulge', gal_id, info, galaxy_data(:,4))
+      call IO_read_dataset_scalar('r_halo', gal_id, info, galaxy_data(:,5))
+      call IO_read_dataset_scalar('v_halo', gal_id, info, galaxy_data(:,6))
+      call IO_read_dataset_scalar('nfw_cs1', gal_id, info, galaxy_data(:,7))
+      call IO_read_dataset_scalar('Mgas_disk', gal_id, info, galaxy_data(:,8))
+      call IO_read_dataset_scalar('Mstars_disk', gal_id, info, galaxy_data(:,9))
+      call IO_read_dataset_scalar('SFR', gal_id, info, galaxy_data(:,10))
+      ! Reads the maximum radius for this galaxy
+      call IO_read_dataset_single('r_max', gal_id, info, r_max_kpc)
+      print *, 'rdisk = ', galaxy_data(:,1)
 
-      ! Reads time-dependent parameter values
-      open(u_dep, file= trim(path_to_input_directories) // '/input/'  &
-                      //  trim(model_name) // '/time_dep_params_'     &
-                      // gal_id_string // '.in', status="old")
-      read(u_dep,*) header_time_dep ! Discards header
-      do i=1, max_number_of_redshifts
-        read(u_dep, *, iostat=stat) galaxy_data(i,:)
-        ! Leaves if no newline is found (and 'i' will be its index)
-        if (stat == iostat_end) exit 
-        ! Apparently, some compilers always read a newline (even if there is
-        ! none). The following workaround avoids this problem.
-        if (galaxy_data(i,1) < 1e-3) then
-          galaxy_data(i,:) = -1
+      ! Sets n1, maximum number of snapshots
+      n1 = number_of_redshifts
+      ! Sets the initial valid snapshot (uses the disk size as a marker)
+      do i=1,n1
+        print *, i, galaxy_data(i,1), galaxy_data(i,5)
+        if (galaxy_data(i,1)>0) then
+          init_it = i
           exit
         endif
       enddo
-      close(u_dep)
-      ! Sets n1, the counter of snapshots
-      n1 = i-1
-      ! Flags abscence of any other values with negatives
-      galaxy_data(i:max_number_of_redshifts,:) = -1
+      iread = init_it
     endsubroutine read_input_parameters
 
 
@@ -103,56 +112,52 @@ module input_params
     end subroutine reset_input_params
 
 
-    subroutine set_input_params(gal_id_string,info)
+    subroutine set_input_params(gal_id,info)
       ! Reads dimensional input parameters that must be specified and may vary
       ! from galaxy to galaxy and from timestep to timestep
 
-      character (len=8), intent(in) :: gal_id_string
-      integer, intent(in) :: info
+!       character (len=8), intent(in) :: gal_id_string
+      integer, intent(in) :: info, gal_id
       double precision :: next_time_input
       double precision :: current_time_input
 
       ! Reads the whole file on first access
-      if (gal_id_string /= current_gal_id_string) then
-        call read_input_parameters(gal_id_string)
+      if (gal_id /= current_gal_id ) then
+        call read_input_parameters(gal_id)
       endif
 
       iread=iread+1
       
-      next_time_input = galaxy_data(iread+1,1)
-      current_time_input = galaxy_data(iread,1)
+      next_time_input = output_times(iread+1)
+      current_time_input = output_times(iread)
       
-      if ( next_time_input > 0 ) then
+      if ( iread < number_of_redshifts ) then
         time_between_inputs = next_time_input-current_time_input
         t = 0 ! At each snapshot, reset the time variable
       else
         last_output = .true.
       endif
-      t_Gyr      = galaxy_data(iread,1)
-      r_disk  = galaxy_data(iread,2)
-      v_disk  = galaxy_data(iread,3)
-      r_bulge = galaxy_data(iread,4)
-      v_bulge = galaxy_data(iread,5)
-      r_halo  = galaxy_data(iread,6)
-      v_halo  = galaxy_data(iread,7)
-      nfw_cs1 = galaxy_data(iread,8)
-      Mgas_disk = galaxy_data(iread,9)
-      Mstars_disk = galaxy_data(iread,10)
-      SFR = galaxy_data(iread,11)
+
+      t_Gyr   = next_time_input
+      r_disk  = galaxy_data(iread,1)
+      v_disk  = galaxy_data(iread,2)
+      r_bulge = galaxy_data(iread,3)
+      v_bulge = galaxy_data(iread,4)
+      r_halo  = galaxy_data(iread,5)
+      v_halo  = galaxy_data(iread,6)
+      nfw_cs1 = galaxy_data(iread,7)
+      Mgas_disk = galaxy_data(iread,8)
+      Mstars_disk = galaxy_data(iread,9)
+      SFR = galaxy_data(iread,10)
 
       ! Temporarily setting v_sol_kms to the turbulent speed
       v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
       l_sol_kpc = p_ISM_turbulent_length
-      
-      if (info> 0) then
-        print *,''
-        print *,'Reading new parameters, iread=',iread, ', gal_id_string=',gal_id_string
-      endif
-!
+
 !     DIMENSIONLESS PARAMETERS THAT MUST BE SPECIFIED BUT WILL NOT NORMALLY VARY FROM GALAXY TO GALAXY
 !     DIFFUSIVE MAGNETIC HELICITY FLUX (DEFAULTS)
       R_kappa=         1.0d0 !Ratio kappa_t/eta_t of turbulent diffusivities of alpha_m and B
-!
+
     endsubroutine set_input_params
 end module input_params
 !*****************************************************

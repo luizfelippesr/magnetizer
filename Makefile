@@ -38,7 +38,7 @@ $(srcdir)/pressureEquilibrium.f90: ${builddir}/root_finder.o ${builddir}/constan
 $(srcdir)/outflow.f90: ${builddir}/input_parameters.o
 $(srcdir)/grid.f90: ${builddir}/constants.o
 $(srcdir)/deriv.f90: ${builddir}/grid.o
-$(srcdir)/input_parameters.f90: ${builddir}/grid.o
+$(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/$(IO).o
 $(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o
 $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o
 $(srcdir)/dynamo.f90: ${builddir}/output.o

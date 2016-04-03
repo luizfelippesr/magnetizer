@@ -177,7 +177,8 @@ def prepares_hdf5_input(data_dict, output_file):
                'Mstars_disk',
                'SFR')
 
-    add_dataset(input_grp, 't', [sorted(ts),])
+    for t in sorted(ts):
+        add_dataset(input_grp, 't', [t,])
     input_grp['t'].attrs['Description'] = description_dictionary['t']
     input_grp['t'].attrs['Units'] = units_dictionary['t']
 
@@ -277,4 +278,4 @@ if __name__ == "__main__"  :
                                 ivol_dir='ivol1')
 
     #prepares_text_input(data_dict, odir)
-    prepares_hdf5_input(data_dict, 'test.hdf5')
+    prepares_hdf5_input(data_dict, 'magnetized_galaxies.hdf5')

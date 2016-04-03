@@ -64,6 +64,10 @@ contains
     B2_4pi = (B*1d-6)**2/4d0/pi * 0.1d0 ! 0.1 J/m^3 = 1 erg/cm^3
 
     ! Computes initial surface density profiles
+    if (rs_g_nonSI==0 .or. rs_nonSI==0) then
+      print *, 'negligible size disk'
+    endif
+    
     Sigma_g_nonSI = exp_surface_density(rs_g_nonSI, abs(r), M_g)
     Sigma_star_nonSI = exp_surface_density(rs_nonSI, abs(r), M_star)
 

@@ -52,7 +52,7 @@ module dynamo
       ! Prepares the grid where the computation will be made
       call construct_grid()
       ! Reads in the model parameters (for the first snapshot)
-      call set_input_params(gal_id_string,info)  
+      call set_input_params(gal_id,info)
       ! Sets other necessary parameters
       call set_calc_params  
       ! Constructs galaxy model for the initial snapshot
@@ -66,14 +66,14 @@ module dynamo
       dfdt_old = dfdt ! this one is probably not necessary...
       
       ! Loops through the SAM's snapshots
-      do it=1,n1
+      do it=init_it,n1
         if (info>0) print *, 'Main loop: Galaxy ',gal_id_string, ' it=',it
 
         ! Initializes the number of steps to the global input value
         nsteps = nsteps_0
         call set_ts_params()
         ! Constructs galaxy model for the present snapshot
-        if (it /= 1) then
+        if (it /= init_it) then
           if (p_oneSnaphotDebugMode) exit
           if (simplified_pressure) then
             able_to_construct_profiles = construct_profiles()
@@ -191,7 +191,7 @@ module dynamo
         if (last_output .or. p_oneSnaphotDebugMode) exit
         
         ! Reads in the model parameters for the next snapshot
-        call set_input_params(gal_id_string,info)  
+        call set_input_params(gal_id,info)
       end do  ! snapshots loop
       
       call write_output(gal_id)  !Writes final simulation output

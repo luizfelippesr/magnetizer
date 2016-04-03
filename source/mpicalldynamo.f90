@@ -44,39 +44,6 @@ program mpicalldynamo
     call read_global_parameters(trim(command_argument))
   endif
 
-  !*****************************************************
-  !
-  ! Assign a chunk of galaxies to each processor
-  !
-!   if (rank== 0) then !Only the master (rank 0)
-!     tstart= MPI_wtime()
-!   endif
-!   !
-!   if (master_participate) then
-!     nslaves=nproc
-!     order=rank+1
-!   else
-!     nslaves=nproc-1
-!     order=rank
-!   endif
-!   !
-!   nmygals=0
-!   do igal=1,ngals
-!     if (mod(igal,nslaves) == order) then
-!       nmygals=nmygals+1
-!     endif
-!   enddo
-!   allocate(mygals(nmygals))
-!   jgal=1
-!   do igal=1,ngals
-!     if (mod(igal,nslaves) == order) then
-!       mygals(jgal)=igal
-!       jgal=jgal+1
-!     endif
-!   enddo
-
-
-
   allocate(mygals(ngals))
 
   nmygals = 0
@@ -89,9 +56,7 @@ program mpicalldynamo
   
   print*,'rank=',rank,'    mygals=',mygals(:nmygals) !processor id, list of galaxies for that processor
   ! Initializes IO  
-  call IO_start(trim(path_to_input_directories) // '/output/' // &
-                trim(model_name), trim(output_file_name), &
-                MPI_COMM_WORLD, MPI_INFO_NULL)
+  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL)
 
   ! Call dynamo code for each galaxy in mygals
   if (nmygals > 0) then
@@ -104,7 +69,7 @@ program mpicalldynamo
   
   print*,'rank=',rank,'    All done'
   ! Finalizes IO
-  call IO_end()
+  call IO_end(info)
   print*,'rank=',rank,'    IO finished'
 
   !Tell the MPI library to release all resources it is using

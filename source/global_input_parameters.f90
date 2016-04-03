@@ -5,14 +5,15 @@ module global_input_parameters
   implicit none
 
   ! DIRECTORY NAMES
-  !Specifies run paths
+  !Specifies run paths (obsolete)
   character (len=10) :: model_name = 'CE_010'
   character (len=10) :: path_to_input_directories = '../../..'
-  character (len=60) :: output_file_name = 'magnetic_galaxies.hdf5'
 
   integer :: ngals = 10
+  integer :: number_of_redshifts = 15
   integer :: info = 2
 
+  ! IO
   ! Chunking and compression options
   ! NB currently, March/2016, the HDF5 library does not support filters
   ! (including compression) when using parallel IO. Therefore this options
@@ -20,7 +21,12 @@ module global_input_parameters
   logical :: p_IO_chunking = .false.
   integer :: p_IO_number_of_galaxies_in_chunks = 10
   logical :: p_IO_compression = .false. ! requires chunking!
-  logical :: p_IO_compression_level = 6
+  integer :: p_IO_compression_level = 6
+  ! Separate files for input and output
+  logical :: p_IO_separate_output = .true.
+  ! If p_IO_separate_output==True, the use the following for the outputfile
+  character (len=80) :: output_file_name = 'magnetized_galaxies_output.hdf5'
+  character (len=80) :: input_file_name  = 'magnetized_galaxies_input.hdf5'
 
   ! PARAMETER INPUTS
   ! Number of timesteps used in the calculation between 2 snapshots
@@ -156,11 +162,13 @@ module global_input_parameters
   double precision :: p_rreg_to_rdisk = 0.15
 
   namelist /global_pars/ &
-    path_to_input_directories, model_name, output_file_name, &
+    path_to_input_directories, model_name, &
+    output_file_name, input_file_name, &
     nsteps_0, &
     Time_evol, &
     info, &
     ngals, &
+    number_of_redshifts, &
     Dyn_quench, Alg_quench, &
     lFloor, &
     Damp, &
@@ -203,7 +211,8 @@ module global_input_parameters
     p_IO_chunking, &
     p_IO_number_of_galaxies_in_chunks, &
     p_IO_compression, &
-    p_IO_compression_level
+    p_IO_compression_level, &
+    p_IO_separate_output
 
   contains
 

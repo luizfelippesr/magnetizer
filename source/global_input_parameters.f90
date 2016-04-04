@@ -157,7 +157,7 @@ module global_input_parameters
   ! Uses a (very) simplified calculation for the mid-plane pressure
   ! where P_B + P_b = \xi P_{turb}
   ! (alternatively, P_B uses the actual B from the dynamo calculation).
-  logical :: simplified_pressure = .true.
+  logical :: p_simplified_pressure = .true.
 
   double precision :: p_rreg_to_rdisk = 0.15
 
@@ -206,7 +206,7 @@ module global_input_parameters
     p_turbulent_to_scaleheight_ratio, &
     p_use_fixed_turbulent_to_scaleheight_ratio, &
     frac_seed, &
-    simplified_pressure, &
+    p_simplified_pressure, &
     p_rreg_to_rdisk, &
     p_IO_chunking, &
     p_IO_number_of_galaxies_in_chunks, &

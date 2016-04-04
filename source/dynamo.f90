@@ -75,7 +75,7 @@ module dynamo
         ! Constructs galaxy model for the present snapshot
         if (it /= init_it) then
           if (p_oneSnaphotDebugMode) exit
-          if (simplified_pressure) then
+          if (p_simplified_pressure) then
             able_to_construct_profiles = construct_profiles()
             ! If unable to construct the profiles, exit and write output
             if (.not. able_to_construct_profiles) then
@@ -92,6 +92,8 @@ module dynamo
           ok = .true.
           ! If a run without magnetic field evolution was requested
           if (test_run) exit
+          ! Skips solution in the case of a negligible disk
+          if (r_disk < 1e-2) exit
 
           ! Loops through the timesteps
           do jt=1,nsteps
@@ -107,7 +109,7 @@ module dynamo
             ! If not using the simplified pressure, all profiles need to be
             ! recomputed at each timestep, since they depend on the large
             ! scale field.
-            if (.not.simplified_pressure) then
+            if (.not.p_simplified_pressure) then
               ! Computes the total magnetic field at this timestep
               Btmp = sqrt(f(:,2)**2 + f(:,1)**2 + Bzmod**2)
               ! Updates all profiles
@@ -172,16 +174,14 @@ module dynamo
           ! Then, stores simulation output in arrays containing the time series
           call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
         else
-!           print *, 'FAIL'
-!           stop
           ! If the run was unsuccessful, leaves the ts arrays with INVALID 
           ! values, except for ts_t (so that one knows when did things break)
           if (.not.p_oneSnaphotDebugMode) &
             call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
                               alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run=.true.)
           ! Resets the f array and adds a seed field 
-          dfdt = 0.0  ! lfsr: Ugly as well... 
-          f = 0.0  ! lfsr: Same here...
+          dfdt = 0.0
+          f = 0.0
           call init_seed(f)
           ! Calculates |Bz|
           call estimate_Bzmod(f)

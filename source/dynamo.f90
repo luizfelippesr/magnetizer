@@ -23,14 +23,13 @@ module dynamo
       integer, intent(in) :: info, gal_id
       logical, intent(in) :: test_run
       integer, intent(out) :: flag
-      logical :: ok, able_to_construct_profiles
+      logical :: ok, able_to_construct_profiles, elliptical
       integer :: fail_count
       character(len=8) :: frmt
       character(len=8) :: gal_id_string
       integer, parameter :: MAX_FAILS=3
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
-
       
       frmt='(I8.8)'
       write(gal_id_string,frmt) gal_id
@@ -71,6 +70,16 @@ module dynamo
 
         ! Initializes the number of steps to the global input value
         nsteps = nsteps_0
+
+        ! Traps the case of negligible disks
+        ! (a recent major merger can convert the galaxy into an elliptical,
+        !  making Mdisk=rdisk=0)
+        if (r_disk < 1e-2) then
+            elliptical = .true.
+        else
+            elliptical = .false.
+        endif
+
         call set_ts_params()
         ! Constructs galaxy model for the present snapshot
         if (it /= init_it) then
@@ -91,9 +100,7 @@ module dynamo
         do fail_count=0, MAX_FAILS
           ok = .true.
           ! If a run without magnetic field evolution was requested
-          if (test_run) exit
-          ! Skips solution in the case of a negligible disk
-          if (r_disk < 1e-2) exit
+          if (test_run .or. elliptical) exit
 
           ! Loops through the timesteps
           do jt=1,nsteps

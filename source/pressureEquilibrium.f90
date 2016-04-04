@@ -65,7 +65,7 @@ contains
 
     ! Computes initial surface density profiles
     if (rs_g_nonSI==0 .or. rs_nonSI==0) then
-      print *, 'negligible size disk'
+      error stop 'solves_hytrostatic_equilibrium: Fatal error. Disk of negligible size'
     endif
     
     Sigma_g_nonSI = exp_surface_density(rs_g_nonSI, abs(r), M_g)

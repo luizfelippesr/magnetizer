@@ -100,6 +100,19 @@ contains
     v_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     v = v_kms / h0_km * h0 * t0_s / t0
 
+    ! Traps case of negligible disks (produced by a recent major merger)
+    if (r_disk < r_disk_min) then
+      ! Sets the profiles to zero and returns
+      n = 0.0
+      l = 0.0
+      h = 0.0
+      Uz = 0.0
+      etat = 0.0
+      alp_k = 0.0
+      return
+    endif
+
+
     ! Solves for density and height
     if (.not.p_check_hydro_solution) then
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
@@ -112,23 +125,16 @@ contains
       ! If required, checks the solution.
       ! (This is a slow step. Should be used for debugging only.)
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-          abs(r_kpc), B_actual, rho_cgs, h_kpc, Sigma_star, Sigma_d, Rm, all_roots)
+                                      abs(r_kpc), B_actual, rho_cgs, h_kpc, &
+                                           Sigma_star, Sigma_d, Rm, all_roots)
       ! Computes the midplane pressure, from gravity
       Pgrav = computes_midplane_ISM_pressure_using_scaleheight(  &
-                                      r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
+                                        r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
       ! Computes the midplane pressure, from the density
       Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 
       if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
-!         do i_halfmass=1, size(Pgrav)
-!           if (abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass)>P_TOL) then
-!             print *,
-!             print *, all_roots(i_halfmass,:)
-!             print *, 'Perr', abs(Pgrav(i_halfmass)-Pgas(i_halfmass))/Pgas(i_halfmass), 'r',r_kpc(i_halfmass)
-!             print *, 'rho', rho_cgs(i_halfmass), 'h_kpc', h_kpc(i_halfmass)
-!           endif
-!         end do
-        print *, 'construct_profiles: Error. Invalid solution for the hydrostatic equilibrium.'
+        print *, 'construct_profiles: Warning. Invalid solution for the hydrostatic equilibrium.'
         construct_profiles = .false.
       end if
     end if
@@ -171,7 +177,7 @@ contains
 
     ! VERTICAL VELOCITY PROFILE
     Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, &
-                                                  r_disk, v_disk, SFR, Rm)
+                                                    r_disk, v_disk, SFR, Rm)
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
     ! TURBULENT DIFFUSIVITY PROFILE

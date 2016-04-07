@@ -301,7 +301,6 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error, &
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
-                    
     return    
     
   end subroutine IO_write_dataset_vector

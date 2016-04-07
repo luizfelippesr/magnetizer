@@ -66,6 +66,7 @@ module dynamo
       
       ! Loops through the SAM's snapshots
       do it=init_it,n1
+        this_t = t_Gyr
         if (info>0) print *, 'Main loop: Galaxy ',gal_id_string, ' it=',it
 
         ! Initializes the number of steps to the global input value
@@ -76,7 +77,18 @@ module dynamo
         !  making Mdisk=rdisk=0)
         if (r_disk < 1e-2) then
             elliptical = .true.
+            ! Resets the f array and adds a seed field
+            dfdt = 0.0
+            f = 0.0
+            call init_seed(f)
         else
+            ! If galaxy was an elliptical during previous snapshot,
+            ! reconstruct the profiles
+            if (elliptical) then
+              able_to_construct_profiles = construct_profiles()
+              call init_seed(f)
+              call estimate_Bzmod(f)
+            endif
             elliptical = .false.
         endif
 
@@ -89,7 +101,7 @@ module dynamo
             ! If unable to construct the profiles, exit and write output
             if (.not. able_to_construct_profiles) then
               last_output = .true.
-              call make_ts_arrays(it,t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               exit
             endif
           endif

@@ -60,7 +60,7 @@ module input_params
 
       if (.not.allocated(galaxy_data)) then
         allocate(galaxy_data(number_of_redshifts,number_of_columns))
-        allocate(output_times(number_of_redshifts+1))
+        allocate(output_times(number_of_redshifts))
         output_times = 0
         ! Reads the output times
         call IO_read_dataset_scalar('t', gal_id, info, output_times, &
@@ -71,11 +71,7 @@ module input_params
       current_gal_id = gal_id
       ! Resets galaxy data array
       galaxy_data(:,:) = -1
-      print *,
-      print *, '----------------------'
-      print *, output_times
-      print *, '----------------------'
-      print *,
+
       ! Reads time dependent parameters for this galaxy
       call IO_read_dataset_scalar('r_disk', gal_id, info, galaxy_data(:,1))
       call IO_read_dataset_scalar('v_disk', gal_id, info, galaxy_data(:,2))
@@ -89,19 +85,17 @@ module input_params
       call IO_read_dataset_scalar('SFR', gal_id, info, galaxy_data(:,10))
       ! Reads the maximum radius for this galaxy
       call IO_read_dataset_single('r_max', gal_id, info, r_max_kpc)
-      print *, 'rdisk = ', galaxy_data(:,1)
 
       ! Sets n1, maximum number of snapshots
       n1 = number_of_redshifts
       ! Sets the initial valid snapshot (uses the disk size as a marker)
       do i=1,n1
-        print *, i, galaxy_data(i,1), galaxy_data(i,5)
-        if (galaxy_data(i,1)>0) then
+        if (galaxy_data(i,1)>=0) then
           init_it = i
           exit
         endif
       enddo
-      iread = init_it
+      iread = init_it-1
     endsubroutine read_input_parameters
 
 
@@ -128,10 +122,10 @@ module input_params
 
       iread=iread+1
       
-      next_time_input = output_times(iread+1)
       current_time_input = output_times(iread)
-      
+
       if ( iread < number_of_redshifts ) then
+        next_time_input = output_times(iread+1)
         time_between_inputs = next_time_input-current_time_input
         t = 0 ! At each snapshot, reset the time variable
       else
@@ -149,7 +143,6 @@ module input_params
       Mgas_disk = galaxy_data(iread,8)
       Mstars_disk = galaxy_data(iread,9)
       SFR = galaxy_data(iread,10)
-
       ! Temporarily setting v_sol_kms to the turbulent speed
       v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
       l_sol_kpc = p_ISM_turbulent_length

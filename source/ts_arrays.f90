@@ -59,7 +59,6 @@ contains
     double precision, dimension(nx), intent(in) :: n
     double precision, dimension(nx), intent(in) :: Beq
     logical, optional, intent(in) :: invalid_run
-    print *, 'updating ts', t, t_Gyr, iread
     
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
@@ -109,7 +108,7 @@ contains
     if (.not. p_oneSnaphotDebugMode) then
       ! Default mode: only times corresponding to snapshots are included
       ! in the output.
-      max_outputs = n1+1 ! Gets it from the global variables
+      max_outputs = n1 ! Gets it from the global variables
     else
       ! In the oneSnaphotDebugMode, all timesteps are included in the output
       ! but only one galform output is used.
@@ -192,29 +191,6 @@ contains
       deallocate(ts_Bzmod)
       deallocate(ts_rkpc)
     endif
-!
-!     ts_t_Gyr = INVALID
-!     ts_Dt = INVALID
-!     ts_rmax = INVALID
-!     ts_delta_r = INVALID
-!     ts_Br = INVALID
-!     ts_Bp = INVALID
-!     ts_alp_m = INVALID
-!     ts_Bzmod = INVALID
-!     ts_h = INVALID
-!     ts_om = INVALID
-!     ts_G = INVALID
-!     ts_l = INVALID
-!     ts_v = INVALID
-!     ts_etat = INVALID
-!     ts_tau = INVALID
-!     ts_alp_k = INVALID
-!     ts_alp = INVALID
-!     ts_Uz = INVALID
-!     ts_Ur = INVALID
-!     ts_n = INVALID
-!     ts_Beq = INVALID
-!     ts_rkpc = INVALID
   end subroutine reset_ts_arrays
 
   subroutine extend_array_vec(ar, length)

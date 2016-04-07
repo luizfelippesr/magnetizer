@@ -18,10 +18,10 @@ contains
     call IO_start_galaxy(gal_id, info)
     if (info>2) print *, 'Galaxy',gal_id,' -> IO initialised'
 
-    call IO_write_dataset('t', gal_id, info,                     &
-                          ts_t_Gyr,                              &
-                          units='Gyr',                           &
-                          description='Time since the Big Bang.')
+!     call IO_write_dataset('t', gal_id, info,                     &
+!                           ts_t_Gyr,                              &
+!                           units='Gyr',                           &
+!                           description='Time since the Big Bang.')
 
     call IO_write_dataset('Br', gal_id, info,                    &
                           ts_Br(:,:) * B0_mkG / B0,              &

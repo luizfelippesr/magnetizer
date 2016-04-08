@@ -120,6 +120,10 @@ contains
         print *, 'construct_profiles: Error. Negative scaleheight detected.'
         construct_profiles = .false.
       endif
+      if (any(h_kpc>1d3)) then
+        print *, 'construct_profiles: Error. Huge scaleheight detected.'
+        construct_profiles = .false.
+      endif
     else
       ! If required, checks the solution.
       ! (This is a slow step. Should be used for debugging only.)

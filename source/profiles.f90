@@ -37,11 +37,9 @@ contains
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: B_actual
     double precision, dimension(nx) :: rho_cgs
-    double precision, parameter :: rmin_over_rmax=0.001
     double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
     double precision, dimension(nx,3) :: all_roots
     double precision, parameter :: P_TOL=1e-10
-    double precision, parameter :: Mgas_disk_min=1d3
     double precision :: r_disk_min
     integer :: i_halfmass
 

@@ -161,6 +161,10 @@ module global_input_parameters
 
   double precision :: p_rreg_to_rdisk = 0.15
 
+  ! Defines what it means to have a negligible disk
+  double precision :: rmin_over_rmax=0.001
+  double precision :: Mgas_disk_min=1d4 ! solar masses
+
   namelist /global_pars/ &
     path_to_input_directories, model_name, &
     output_file_name, input_file_name, &
@@ -212,7 +216,9 @@ module global_input_parameters
     p_IO_number_of_galaxies_in_chunks, &
     p_IO_compression, &
     p_IO_compression_level, &
-    p_IO_separate_output
+    p_IO_separate_output, &
+    Mgas_disk_min, &
+    rmin_over_rmax
 
   contains
 

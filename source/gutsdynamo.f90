@@ -252,7 +252,7 @@ module equ  !Contains the partial differential equations to be solved
         endif
         if (Dyn_quench) then
           dfdt(:,3)= -2*(h0_kpc/l_kpc)**2*etat*(ctau*alp*(Br**2+Bp**2+Bzmod**2)/Beq**2                      &
-                     +ctau*3*etat/pi**(3.d0/2)/h*abs(Dyn_gen)**(1.d0/2)*Br*Bp/Beq**2+Rm_inv*alp_m) &
+                     +ctau*3*etat/pi**(3.d0/2)/h*abs(Dyn_gen)**(1.d0/2d0)*Br*Bp/Beq**2+Rm_inv*alp_m) &
                      -C_a*alp_m*Uz/h -lambda*alp_m*Ur/r -lambda*alp_m*dUrdr -lambda*Ur*dalp_mdr    &
                      +R_kappa*etat*(lambda**2*d2alp_mdr2 +lambda**2/r*dalp_mdr +C_d/h**2*alp_m)
         endif

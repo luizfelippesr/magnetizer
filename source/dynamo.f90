@@ -75,7 +75,8 @@ module dynamo
         ! Traps the case of negligible disks
         ! (a recent major merger can convert the galaxy into an elliptical,
         !  making Mdisk=rdisk=0)
-        if (r_disk < 1e-2) then
+        if (r_disk < r_max_kpc*rmin_over_rmax .or.  &
+              Mgas_disk < Mgas_disk_min) then
             elliptical = .true.
             ! Resets the f array and adds a seed field
             dfdt = 0.0

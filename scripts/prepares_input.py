@@ -261,21 +261,20 @@ if __name__ == "__main__"  :
     import argparse
 
     model_dir = 'test'
-    odir = '../input/real'
 
     model_dir = '/home/nlfsr/galform_models/GON'
-    odir = '../input/GON/ivol0'
+    #odir = '../input/GON/ivol0'
 
     data_dict = read_time_data( model_dir,
-                                max_z = 10,
+                                max_z = 5,
                                 maximum_final_B_over_T=0.5,
-                                minimum_final_stellar_mass=2e9,
+                                minimum_final_stellar_mass=1e7,
                                 maximum_final_stellar_mass=1e14,
                                 minimum_final_gas_mass=1e7,
-                                number_of_galaxies=10,
+                                number_of_galaxies=1000,
                                 minimum_final_disk_size=5e-4, # Gpc, i.e. 0.5 kpc
                                 empirical_disks=False,
                                 ivol_dir='ivol1')
 
     #prepares_text_input(data_dict, odir)
-    prepares_hdf5_input(data_dict, 'magnetized_galaxies.hdf5')
+    prepares_hdf5_input(data_dict, 'large_input.hdf5')

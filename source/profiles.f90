@@ -41,6 +41,7 @@ contains
     double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
     double precision, dimension(nx,3) :: all_roots
     double precision, parameter :: P_TOL=1e-10
+    double precision, parameter :: Mgas_disk_min=1d3
     double precision :: r_disk_min
     integer :: i_halfmass
 
@@ -101,7 +102,7 @@ contains
     v = v_kms / h0_km * h0 * t0_s / t0
 
     ! Traps case of negligible disks (produced by a recent major merger)
-    if (r_disk < r_disk_min) then
+    if (r_disk < r_disk_min .or. Mgas_disk< Mgas_disk_min) then
       ! Sets the profiles to zero and returns
       n = 0.0
       l = 0.0

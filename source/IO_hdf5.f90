@@ -45,10 +45,8 @@ contains
     integer(hid_t) :: plist_id      ! property list identifier
     integer :: error
     
-    ! Reads some properties from the global variable at the grid module
-    gals_number = ngals
-    grid_points = nx
     ! Reads properties from the global parameters module
+    grid_points = nx
     lchunking = p_IO_chunking
     lcompression = p_IO_compression
     compression_level = p_IO_compression_level
@@ -58,19 +56,24 @@ contains
     if (.not.present(mpi_comm)) then
       error stop 'Fatal Error: start_IO, trying to initialize parallel hdf5 IO without a communicator.'
     endif
-    
+
     if (Initialized) then
       error stop 'Fatal Error: start_IO trying to initialize already initialized IO'
     endif
-    
+
     ! Initializes predefined datatypes
-    call h5open_f(error) 
+    call h5open_f(error)
     ! Setup file access property list with parallel I/O access.
     call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
     call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
     ! Opens the file collectively.
     call h5fopen_f(trim(input_file_name), H5F_ACC_RDWR_F, &
                     file_id, error, access_prp=plist_id)
+
+    ! Reads some properties from the global attributes
+    gals_number = read_global_attribute('Number of galaxies')
+    ngals = gals_number
+    number_of_redshifts = read_global_attribute('Number of snapshots')
 
     if (lseparate_output) then
       ! Creates the file collectively.
@@ -391,6 +394,28 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     call h5sclose_f(aspace_id, error)
 
   end subroutine add_text_attribute
+
+
+  function read_global_attribute(attribute_name)
+    integer(hid_t) :: attr_id,atype_id       ! attribute identifier
+    integer     ::   error ! error flag
+    integer(hsize_t), dimension(1) :: dimsf_sca
+    integer :: read_global_attribute
+    character(len=*), intent(in) ::  attribute_name ! attribute name
+
+    dimsf_sca = 0.0
+
+    call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
+
+    call h5aopen_f(file_id, attribute_name, attr_id, error)
+
+    call h5aread_f(attr_id, atype_id, read_global_attribute, dimsf_sca,error)
+
+    ! Closes the attribute.
+    call h5aclose_f(attr_id, error)
+
+  end function read_global_attribute
+
 
 
   function create_dset(dataset_name, scalar, dimsf_vec, dimsf_sca) result(idx)

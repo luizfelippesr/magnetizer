@@ -2,8 +2,15 @@
     evolution code. """
 from read_data import read_time_data
 import numpy as N
-Mpc_to_kpc = 1000
 
+# Some constants
+Mpc_to_kpc = 1000
+G_SI=6.67259e-11
+MSOLAR=1.9891e30 # The mass of the Sun in kg
+KM2M=1.0e3 # km to m
+MPC2M=3.0856775807e22 # The number of metres in a Mpc
+G=G_SI*MSOLAR/MPC2M/(KM2M**2) # The gravitational constant
+                              # in units of (km/s)^2 Mpc/Msun.
 
 description_dictionary = {
         't':'Time since the Big Bang.',
@@ -44,7 +51,7 @@ def prepares_text_input(model_dir, odir):
                                 minimum_final_stellar_mass=2e9,
                                 maximum_final_stellar_mass=1e14,
                                 minimum_final_gas_mass=1e7,
-                                number_of_galaxies=100,
+                                number_of_galaxies=None,
                                 minimum_final_disk_size=5e-4, # Gpc, i.e. 0.5 kpc
                                 empirical_disks=False,
                                 ivol_dir='ivol0')
@@ -110,12 +117,6 @@ def prepares_text_input(model_dir, odir):
                 if 'halo_r_virial' in data_dict[t]:
                     r_halo  = data_dict[t]['halo_r_virial'][select][0]
                 else:
-                    G_SI=6.67259e-11
-                    MSOLAR=1.9891e30 # The mass of the Sun in kg
-                    KM2M=1.0e3 # km to m
-                    MPC2M=3.0856775807e22 # The number of metres in a Mpc
-                    G=G_SI*MSOLAR/MPC2M/(KM2M**2) # The gravitational constant
-                                                  # in units of (km/s)^2 Mpc/Msun.
                     mhalo = data_dict[t]['mhalo'][select][0]
                     r_halo = G*mhalo/(v_halo**2)
                 r_halo *= Mpc_to_kpc/data_dict['h0']
@@ -228,12 +229,6 @@ def prepares_hdf5_input(data_dict, output_file):
             if 'halo_r_virial' in data_dict[t]:
                 r_halo  = data_dict[t]['halo_r_virial'][select][0]
             else:
-                G_SI=6.67259e-11
-                MSOLAR=1.9891e30 # The mass of the Sun in kg
-                KM2M=1.0e3 # km to m
-                MPC2M=3.0856775807e22 # The number of metres in a Mpc
-                G=G_SI*MSOLAR/MPC2M/(KM2M**2) # The gravitational constant
-                                              # in units of (km/s)^2 Mpc/Msun.
                 mhalo = data_dict[t]['mhalo'][select][0]
                 r_halo = G*mhalo/(tmp['v_halo'][j]**2)
             r_halo *= Mpc_to_kpc/data_dict['h0']
@@ -254,6 +249,9 @@ def prepares_hdf5_input(data_dict, output_file):
             if dataset_name in units_dictionary:
                 input_grp[dataset_name].attrs['Units'] = \
                                                 units_dictionary[dataset_name]
+        ngals, nzs = input_grp['r_disk'].shape
+        h5file.attrs['Number of galaxies'] = ngals
+        h5file.attrs['Number of snapshots'] = nzs
 
 
 
@@ -263,7 +261,6 @@ if __name__ == "__main__"  :
     model_dir = 'test'
 
     model_dir = '/home/nlfsr/galform_models/GON'
-    #odir = '../input/GON/ivol0'
 
     data_dict = read_time_data( model_dir,
                                 max_z = 5,
@@ -271,10 +268,11 @@ if __name__ == "__main__"  :
                                 minimum_final_stellar_mass=1e7,
                                 maximum_final_stellar_mass=1e14,
                                 minimum_final_gas_mass=1e7,
-                                number_of_galaxies=1000,
-                                minimum_final_disk_size=5e-4, # Gpc, i.e. 0.5 kpc
+                                number_of_galaxies=15,
+                                minimum_final_disk_size=5e-4,#Gpc, i.e. 0.5kpc
                                 empirical_disks=False,
                                 ivol_dir='ivol1')
 
+    #odir = '../input/GON/ivol0'
     #prepares_text_input(data_dict, odir)
-    prepares_hdf5_input(data_dict, 'large_input.hdf5')
+    prepares_hdf5_input(data_dict, 'ivol1.hdf5')

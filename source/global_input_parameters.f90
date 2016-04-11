@@ -171,8 +171,6 @@ module global_input_parameters
     nsteps_0, &
     Time_evol, &
     info, &
-    ngals, &
-    number_of_redshifts, &
     Dyn_quench, Alg_quench, &
     lFloor, &
     Damp, &

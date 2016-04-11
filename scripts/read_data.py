@@ -180,12 +180,13 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             print("Sampling {0}  galaxies based on weight".format(
                                                             number_of_galaxies))
             randm = random( len(data_dict[t]['weight']) )
-            # selects a number of galaxies based on weight
-            rfac = number_of_galaxies / N.sum(data_dict[t]['weight']) 
-            ok = ( randm / data_dict[t]['weight'] < rfac )
-            
-            print('Actual number of selected galaxies: {0}'.format(len(ok[ok])))
-            filter_dictionary_inplace(ok,data_dict[t])
+            if number_of_galaxies:
+                # selects a number of galaxies based on weight
+                rfac = number_of_galaxies / N.sum(data_dict[t]['weight'])
+                ok = ( randm / data_dict[t]['weight'] < rfac )
+
+                print('Actual number of selected galaxies: {0}'.format(len(ok[ok])))
+                filter_dictionary_inplace(ok,data_dict[t])
 
             print('Number of galaxies after sampling: {0}'.format(
                                                    len(data_dict[t]['weight'])))

@@ -54,11 +54,11 @@ contains
     lseparate_output = p_IO_separate_output
 
     if (.not.present(mpi_comm)) then
-      error stop 'Fatal Error: start_IO, trying to initialize parallel hdf5 IO without a communicator.'
+      stop 'Fatal Error: start_IO, trying to initialize parallel hdf5 IO without a communicator.'
     endif
 
     if (Initialized) then
-      error stop 'Fatal Error: start_IO trying to initialize already initialized IO'
+      stop 'Fatal Error: start_IO trying to initialize already initialized IO'
     endif
 
     ! Initializes predefined datatypes
@@ -103,7 +103,7 @@ contains
     integer, intent(in) :: gal_id, info
 
     if (.not.Initialized) then
-      error stop  'Fatal Error: IO_write_meta, IO not initialized'
+      stop  'Fatal Error: IO_write_meta, IO not initialized'
     endif
 
   end subroutine IO_start_galaxy

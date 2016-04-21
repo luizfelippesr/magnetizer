@@ -44,6 +44,9 @@ program mpicalldynamo
     call read_global_parameters(trim(command_argument))
   endif
 
+  ! Initializes IO  
+  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL)
+
   allocate(mygals(ngals))
 
   nmygals = 0
@@ -53,10 +56,8 @@ program mpicalldynamo
     mygals(i+1) = igal
     nmygals = nmygals + 1
   end do
-  
+
   print*,'rank=',rank,'    mygals=',mygals(:nmygals) !processor id, list of galaxies for that processor
-  ! Initializes IO  
-  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL)
 
   ! Call dynamo code for each galaxy in mygals
   if (nmygals > 0) then

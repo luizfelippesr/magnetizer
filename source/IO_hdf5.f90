@@ -128,9 +128,9 @@ contains
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
-    dimsf_sca = (/data_shape(1),gals_number/)
+    dimsf_sca = [data_shape(1),gals_number]
     ! Sets the dimensions associated with writing a single galaxy
-    dimsf_sca_1gal = (/data_shape(1),1/)
+    dimsf_sca_1gal = [data_shape(1),1]
 
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
@@ -149,7 +149,7 @@ contains
     end if
 
     ! Selects hyperslab in the file.
-    offset = (/0,gal_id-1/) ! Means: in second dimension, start from gal_id-1
+    offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
     call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
     ! At last, writes the dataset
@@ -184,9 +184,9 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     endif
     data_shape = shape(data)
     ! Sets dataset dimensions.
-    dimsf_sca = (/data_shape(1),gals_number/)
+    dimsf_sca = [data_shape(1),gals_number]
     ! Sets the dimensions associated with reading a single galaxy
-    dimsf_sca_1gal = (/data_shape(1),1/)
+    dimsf_sca_1gal = [data_shape(1),1]
 
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
@@ -194,7 +194,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     if (idx < 0) then
       idx = open_dset(dataset_name)
       if (full) then
-        dimsf_sca = (/nrows_actual,1/)
+        dimsf_sca = [nrows_actual,1]
         call h5screate_simple_f(rank, dimsf_sca, memspace_ids(idx), error)
       else
         call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
@@ -203,7 +203,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     end if
 
     ! Selects hyperslab in the file.
-    offset = (/0,gal_id-1/) ! Means: in second dimension, start from gal_id-1
+    offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
     if (.not.full) &
       call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                  offset, dimsf_sca_1gal, error)
@@ -232,9 +232,9 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
 
     ! Sets dataset dimensions.
-    dimsf_sca = (/1,gals_number/)
+    dimsf_sca = [1,gals_number]
     ! Sets the dimensions associated with writing a single galaxy
-    dimsf_sca_1gal = (/1,1/)
+    dimsf_sca_1gal = [1,1]
 
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
@@ -247,7 +247,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     end if
 
     ! Selects hyperslab in the file.
-    offset = (/0,gal_id-1/) ! Means: in second dimension, start from gal_id-1
+    offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
     call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
     ! At last, reads the dataset
@@ -277,9 +277,9 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
-    dimsf_vec = (/data_shape(1),data_shape(2),gals_number/)
+    dimsf_vec = [data_shape(1),data_shape(2),gals_number]
     ! Sets the dimensions associated with writing a single galaxy
-    dimsf_vec_1gal = (/data_shape(1),data_shape(2),1/)
+    dimsf_vec_1gal = [data_shape(1),data_shape(2),1]
 
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
@@ -297,7 +297,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     end if
     
     ! Selects hyperslab in the file.
-    offset = (/0,0,gal_id-1/) ! Means: in third dimension, start from gal_id-1
+    offset = [0,0,gal_id-1] ! Means: in third dimension, start from gal_id-1
     call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_vec_1gal, error)
     ! At last, writes the dataset
@@ -363,7 +363,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     integer(hid_t) :: attr_id       ! attribute identifier
     integer(hid_t) :: aspace_id     ! attribute dataspace identifier
     integer(hid_t) :: atype_id      ! attribute dataspace identifier
-    integer(hsize_t), dimension(1) :: adims = (/1/) ! attribute dimension
+    integer(hsize_t), dimension(1) :: adims = [1] ! attribute dimension
     integer     ::   arank = 1                      ! attribute rank
     integer(size_t) :: attrlen    ! length of the attribute string
     integer     ::   error ! error flag
@@ -452,14 +452,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
       ! thus, 2 dimensions: galaxy id and time
       rank = 2
       if (lchunking) &
-          chunkdim_sca = (/ dimsf_sca(1), min(dimsf_sca(2), chunksize) /)
+          chunkdim_sca = [ dimsf_sca(1), min(dimsf_sca(2), chunksize) ]
       call h5screate_simple_f(rank, dimsf_sca, dataspace, error)
     else
       ! 3 dimensions: galaxy id, time and radius
       rank = 3
 
       if (lchunking) chunkdim_vec = &
-              (/ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) /)
+              [ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) ]
       call h5screate_simple_f(rank, dimsf_vec, dataspace, error)
     endif
 

@@ -14,6 +14,7 @@ program mpicalldynamo
   integer, allocatable, dimension(:) :: mygals
   character(len=32) :: command_argument
   integer :: i
+  logical :: lstop
 
 !*****************************************************
   double precision :: tstart,tfinish
@@ -59,12 +60,19 @@ program mpicalldynamo
 
   print*,'rank=',rank,'    mygals=',mygals(:nmygals) !processor id, list of galaxies for that processor
 
-  ! Call dynamo code for each galaxy in mygals
   if (nmygals > 0) then
     do jgal=1,nmygals
+      ! Call dynamo code for each galaxy in mygals
       call dynamo_run(info, mygals(jgal), flag, &
                       p_no_magnetic_fields_test_run)
       print*,'flag',flag,'obtained by processor',rank,'for galaxy',mygals(jgal)
+      ! Checks whether a STOP file exists
+      inquire (file='STOP', exist=lstop)
+      ! If yes, exits gently
+      if (lstop) then
+        print *,'rank=', rank, '   Found STOP file. Exiting..'
+        exit
+      endif
     enddo
   endif
   
@@ -80,7 +88,7 @@ program mpicalldynamo
   
   if (rank == 0) then !Only the master (rank 0)
     tfinish= MPI_wtime()
-    print*,'total wall time in seconds=',tfinish-tstart
+    print*,'Total wall time in seconds=',tfinish-tstart
   endif
 end program mpicalldynamo
 !*****************************************************

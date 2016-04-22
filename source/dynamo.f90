@@ -15,7 +15,7 @@ module dynamo
   double precision :: cpu_time_start, cpu_time_finish
   double precision, allocatable, dimension(:,:) :: f, dfdt
   double precision, allocatable, dimension(:,:) :: f_old, dfdt_old
-  
+
   public dynamo_run
 
   contains

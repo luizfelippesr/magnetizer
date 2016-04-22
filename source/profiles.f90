@@ -34,6 +34,7 @@ contains
     use outflow
     use pressureEquilibrium
     use input_constants
+    use messages
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: B_actual
     double precision, dimension(nx) :: rho_cgs
@@ -117,11 +118,11 @@ contains
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
                           abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
       if (any(h_kpc<0)) then
-        print *, 'construct_profiles: Error. Negative scaleheight detected.'
+        call message('construct_profiles: Error. Negative scaleheight detected.')
         construct_profiles = .false.
       endif
       if (any(h_kpc>1d3)) then
-        print *, 'construct_profiles: Error. Huge scaleheight detected.'
+        call message('construct_profiles: Error. Huge scaleheight detected.')
         construct_profiles = .false.
       endif
     else
@@ -137,7 +138,7 @@ contains
       Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 
       if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
-        print *, 'construct_profiles: Warning. Invalid solution for the hydrostatic equilibrium.'
+        call message('construct_profiles: Warning. Invalid solution for the hydrostatic equilibrium.')
         construct_profiles = .false.
       end if
     end if

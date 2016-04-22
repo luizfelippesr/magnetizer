@@ -9,7 +9,7 @@ builddir=build
 
 FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -g -Wall
 
-_OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o
+_OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 # Builds parallel version
@@ -41,11 +41,11 @@ $(srcdir)/deriv.f90: ${builddir}/grid.o
 $(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/$(IO).o
 $(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o
 $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o
-$(srcdir)/dynamo.f90: ${builddir}/output.o
+$(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o
 $(srcdir)/output.f90: ${builddir}/$(IO).o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o
-$(srcdir)/$(IO).f90: ${builddir}/grid.o
+$(srcdir)/$(IO).f90: ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o ${builddir}/grid.o
-$(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o ${builddir}/grid.o
+$(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
 
 # Tides up

@@ -4,7 +4,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   use var
   use grid
   use input_params
-
+  use messages
   implicit none
   private
 
@@ -66,8 +66,7 @@ contains
     ts_t_Gyr(it) = this_t
 
     if (present(invalid_run)) then
-      print *, 'INVALID RUN'
-      print *, it
+      call message('INVALID RUN')
       if (invalid_run) return
     endif
 

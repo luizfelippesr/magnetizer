@@ -42,11 +42,12 @@ module input_params
   contains
    subroutine set_ts_params()
       use units
+      use messages
 
       tsnap = time_between_inputs/t0_Gyr
       dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
-      print *, 'set_ts_params  ','dt=',dt*t0_Gyr,'Gyr', time_between_inputs/100.
-      print *, nsteps
+      call message('Set_ts_params  dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
+              gal_id=current_gal_id)
       
     endsubroutine set_ts_params
 
@@ -63,7 +64,7 @@ module input_params
         allocate(output_times(number_of_redshifts))
         output_times = 0
         ! Reads the output times
-        call IO_read_dataset_scalar('t', gal_id, info, output_times, &
+        call IO_read_dataset_scalar('t', gal_id, output_times, &
                                     nrows=number_of_redshifts)
       endif
 
@@ -73,18 +74,18 @@ module input_params
       galaxy_data(:,:) = -1
 
       ! Reads time dependent parameters for this galaxy
-      call IO_read_dataset_scalar('r_disk', gal_id, info, galaxy_data(:,1))
-      call IO_read_dataset_scalar('v_disk', gal_id, info, galaxy_data(:,2))
-      call IO_read_dataset_scalar('r_bulge', gal_id, info, galaxy_data(:,3))
-      call IO_read_dataset_scalar('v_bulge', gal_id, info, galaxy_data(:,4))
-      call IO_read_dataset_scalar('r_halo', gal_id, info, galaxy_data(:,5))
-      call IO_read_dataset_scalar('v_halo', gal_id, info, galaxy_data(:,6))
-      call IO_read_dataset_scalar('nfw_cs1', gal_id, info, galaxy_data(:,7))
-      call IO_read_dataset_scalar('Mgas_disk', gal_id, info, galaxy_data(:,8))
-      call IO_read_dataset_scalar('Mstars_disk', gal_id, info, galaxy_data(:,9))
-      call IO_read_dataset_scalar('SFR', gal_id, info, galaxy_data(:,10))
+      call IO_read_dataset_scalar('r_disk', gal_id, galaxy_data(:,1))
+      call IO_read_dataset_scalar('v_disk', gal_id, galaxy_data(:,2))
+      call IO_read_dataset_scalar('r_bulge', gal_id, galaxy_data(:,3))
+      call IO_read_dataset_scalar('v_bulge', gal_id, galaxy_data(:,4))
+      call IO_read_dataset_scalar('r_halo', gal_id, galaxy_data(:,5))
+      call IO_read_dataset_scalar('v_halo', gal_id, galaxy_data(:,6))
+      call IO_read_dataset_scalar('nfw_cs1', gal_id, galaxy_data(:,7))
+      call IO_read_dataset_scalar('Mgas_disk', gal_id, galaxy_data(:,8))
+      call IO_read_dataset_scalar('Mstars_disk', gal_id, galaxy_data(:,9))
+      call IO_read_dataset_scalar('SFR', gal_id, galaxy_data(:,10))
       ! Reads the maximum radius for this galaxy
-      call IO_read_dataset_single('r_max', gal_id, info, r_max_kpc)
+      call IO_read_dataset_single('r_max', gal_id, r_max_kpc)
 
       ! Sets n1, maximum number of snapshots
       n1 = number_of_redshifts
@@ -106,12 +107,10 @@ module input_params
     end subroutine reset_input_params
 
 
-    subroutine set_input_params(gal_id,info)
+    subroutine set_input_params(gal_id)
       ! Reads dimensional input parameters that must be specified and may vary
       ! from galaxy to galaxy and from timestep to timestep
-
-!       character (len=8), intent(in) :: gal_id_string
-      integer, intent(in) :: info, gal_id
+      integer, intent(in) :: gal_id
       double precision :: next_time_input
       double precision :: current_time_input
 

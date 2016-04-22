@@ -7,7 +7,7 @@ module dynamo
   use timestep
   use output
   use initial_conditions
-
+  use messages
   implicit none 
   private 
   
@@ -19,20 +19,21 @@ module dynamo
   public dynamo_run
 
   contains
-    subroutine dynamo_run(info, gal_id, flag, test_run)
-      integer, intent(in) :: info, gal_id
+    subroutine dynamo_run(gal_id, test_run, rank)
+      integer, intent(in) :: gal_id
+      integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
-      integer, intent(out) :: flag
       logical :: ok, able_to_construct_profiles, elliptical
-      integer :: fail_count
-      character(len=8) :: frmt
-      character(len=8) :: gal_id_string
+      integer :: fail_count, rank_actual
       integer, parameter :: MAX_FAILS=3
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
-      
-      frmt='(I8.8)'
-      write(gal_id_string,frmt) gal_id
+
+      if (present(rank)) then
+          rank_actual = rank
+      else
+          rank_actual = 0
+      endif
 
       call cpu_time(cpu_time_start)
       
@@ -46,12 +47,11 @@ module dynamo
       
       f=0
       dfdt=0
-      
-      print *, 'Galaxy ',gal_id_string
+
       ! Prepares the grid where the computation will be made
       call construct_grid()
       ! Reads in the model parameters (for the first snapshot)
-      call set_input_params(gal_id,info)
+      call set_input_params(gal_id)
       ! Sets other necessary parameters
       call set_calc_params  
       ! Constructs galaxy model for the initial snapshot
@@ -67,7 +67,7 @@ module dynamo
       ! Loops through the SAM's snapshots
       do it=init_it,n1
         this_t = t_Gyr
-        if (info>0) print *, 'Main loop: Galaxy ',gal_id_string, ' it=',it
+        call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=1)
 
         ! Initializes the number of steps to the global input value
         nsteps = nsteps_0
@@ -118,12 +118,10 @@ module dynamo
           ! Loops through the timesteps
           do jt=1,nsteps
             this_t = t_Gyr +dt*t0_Gyr*jt
-            if (info>2) then
-              print *, 'Inner loop: Galaxy ',gal_id_string, ' jt=',jt, &
-                      'nsteps=',nsteps, ' fail_count=',fail_count
-              print *, '            t (Gyr)',t_Gyr +dt*t0_Gyr*jt
-              print *, '            t',t
-            endif
+            call message('Inner loop: jt = ',gal_id=gal_id, val_int=jt, info=2)
+            call message('Inner loop: fail_count =',val_int=fail_count,gal_id=gal_id, info=2)
+            call message('Inner loop: nsteps = ',gal_id=gal_id, val_int=nsteps, info=3)
+            call message('Inner loop: t (Gyr) = ', t_Gyr +dt*t0_Gyr*jt,gal_id=gal_id, info=3)
 
             call estimate_Bzmod(f)
             ! If not using the simplified pressure, all profiles need to be
@@ -167,10 +165,8 @@ module dynamo
           
           ! Otherwise, the calculation needs to be remade with a smaller
           ! timestep
-          if (info>1) then
-            print *, 'Galaxy ',gal_id_string, &
-            ': NANs or unrealistically large magnetic fields detected, changing time step'
-          endif
+          call message('NANs or unrealistically large magnetic fields detected, changing time step', &
+                         gal_id=gal_id, info=2)
           
           ! Doubles the number of timesteps
           nsteps = nsteps * 2
@@ -211,18 +207,18 @@ module dynamo
         if (last_output .or. p_oneSnaphotDebugMode) exit
         
         ! Reads in the model parameters for the next snapshot
-        call set_input_params(gal_id,info)
+        call set_input_params(gal_id)
       end do  ! snapshots loop
       
-      call write_output(gal_id)  !Writes final simulation output
-      
+
       call cpu_time(cpu_time_finish)
-      
-      if (info>0) then
-        print *, 'Galaxy ', gal_id_string,': finished after', &
-            (cpu_time_finish - cpu_time_start), ' s  CPU time'
-      endif
-      flag=-1  !Tell calldynamo that simulation was successful
+
+
+      call message('Finished after ', (cpu_time_finish - cpu_time_start),  &
+                   gal_id= gal_id, msg_end=' s  CPU time', info=1)
+
+      call write_output(gal_id, ok, cpu_time_finish - cpu_time_start)  !Writes final simulation output
+
       call reset_input_params()  !Reset iread
       ! Resets the arrays which store the time series
       call reset_ts_arrays()  

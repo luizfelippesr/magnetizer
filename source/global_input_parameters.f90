@@ -225,8 +225,6 @@ module global_input_parameters
     implicit none
     character(len=*), intent(in) :: global_pars_filename
     integer :: u
-
-    write(*,*) 'Using global parameters file: ',global_pars_filename
     open(newunit=u,file=global_pars_filename, status='old')
     read(u,nml=global_pars)
     close(u)

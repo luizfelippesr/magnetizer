@@ -1,6 +1,7 @@
 ! Contains a module that implements hdf5 IO
 module IO
   use hdf5
+  use messages
   implicit none
   
   interface IO_write_dataset ! Overload the IO_write_dataset function
@@ -97,23 +98,24 @@ contains
   end subroutine IO_start
   
 
-  subroutine IO_start_galaxy(gal_id, info)
+  subroutine IO_start_galaxy(gal_id)
     ! Initializes galaxy
     ! At the moment, this is a dummy
-    integer, intent(in) :: gal_id, info
+    integer, intent(in) :: gal_id
 
     if (.not.Initialized) then
       stop  'Fatal Error: IO_write_meta, IO not initialized'
     endif
 
+    call message('IO initialised', gal_id=gal_id,info=2)
   end subroutine IO_start_galaxy
 
 
-  subroutine IO_write_dataset_scalar(dataset_name, gal_id, info, data, &
+  subroutine IO_write_dataset_scalar(dataset_name, gal_id, data, &
                                      units, description)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
-    integer, intent(in) :: gal_id, info
+    integer, intent(in) :: gal_id
     double precision, dimension(:), intent(in) :: data
     character(len=*), optional, intent(in) :: units
     character(len=*), optional, intent(in) :: description
@@ -161,10 +163,10 @@ contains
 
   end subroutine IO_write_dataset_scalar
 
-subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
+subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
-    integer, intent(in) :: gal_id, info
+    integer, intent(in) :: gal_id
     integer, intent(in), optional :: nrows
     logical :: full
     double precision, dimension(:), intent(out) :: data
@@ -219,10 +221,10 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
 
   end subroutine IO_read_dataset_scalar
 
-  subroutine IO_read_dataset_single(dataset_name, gal_id, info, data)
+  subroutine IO_read_dataset_single(dataset_name, gal_id, data)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
-    integer, intent(in) :: gal_id, info
+    integer, intent(in) :: gal_id
     double precision, intent(out) :: data
     integer ::  idx, error
     integer, parameter :: rank = 2
@@ -259,11 +261,11 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
   end subroutine IO_read_dataset_single
 
 
-  subroutine IO_write_dataset_vector(dataset_name, gal_id, info, data, &
+  subroutine IO_write_dataset_vector(dataset_name, gal_id, data, &
                                      units, description)
     ! Writes a dataset to disk - vector version
     character(len=*), intent(in) :: dataset_name
-    integer, intent(in) :: gal_id, info
+    integer, intent(in) :: gal_id
     double precision, dimension(:,:), intent(in) :: data
     character(len=*), optional, intent(in) :: units
     character(len=*), optional, intent(in) :: description
@@ -309,11 +311,13 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
   end subroutine IO_write_dataset_vector
     
   
-  subroutine IO_finish_galaxy(gal_id, info)
+  subroutine IO_finish_galaxy(gal_id)
     ! Finishes IO 
     ! At the moment, this is a dummy
-    integer, intent(in) :: gal_id, info
-    
+    integer, intent(in) :: gal_id
+
+    call message('Finished writing datasets',gal_id=gal_id, info=2)
+
   end subroutine IO_finish_galaxy
   
   
@@ -325,30 +329,35 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     ! Closes all dataspaces, namespaces and datasets
     ! (this may be moved to IO_finish_galaxy, if necessary)
     do i=1,ndsets
-      if (info>2) print *, 'Closing ', dset_names(i)
-!       print *, 'Closing dataspace ', i
+      call message('Preparing to close dataset'//dset_names(i), info=3)
+      call message('Closing dataspace ', val_int=i, info=4)
       call h5sclose_f(dataspace_ids(i), error)
-      
-!       print *, 'Closing memspace ', i
+      call check(error)
+      call message('Closing memspace', val_int=i, info=4)
       call h5sclose_f(memspace_ids(i), error)
-      
-!       print *, 'Closing dset ', i
+      call check(error)
+      call message('Closing dataset '//dset_names(i), info=4)
       call h5dclose_f(dset_ids(i), error)
+      call check(error)
     end do
     ndsets = 0
     ! Closes output group
-    if (info>2) print *, "Closing Output group"
+    call message("Closing Output group", info=3)
     call h5gclose_f(output_group_id, error)
+    call check(error)
     ! Closes input group
-    if (info>2) print *, "Closing input group"
+    call message("Closing input group", info=3)
     call h5gclose_f(input_group_id, error)
+    call check(error)
     ! Closes file
-    if (info>2) print *, "Closing input file"
+    call message("Closing input file", info=3)
     call h5fclose_f(file_id, error)
+    call check(error)
     ! Closes file
     if (lseparate_output) then
-        if (info>2) print *, "Closing Output file"
+      call message("Closing Output file", info=3)
       call h5fclose_f(file_id_out, error)
+      call check(error)
     endif
   end subroutine IO_end  
   
@@ -375,23 +384,31 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
 
     ! Creates scalar data space for the attribute.
     call h5screate_simple_f(arank, adims, aspace_id, error)
+    call check(error)
 
     ! Creates datatype for the attribute.
     call h5tcopy_f(H5T_NATIVE_CHARACTER, atype_id, error)
+    call check(error)
     call h5tset_size_f(atype_id, attrlen, error)
+    call check(error)
 
     ! Creates dataset attribute.
     call h5acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
                      error)
+    call check(error)
 
     ! Writes the attribute data.
     call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
+    call check(error)
+
 
     ! Closes the attribute.
     call h5aclose_f(attr_id, error)
+    call check(error)
 
     ! Terminates access to the data space.
     call h5sclose_f(aspace_id, error)
+    call check(error)
 
   end subroutine add_text_attribute
 
@@ -406,13 +423,17 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     dimsf_sca = 0.0
 
     call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
+    call check(error)
 
     call h5aopen_f(file_id, attribute_name, attr_id, error)
+    call check(error)
 
     call h5aread_f(attr_id, atype_id, read_global_attribute, dimsf_sca,error)
+    call check(error)
 
     ! Closes the attribute.
     call h5aclose_f(attr_id, error)
+    call check(error)
 
   end function read_global_attribute
 
@@ -454,6 +475,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
       if (lchunking) &
           chunkdim_sca = [ dimsf_sca(1), min(dimsf_sca(2), chunksize) ]
       call h5screate_simple_f(rank, dimsf_sca, dataspace, error)
+      call check(error)
     else
       ! 3 dimensions: galaxy id, time and radius
       rank = 3
@@ -461,27 +483,35 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
       if (lchunking) chunkdim_vec = &
               [ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) ]
       call h5screate_simple_f(rank, dimsf_vec, dataspace, error)
+      call check(error)
     endif
 
     ! Creates a dataset property list
     call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+    call check(error)
+
     if (lchunking) then
       ! Sets the size of the chunks
       if (scalar_actual) then
         call h5pset_chunk_f(plist_id, rank, chunkdim_sca, error)
+        call check(error)
       else
         call h5pset_chunk_f(plist_id, rank, chunkdim_vec, error)
+        call check(error)
       endif
       if (lcompression) then
         ! Sets compression
         call h5pset_deflate_f(plist_id, compression_level, error)
+        call check(error)
       endif
     endif
     ! Creates the dataset
     call h5dcreate_f(output_group_id, dataset_name, H5T_NATIVE_DOUBLE, &
                     dataspace, dset_ids(idx), error,  dcpl_id=plist_id)
+    call check(error)
     ! Closes dataspace
     call h5sclose_f(dataspace, error)
+    call check(error)
 
     return
   end function create_dset
@@ -504,6 +534,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
 
     ! Opens the dataset
     call h5dopen_f(input_group_id, dataset_name, dset_ids(idx), error)
+    call check(error)
 
     return
   end function open_dset
@@ -524,4 +555,13 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, info, data, nrows)
     idx = -1
     return
   end function find_dset
+
+  subroutine check(error)
+    integer, intent(in) :: error
+    if (error /= 0) then
+      call message("Error when calling HDF5.  ", val_int=error, info=0)
+      stop
+    endif
+  end subroutine
+
 end module IO

@@ -224,11 +224,12 @@ module global_input_parameters
     ! Reads the global parameters file
     implicit none
     character(len=*), intent(in) :: global_pars_filename
+    integer :: u
 
     write(*,*) 'Using global parameters file: ',global_pars_filename
-    open(8,file=global_pars_filename, status='old')
-    read(8,nml=global_pars)
-    close(8)
+    open(newunit=u,file=global_pars_filename, status='old')
+    read(u,nml=global_pars)
+    close(u)
   end subroutine read_global_parameters
 
 end module global_input_parameters

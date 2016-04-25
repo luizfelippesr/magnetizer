@@ -42,7 +42,6 @@ contains
     use grid
     use global_input_parameters
     ! Initializes IO
-    character(len=40) :: filepath
     integer, intent(in), optional :: mpi_comm, mpi_info
     integer(hid_t) :: plist_id      ! property list identifier
     integer :: error
@@ -450,7 +449,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     integer :: read_global_attribute
     character(len=*), intent(in) ::  attribute_name ! attribute name
 
-    dimsf_sca = 0.0
+    dimsf_sca = 0
 
     call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
     call check(error)
@@ -479,7 +478,6 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     integer(hid_t), intent(in), optional :: group_id
     integer(hsize_t), dimension(3), target :: chunkdim_vec
     integer(hsize_t), dimension(2), target :: chunkdim_sca
-    integer, pointer :: chunkdim
     character(len=*), intent(in) :: dataset_name
     logical, intent(in), optional :: scalar
     integer(hid_t) :: plist_id, group_id_actual      ! property list identifier
@@ -561,9 +559,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     ! Returns the index
     ! NB This is a collective procedure
     character(len=*), intent(in) :: dataset_name
-    integer(hid_t) :: dataspace ! dataspace identifier (temporary)
-    integer :: idx
-    integer :: rank, error
+    integer :: idx, error
 
     ! Increments ndsets and sets idx
     ndsets = ndsets+1

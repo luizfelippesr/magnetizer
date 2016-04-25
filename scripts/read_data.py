@@ -26,8 +26,8 @@ def get_parameter_values(model_dir):
             d[p] = N.float64( d[p] )
         except:
             pass
-
     return d
+
 
 def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
                    max_z = 1000.0,
@@ -67,40 +67,36 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
     # Opens the hdf5 file
     if os.path.isfile( model_dir+'/'+ivol_dir+"/galaxies.hdf5.bz2" ):
         os.system("bunzip2 -f "+model_dir+'/'+ivol_dir+"/galaxies.hdf5.bz2")
-    print model_dir+'/'+ivol_dir+"/galaxies.hdf5"
     f = h5py.File(model_dir+'/'+ivol_dir+"/galaxies.hdf5")
 
-    # Gets the parameters (later this may be used...)
-    #params = get_parameter_values(model_dir+'/'+ivol_dir)
-    h0     = f['Parameters']['h0'][()] #params['h0']
+    # Reads the little-h
+    h0 = f['Parameters']['h0'][()]
 
     # Gets the redshifts and times
     zout_array = f["Output_Times/zout"][:]
     tout_array = f["Output_Times/tout"][:]
     z_indices = N.arange(len(zout_array[zout_array<max_z]))
 
-
-    data_dict = {}
-
-    data_dict['Galform Parameters'] = dict()
+    # Initializes dictionary and copy galform run parameters
+    data_dict = {'Galform Parameters': dict()}
     for param in f['Parameters']:
         data_dict['Galform Parameters'][param] = f['Parameters'][param][()]
 
+    # Loops over redshifs
     for i, zidx in enumerate(z_indices[:]):
         t = tout_array[zidx]
 
         print('Working on redshift {0}, time {1}'.format(zout_array[zidx],t))
-
+        # Initializes dictionary
         data_dict[t] = {}
         output_id = "Output%.3i" % (zidx+1)   # outputs labeled Fortran style.
 
-        # read the data from the hdf5 file.
+        # Reads the data from the hdf5 file.
         for k in datasets:
             if k in f[output_id]:
                 data_dict[t][k] = f[output_id][k]
-            #else:
-                #print k, 'not present'
 
+        # If galaxy weights are not in the file, include them
         if "galaxy_weight" not in f[output_id]:
             print('Adding weights, jm and jtree (this may take some time).')
             # Weights are associated with haloes.
@@ -108,8 +104,8 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             # The same goes with jm and jtree
             halo_weight = f[output_id+"/Trees/weight"]
             halo_ngals = f[output_id+"/Trees/ngals"]
-            halo_jm = f[output_id+"/Trees/jm"]
-            halo_jtree = f[output_id+"/Trees/jtree"]
+            #halo_jm = f[output_id+"/Trees/jm"]
+            #halo_jtree = f[output_id+"/Trees/jtree"]
 
             if ((N.sum(halo_ngals) != len(data_dict[t]['mstars_disk']) or 
                  len(halo_weight) != len(halo_ngals))):
@@ -119,20 +115,20 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             # count galaxies, assiging weight from their halo weight.
             # initial weights are -1
             galaxy_weight = N.zeros( len(f[output_id+"/mstars_disk"][:]) )-1.
-            jtree = N.zeros( len(f[output_id+"/mstars_disk"][:]) ) -1.
-            jm = N.zeros( len(f[output_id+"/mstars_disk"][:]) ) -1.
+            #jtree = N.zeros( len(f[output_id+"/mstars_disk"][:]) ) -1.
+            #jm = N.zeros( len(f[output_id+"/mstars_disk"][:]) ) -1.
 
             igal = 0
             for ihalo in range( len(halo_ngals) ):
                 if (halo_ngals[ihalo] > 0):
                     galaxy_weight[igal:igal+halo_ngals[ihalo]] = halo_weight[ihalo]
-                    jtree[igal:igal+halo_ngals[ihalo]] = halo_jtree[ihalo]
-                    jm[igal:igal+halo_ngals[ihalo]] = halo_jm[ihalo]
+                    #jtree[igal:igal+halo_ngals[ihalo]] = halo_jtree[ihalo]
+                    #jm[igal:igal+halo_ngals[ihalo]] = halo_jm[ihalo]
                     igal = igal+halo_ngals[ihalo]
 
             f[output_id+"/galaxy_weight"] = galaxy_weight
-            f[output_id+"/galaxy_jtree"] = jtree
-            f[output_id+"/galaxy_jm"] = jm
+            #f[output_id+"/galaxy_jtree"] = jtree
+            #f[output_id+"/galaxy_jm"] = jm
             f.flush()
         else:
             galaxy_weight = f[output_id+"/galaxy_weight"]
@@ -148,48 +144,45 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
         print 'Galaxies read:', len(galaxy_weight)
         if i==0:
-            #print "Pre-sampling {0} galaxies based on weight".format(
-                                                        #100.0*number_of_galaxies)
+            # Pre-loads parts of the HDF5 file to RAM (allowing a ~20% speedup)
+            # (this converts the 'HDF5 dataset' into a numpy array)
+            data_dict[t]['mstars_disk'] = data_dict[t]['mstars_disk'][:]
+            data_dict[t]['mcold'] = data_dict[t]['mcold'][:]
+            data_dict[t]['mstars_bulge'] = data_dict[t]['mstars_bulge'][:]
+            data_dict[t]['mcold_burst'] = data_dict[t]['mcold_burst'][:]
 
-            #randm = random( len(galaxy_weight) )
-            ## select a number of galaxies based on weight
-            #if 100*number_of_galaxies < len(galaxy_weight) :
-                #rfac = (10.0*number_of_galaxies) / N.sum(galaxy_weight)
-                #ok = ( randm / data_dict[t]['weight'] < rfac )
+            # Computes bulge to total mass ratio
+            data_dict[t]['BoT'] = (data_dict[t]['mstars_bulge'] +
+                                   data_dict[t]['mcold_burst']
+                                  ) / (data_dict[t]['mstars_disk'] +
+                                       data_dict[t]['mcold'] +
+                                       data_dict[t]['mstars_bulge'] +
+                                       data_dict[t]['mcold_burst']  )
 
-                #filter_dictionary_inplace(ok,data_dict[t])
-
-            data_dict[t]['BoT'] = (data_dict[t]['mstars_bulge'][:]+
-                                    data_dict[t]['mcold_burst'][:]) / (
-                                        data_dict[t]['mstars_disk'][:]+
-                                        data_dict[t]['mcold'][:]+
-                                        data_dict[t]['mstars_bulge'][:]+
-                                        data_dict[t]['mcold_burst'][:] )
-
-            # Selects galaxies with a minimum stellar mass, gass mass and
-            # bulge to total mass ratio
-            ok  = data_dict[t]['BoT'][:] < maximum_final_B_over_T
-            ok *= data_dict[t]['mstars_disk'][:] > minimum_final_stellar_mass
-            ok *= data_dict[t]['mstars_disk'][:] < maximum_final_stellar_mass
-            ok *= data_dict[t]['mcold'][:] > minimum_final_gas_mass
+            # Selects galaxies with a minimum stellar mass, gass mass
+            # and the correct bulge to total mass ratio
+            ok = data_dict[t]['mstars_disk'] > minimum_final_stellar_mass
+            ok *= data_dict[t]['mstars_disk'] < maximum_final_stellar_mass
+            ok *= data_dict[t]['mcold'] > minimum_final_gas_mass
             ok *= data_dict[t]['rdisk'][:] > minimum_final_disk_size
+            ok *= data_dict[t]['BoT'] < maximum_final_B_over_T
+            # Filters the dictionary
             filter_dictionary_inplace(ok,data_dict[t])
 
-            print('Number of galaxies after filtering: {0}'.format(
+            print('Number of galaxies after initial filtering: {0}'.format(
                                                    len(data_dict[t]['weight'])))
-            print("Sampling {0}  galaxies based on weight".format(
-                                                            number_of_galaxies))
-            randm = random( len(data_dict[t]['weight']) )
+
+            # If a maximum number of galaxies was specified
             if number_of_galaxies:
-                # selects a number of galaxies based on weight
+                print("Sampling up to {0} galaxies based on weight".format(
+                                                           number_of_galaxies))
+                randm = random( len(data_dict[t]['weight']) )
+                # Selects a sample of galaxies based on weight
                 rfac = number_of_galaxies / N.sum(data_dict[t]['weight'])
                 ok = ( randm / data_dict[t]['weight'] < rfac )
-
-                print('Actual number of selected galaxies: {0}'.format(len(ok[ok])))
+                print('Actual number of selected galaxies: {0}'.format(
+                                                                  len(ok[ok])))
                 filter_dictionary_inplace(ok,data_dict[t])
-
-            print('Number of galaxies after sampling: {0}'.format(
-                                                   len(data_dict[t]['weight'])))
 
             # Stores indexing information and reference ID
             GalaxyID_target    = data_dict[t]['FirstProgenitorID']
@@ -197,7 +190,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             previous_ID = data_dict[t]['ID']
             previous_t = t
         else: 
-            # selects only the most massive ascendents of the gals in
+            # Selects only the most massive ascendents of the gals in
             # the previous t
             filt = N.zeros(data_dict[t]['GalaxyID'].shape, dtype=bool)
             data_dict[t]['ID'] = N.zeros(data_dict[t]['GalaxyID'].shape) * N.NaN
@@ -226,16 +219,13 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
     if empirical_disks: # TODO not working yet
         pass
-        # Deep copy of data_dict_z0, to be used in the empirical_disk function
-        #data_dict_z0 = data_dict[first_t].copy()
-        #for t in data_dict:
-            #data_dict[t] = empirical_disk(data_dict[t],data_dict_z0)
 
     data_dict['tout'] = tout_array[zout_array<max_z]
     data_dict['zout'] = zout_array[zout_array<max_z]
     data_dict['h0'] = h0
 
     return data_dict
+
 
 def plot_mass_evolution(model_dir, gtype='all'):
     """ Tests the module ploting the time evolution of galaxy mass.
@@ -296,6 +286,7 @@ def plot_mass_evolution(model_dir, gtype='all'):
     P.xlabel(r'$t\,[{{\rm Gyr}}]$')
     P.ylabel(r'$M\,/\, (10^{10}\,{{\rm M}}_\odot)$')
     P.show()
+
 
 if __name__ == "__main__"  :
     model_dir = 'test_SAM_output'

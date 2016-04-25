@@ -15,12 +15,13 @@ module IO
   integer :: gals_number, grid_points
 
   ! Parameter setting the maximum possible number of datasets
-  integer, parameter :: max_number_of_datasets=55
+  integer, parameter :: max_number_of_datasets=40
   
   integer(hid_t) :: file_id          ! hdf5 file identifier
   integer(hid_t) :: file_id_out      ! hdf5 file identifier
   integer(hid_t) :: output_group_id  ! hdf5 group identifier
   integer(hid_t) :: input_group_id   ! hdf5 group identifier
+  integer(hid_t) :: log_group_id
   
   ! The following store dataset names and ids
   character(len=15), dimension(max_number_of_datasets) :: dset_names = ''
@@ -68,8 +69,10 @@ contains
     call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
     call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
     ! Opens the file collectively.
+    call message('Opening file'//trim(input_file_name), info=3)
     call h5fopen_f(trim(input_file_name), H5F_ACC_RDWR_F, &
                     file_id, error, access_prp=plist_id)
+    call check(error)
 
     ! Reads some properties from the global attributes
     gals_number = read_global_attribute('Number of galaxies')
@@ -78,19 +81,28 @@ contains
 
     if (lseparate_output) then
       ! Creates the file collectively.
+      call message('Creating file'//trim(output_file_name), info=3)
       call h5fcreate_f(trim(output_file_name), H5F_ACC_TRUNC_F, &
                         file_id_out, error, access_prp=plist_id)
+      call check(error)
     else
       file_id_out = file_id
     endif
 
     ! Creates output group
+    call message('Creating groups', info=3)
+    call h5gcreate_f(file_id_out, 'Log', log_group_id, error)
+    call check(error)
+    ! Creates output group
     call h5gcreate_f(file_id_out, 'Output', output_group_id, error)
+    call check(error)
     ! Opens input group
     call h5gopen_f(file_id, 'Input', input_group_id, error)
+    call check(error)
 
     ! Closes property list
     call h5pclose_f(plist_id, error)
+    call check(error)
 
     Initialized = .true.
     return    
@@ -112,13 +124,15 @@ contains
 
 
   subroutine IO_write_dataset_scalar(dataset_name, gal_id, data, &
-                                     units, description)
+                                     units, description, is_log)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id
     double precision, dimension(:), intent(in) :: data
     character(len=*), optional, intent(in) :: units
     character(len=*), optional, intent(in) :: description
+    logical, intent(in), optional :: is_log
+    integer(hid_t) :: group_id
     integer ::  idx, error
     integer, parameter :: rank = 2
     integer(hssize_t), dimension(2) :: offset
@@ -127,6 +141,7 @@ contains
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
 
+    group_id = output_group_id
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
@@ -138,7 +153,12 @@ contains
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca)
+      ! Flag 'is_log' can be used to choose the group 'Log' instead of 'Output'
+      if (present(is_log)) then
+          if (is_log) group_id = log_group_id
+      endif
+      idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca, &
+                          group_id=group_id)
       ! Also writes the attributes (if needed)
       if (present(units)) &
         call add_text_attribute(dset_ids(idx), 'Units', units)
@@ -321,19 +341,25 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
   end subroutine IO_finish_galaxy
   
   
-  subroutine IO_end(info)
+  subroutine IO_end(name)
     ! Finishes IO (closing everything)
-    integer, intent(in) :: info
     integer :: i, error
+    character(len=*), intent(in) :: name
+    character(len=10) :: date
+
+
+    call date_and_time(date=date)
+    call add_text_attribute(file_id_out, 'Hostname', trim(name))
+    call add_text_attribute(file_id_out, 'Date', date)
 
     ! Closes all dataspaces, namespaces and datasets
     ! (this may be moved to IO_finish_galaxy, if necessary)
     do i=1,ndsets
-      call message('Preparing to close dataset'//dset_names(i), info=3)
+      call message('Preparing to close dataset '//dset_names(i), info=3)
       call message('Closing dataspace ', val_int=i, info=4)
       call h5sclose_f(dataspace_ids(i), error)
       call check(error)
-      call message('Closing memspace', val_int=i, info=4)
+      call message('Closing memspace ', val_int=i, info=4)
       call h5sclose_f(memspace_ids(i), error)
       call check(error)
       call message('Closing dataset '//dset_names(i), info=4)
@@ -346,8 +372,12 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     call h5gclose_f(output_group_id, error)
     call check(error)
     ! Closes input group
-    call message("Closing input group", info=3)
+    call message("Closing Input group", info=3)
     call h5gclose_f(input_group_id, error)
+    call check(error)
+    ! Closes log group
+    call message("Closing log group", info=3)
+    call h5gclose_f(log_group_id, error)
     call check(error)
     ! Closes file
     call message("Closing input file", info=3)
@@ -439,18 +469,20 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
 
 
 
-  function create_dset(dataset_name, scalar, dimsf_vec, dimsf_sca) result(idx)
+  function create_dset(dataset_name, scalar, dimsf_vec, dimsf_sca, group_id) &
+                                                                    result(idx)
     ! Creates a hdf5 dataspace, a namespace and dataset
     ! Returns the index
     ! NB This is a collective procedure
     integer(hsize_t), dimension(3), intent(in), optional :: dimsf_vec
     integer(hsize_t), dimension(2), intent(in), optional :: dimsf_sca
+    integer(hid_t), intent(in), optional :: group_id
     integer(hsize_t), dimension(3), target :: chunkdim_vec
     integer(hsize_t), dimension(2), target :: chunkdim_sca
     integer, pointer :: chunkdim
     character(len=*), intent(in) :: dataset_name
     logical, intent(in), optional :: scalar
-    integer(hid_t) :: plist_id      ! property list identifier
+    integer(hid_t) :: plist_id, group_id_actual      ! property list identifier
     integer(hid_t) :: dataspace ! dataspace identifier (temporary)
     logical :: scalar_actual
     integer :: idx
@@ -468,6 +500,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
       scalar_actual = .false.
     endif
 
+    if (present(group_id)) then
+      group_id_actual = group_id
+    else
+      group_id_actual = output_group_id
+    endif
+
+    call message('Creating dataset '//dataset_name//', idx = ',val_int= idx, &
+                 info=4)
     if (scalar_actual) then
       ! "scalar" here, means no variation with radius
       ! thus, 2 dimensions: galaxy id and time
@@ -479,7 +519,6 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     else
       ! 3 dimensions: galaxy id, time and radius
       rank = 3
-
       if (lchunking) chunkdim_vec = &
               [ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) ]
       call h5screate_simple_f(rank, dimsf_vec, dataspace, error)
@@ -506,7 +545,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
       endif
     endif
     ! Creates the dataset
-    call h5dcreate_f(output_group_id, dataset_name, H5T_NATIVE_DOUBLE, &
+    call h5dcreate_f(group_id_actual, dataset_name, H5T_NATIVE_DOUBLE, &
                     dataspace, dset_ids(idx), error,  dcpl_id=plist_id)
     call check(error)
     ! Closes dataspace

@@ -19,7 +19,7 @@ program mpicalldynamo
 
   double precision :: tstart,tfinish
   integer :: rank, nproc, ierr, rc, len
-  character*(MPI_MAX_PROCESSOR_NAME) name
+  character*(MPI_MAX_PROCESSOR_NAME) hostname
 
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -28,9 +28,9 @@ program mpicalldynamo
   endif
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr) !Get the rank of the processor this thread is running on
   call MPI_COMM_SIZE(MPI_COMM_WORLD, nproc, ierr) !Get the number of processors this job
-  call MPI_GET_PROCESSOR_NAME(name, len, ierr) !Get the name of this processor (usually the hostname)
+  call MPI_GET_PROCESSOR_NAME(hostname, len, ierr) !Get the hostname of this processor (usually the hosthostname)
   if (ierr/= MPI_SUCCESS) then
-    call message('Error getting processor name. Terminating.')
+    call message('Error getting processor hostname. Terminating.')
     call MPI_ABORT(MPI_COMM_WORLD, rc, ierr)
   endif
 
@@ -96,14 +96,15 @@ program mpicalldynamo
   endif
   
   call message('All computing done', info=0)
+
   ! Finalizes IO
-  call IO_end(info)
+  call IO_end(hostname)
   call message('IO finished')
 
   !Tell the MPI library to release all resources it is using
   call MPI_FINALIZE(ierr)
   call message('MPI finished')
-  
+
   if (rank == 0) then !Only the master (rank 0)
     tfinish= MPI_wtime()
     ! Removes stop file if necessary
@@ -113,6 +114,7 @@ program mpicalldynamo
       call message('Removed STOP file.', master_only=.true.)
     endif
   endif
+
   call message('Total wall time in seconds =',tfinish-tstart, &
        master_only=.true., info=0)
 end program mpicalldynamo

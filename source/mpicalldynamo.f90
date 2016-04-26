@@ -109,7 +109,8 @@ program mpicalldynamo
     tfinish= MPI_wtime()
     ! Removes stop file if necessary
     if (lstop) then
-      open (newunit=i, FILE='STOP')
+      i = 17
+      open(unit=i, FILE='STOP')
       close(i, status='delete')
       call message('Removed STOP file.', master_only=.true.)
     endif

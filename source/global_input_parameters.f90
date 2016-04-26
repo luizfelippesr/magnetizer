@@ -224,8 +224,8 @@ module global_input_parameters
     ! Reads the global parameters file
     implicit none
     character(len=*), intent(in) :: global_pars_filename
-    integer :: u
-    open(newunit=u,file=global_pars_filename, status='old')
+    integer, parameter :: u = 17
+    open(unit=u,file=global_pars_filename, status='old')
     read(u,nml=global_pars)
     close(u)
   end subroutine read_global_parameters

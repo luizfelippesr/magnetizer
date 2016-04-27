@@ -45,6 +45,8 @@ contains
     integer, intent(in), optional :: mpi_comm, mpi_info
     integer(hid_t) :: plist_id      ! property list identifier
     integer :: error
+    integer, parameter :: MAX_NMLSTR=20000
+    character(len=MAX_NMLSTR) :: namelist_str
     
     ! Reads properties from the global parameters module
     grid_points = nx
@@ -87,6 +89,11 @@ contains
     else
       file_id_out = file_id
     endif
+
+    ! Saves global parameters file to the HDF5 file
+    call add_text_attribute(file_id_out, 'Model name', model_name)
+    write(namelist_str, nml=global_pars)
+    call add_text_attribute(file_id_out,'Global parameters',namelist_str)
 
     ! Creates output group
     call message('Creating groups', info=3)
@@ -340,16 +347,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
   end subroutine IO_finish_galaxy
   
   
-  subroutine IO_end(name)
+  subroutine IO_end(date)
     ! Finishes IO (closing everything)
     integer :: i, error
-    character(len=*), intent(in) :: name
-    character(len=10) :: date
+    character(len=*), intent(in) :: date
+    character(len=10) :: date_formatted
 
-
-    call date_and_time(date=date)
-    call add_text_attribute(file_id_out, 'Hostname', trim(name))
-    call add_text_attribute(file_id_out, 'Date', date)
+    date_formatted = date(1:4)//'-'//date(5:6)//'-'//date(7:8)
+    call add_text_attribute(file_id_out, 'Run date', date_formatted)
 
     ! Closes all dataspaces, namespaces and datasets
     ! (this may be moved to IO_finish_galaxy, if necessary)
@@ -388,6 +393,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
       call h5fclose_f(file_id_out, error)
       call check(error)
     endif
+
   end subroutine IO_end  
   
   subroutine add_text_attribute(dset_id, attribute_name, attribute)

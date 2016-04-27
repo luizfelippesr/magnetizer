@@ -17,9 +17,10 @@ program mpicalldynamo
   integer :: i
   logical :: lstop
 
+  character(len=8) :: date
   double precision :: tstart,tfinish
   integer :: rank, nproc, ierr, rc, len
-  character*(MPI_MAX_PROCESSOR_NAME) hostname
+  character(len=MPI_MAX_PROCESSOR_NAME) hostname
 
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -28,7 +29,7 @@ program mpicalldynamo
   endif
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr) !Get the rank of the processor this thread is running on
   call MPI_COMM_SIZE(MPI_COMM_WORLD, nproc, ierr) !Get the number of processors this job
-  call MPI_GET_PROCESSOR_NAME(hostname, len, ierr) !Get the hostname of this processor (usually the hosthostname)
+  call MPI_GET_PROCESSOR_NAME(hostname, len, ierr) !Get the name of this processor (usually the hostname)
   if (ierr/= MPI_SUCCESS) then
     call message('Error getting processor hostname. Terminating.')
     call MPI_ABORT(MPI_COMM_WORLD, rc, ierr)
@@ -97,8 +98,15 @@ program mpicalldynamo
   
   call message('All computing done', info=0)
 
+  ! Gets the date
+  if (rank==0) then
+    call date_and_time(date=date)
+  end if
+  ! Broadcast the date
+  call MPI_BCAST(date, 8, MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
+
   ! Finalizes IO
-  call IO_end(hostname)
+  call IO_end(date)
   call message('IO finished')
 
   !Tell the MPI library to release all resources it is using

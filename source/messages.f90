@@ -53,7 +53,7 @@ module messages
     ! Writes $rank: unless single precessor or master_only=True
     if (MPI_rank>=0)  p_rank = str(MPI_rank)//':  '
     if (present(master_only)) then
-      if (master_only .and. (MPI_rank /= 0)) then
+      if (master_only .and. (MPI_rank > 0)) then
         return
       else
         p_rank =''

@@ -13,7 +13,7 @@ program mpicalldynamo
   integer :: igal, jgal, nmygals
   integer, parameter :: master=0
   integer, allocatable, dimension(:) :: mygals
-  character(len=32) :: command_argument
+  character(len=100) :: command_argument
   integer :: i
   logical :: lstop
 
@@ -51,16 +51,17 @@ program mpicalldynamo
 
   call get_command_argument(1, command_argument)
   if (len_trim(command_argument) == 0) then
-    command_argument = 'global_parameters.in'
+    command_argument = 'example/example_global_parameters.in'
     call read_global_parameters(trim(command_argument))
     call message('No parameter file provided. Using standard: '// &
-                  'global parameters.in', master_only=.true., set_info=info)
+                  trim(command_argument), master_only=.true.,&
+                   set_info=info)
   else
     call read_global_parameters(trim(command_argument))
     call message('Using global parameters file: '// trim(command_argument), &
                  master_only=.true., set_info=info)
   endif
-
+  
   ! Initializes IO
   call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL)
 
@@ -84,8 +85,8 @@ program mpicalldynamo
   if (nmygals > 0) then
     do jgal=1,nmygals
       ! Call dynamo code for each galaxy in mygals
+      call message('Starting',gal_id=mygals(jgal))
       call dynamo_run(mygals(jgal), p_no_magnetic_fields_test_run, rank)
-      call message('Finished galaxy',val_int=mygals(jgal))
       ! Checks whether a STOP file exists
       inquire (file='STOP', exist=lstop)
       ! If yes, exits gently

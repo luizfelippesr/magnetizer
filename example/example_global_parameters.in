@@ -1,0 +1,123 @@
+&global_pars
+! -------------------------------------------------------
+! Input and output file settings
+! -------------------------------------------------------
+!   input_file_name = "magnetized_SAM.hdf5"
+!
+  ! If p_io_separate_output is set to false, the output
+  ! is saved in a group inside the input file (which is
+  ! usually very convenient) and the output_file_name
+  ! parameter is ignored
+  p_io_separate_output = .true.
+  input_file_name = "example/example_SAM_input.hdf5"
+  output_file_name = "example/example_magnetized_SAM_output.hdf5"
+!
+! -------------------------------------------------------
+! Run settings
+! -------------------------------------------------------
+  ! Name of the model (for organization only)
+  model_name = "magnetized SAM"
+  ! Number of timesteps between consecutive SAM outputs
+  nsteps_0 = 200
+  ! Verbosity level (0 to 5)
+  info = 2
+  ! Outputs all timesteps between the first two snapshots
+  p_oneSnaphotDebugMode = .false.
+  ! Runs without solving the dynamo equations
+  p_no_magnetic_fields_test_run = .false.
+!
+! -------------------------------------------------------
+! Dynamo equations parameters and switches
+! -------------------------------------------------------
+  dyn_quench = .true.
+  alg_quench = .false.
+  lfloor = .true.
+  damp = .false.
+  rand_seed = .false.
+  alp_ceiling = .true.
+  alp_squared = .true.
+  krause = .true.
+  advect = .true.
+  turb_dif = .true.
+  frac_seed = 1.0000000000000000e-002
+!
+! -------------------------------------------------------
+! Rotation curve and disk structure
+! -------------------------------------------------------
+  ! Ratio between total gas scale length and stellar scale length
+  p_gasScaleRadiusToStellarScaleRadius_ratio = 2.0
+  ! Ratio between stellar scale-height and stellar scale-radius
+  p_stellarHeightToRadiusScale = 1d0/7.3
+  ! Ratio between molecular scale-height and molecular scale-radius
+  p_molecularHeightToRadiusScale = 0.032
+  ! When set to false, this substitutes any positive shear by 0
+  ! (NB positive shears can only arise from the regularisation)
+  p_allow_positive_shears = .false.
+  ! Ratio between the regularisation radius and the half-mass radius
+  p_rreg_to_rdisk = 0.15
+  ! Defines what it means to have a negligible disk
+  rmin_over_rmax = 0.001
+  Mgas_disk_min = 1d4
+!
+! -------------------------------------------------------
+! Interstellar medium
+! -------------------------------------------------------
+  ! Sound speed (in km/s)
+  p_ISM_sound_speed_km_s = 10d0
+  ! Ratio between turbulent velocity and sound speed
+  p_ISM_kappa = 1d0
+  ! Ratio between turbulent pressure and turbulent magnetic field pressure
+  ! NB if simplified_pressure is on, this correspond to the ratio between
+  ! turbulent pressure and _total_ magnetic field pressure
+  p_ISM_xi = 1d0
+  ! Adiabatic index of the ISM
+  p_ISM_gamma = 5d0/3d0
+  ! Turbulent length (in kpc)
+  p_ISM_turbulent_length = 0.1
+  ! Uses the scale height as an upper limit for the turbulent scale
+  p_limit_turbulent_scale = .true.
+  ! If true: uses a fixed l/h ratio, setting it with
+  ! l = p_turbulent_to_scaleheight_ratio * h
+  p_use_fixed_turbulent_to_scaleheight_ratio = .false.
+  p_turbulent_to_scaleheight_ratio = 0.25
+  ! Uses a simplified calculation for the mid-plane pressure
+  ! where P_B + P_b = \xi P_{turb}
+  ! (alternatively, P_B uses the actual B from the dynamo calculation).
+  p_simplified_pressure = .true.
+!
+! -------------------------------------------------------
+! Molecular fraction calculation
+! -------------------------------------------------------
+  ! Blitz&Rosolowsky alpha
+  p_Rmol_alpha = 0.92d0
+  ! Blitz&Rosolowsky P0 (in erg/cm^3)
+  p_Rmol_P0 = 4.787d-12
+!
+! -------------------------------------------------------
+! Ouflows
+! -------------------------------------------------------
+  ! Outflow type. Options:
+  ! 'no_outflow'/'vturb'/'superbubble_simple'/'superbubble/wind
+  p_outflow_type = 'superbubble'
+  ! Mechanical luminosity associated with the superbubble (in erg/s)
+  p_outflow_Lsn = 1d38
+  ! Ratio between OB associations (superbubbles) rate and supernovae rate
+  p_outflow_fOB = 0.7
+  ! Ratio between supernovae rate and SFR (in \msun^{-1})
+  p_outflow_etaSN = 9.4d-3
+  ! Lifetime of an OB association (in Myr)
+  p_tOB = 3
+  ! Number of supernovae in 1 OB association
+  p_N_SN1OB = 40
+  ! Density of the hot gas (in g/cm^3)
+  p_outflow_hot_gas_density = 1.7d-27
+  ! Inverse of the depletion timescale of molecular gas (H2+He) in units of Gyr-1
+  p_outflow_nu0 = 0.5
+  ! Exponent in Galform's parametrization of the mass loading
+  p_outflow_alphahot = -3.2
+  ! Velocity scale in Galform's parametrization of the mass loading
+  p_outflow_Vhot = 425
+  ! Check whether the hydrostatic equilibrium solution is correct
+  p_check_hydro_solution = .false.
+!
+/

@@ -66,7 +66,7 @@ contains
     ts_t_Gyr(it) = this_t
 
     if (present(invalid_run)) then
-      call message('INVALID RUN')
+      call message('INVALID RUN', info=2)
       if (invalid_run) return
     endif
 

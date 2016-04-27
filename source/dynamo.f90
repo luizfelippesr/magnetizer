@@ -67,7 +67,7 @@ module dynamo
       ! Loops through the SAM's snapshots
       do it=init_it,n1
         this_t = t_Gyr
-        call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=1)
+        call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
 
         ! Initializes the number of steps to the global input value
         nsteps = nsteps_0
@@ -118,10 +118,10 @@ module dynamo
           ! Loops through the timesteps
           do jt=1,nsteps
             this_t = t_Gyr +dt*t0_Gyr*jt
-            call message('Inner loop: jt = ',gal_id=gal_id, val_int=jt, info=2)
-            call message('Inner loop: fail_count =',val_int=fail_count,gal_id=gal_id, info=2)
-            call message('Inner loop: nsteps = ',gal_id=gal_id, val_int=nsteps, info=3)
-            call message('Inner loop: t (Gyr) = ', t_Gyr +dt*t0_Gyr*jt,gal_id=gal_id, info=3)
+            call message('Inner loop: jt = ',gal_id=gal_id, val_int=jt, info=3)
+            call message('Inner loop: fail_count =',val_int=fail_count,gal_id=gal_id, info=3)
+            call message('Inner loop: nsteps = ',gal_id=gal_id, val_int=nsteps, info=4)
+            call message('Inner loop: t (Gyr) = ', t_Gyr +dt*t0_Gyr*jt,gal_id=gal_id, info=4)
 
             call estimate_Bzmod(f)
             ! If not using the simplified pressure, all profiles need to be
@@ -210,19 +210,17 @@ module dynamo
         call set_input_params(gal_id)
       end do  ! snapshots loop
       
-
-      call cpu_time(cpu_time_finish)
-
-
-      call message('Finished after ', (cpu_time_finish - cpu_time_start),  &
-                   gal_id= gal_id, msg_end=' s  CPU time', info=1)
-
       !Writes final simulation output
       call write_output(gal_id, ok, cpu_time_finish - cpu_time_start)
 
       call reset_input_params()  !Reset iread
       ! Resets the arrays which store the time series
-      call reset_ts_arrays()  
+      call reset_ts_arrays()
+
+      call cpu_time(cpu_time_finish)
+
+      call message('Finished after ', (cpu_time_finish - cpu_time_start),  &
+                   gal_id= gal_id, msg_end='s  CPU time', info=1)
     end subroutine dynamo_run
 end module dynamo
 !*****************************************************

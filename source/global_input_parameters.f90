@@ -6,12 +6,11 @@ module global_input_parameters
 
   ! DIRECTORY NAMES
   !Specifies run paths (obsolete)
-  character (len=10) :: model_name = 'CE_010'
-  character (len=10) :: path_to_input_directories = '../../..'
+  character (len=50) :: model_name = 'Magnetized SAM'
 
-  integer :: ngals = 10
-  integer :: number_of_redshifts = 15
-  integer :: info = 2
+  integer :: ngals = -1
+  integer :: number_of_redshifts = -1
+  integer :: info = 1
 
   ! IO
   ! Chunking and compression options
@@ -30,40 +29,32 @@ module global_input_parameters
 
   ! PARAMETER INPUTS
   ! Number of timesteps used in the calculation between 2 snapshots
-  integer :: nsteps_0 = 30
-
-  ! PARAMETER INPUTS
-  ! Set to T to read in parameters at several timesteps; set to F to read in parameters at the start only
-  logical :: Time_evol= .true.
+  integer :: nsteps_0 = 180
 
   ! ALPHA QUENCHING
   ! Works with alg_quench=F; Set to T for dynamical quenching (d_alpha_m/dt eqn incl in sim)
-  logical :: Dyn_quench= .true.
+  logical :: Dyn_quench = .true.
   ! Works with dyn_quench=F; Set to T for algebraic alpha quenching; F for no quenching
-  logical :: Alg_quench= .false.
+  logical :: Alg_quench = .false.
 
   ! RANDOM MAGNETIC FIELD
   ! Strength of the rms random magnetic field brms in units of Beq
-  logical :: lFloor= .true.
+  logical :: lFloor = .true.
 
   ! CLOSURE APPROXIMATION
   ! Set to T for FOSA, F for minimal tau approximation
-  logical :: Damp= .false.
+  logical :: Damp = .false.
 
   ! SEED MAGNETIC FIELD
   ! Set to F for random seed magnetic field, T for some other seed
-  logical :: Rand_seed= .false.
+  logical :: Rand_seed = .false.
 
   !Seed field amplitude as a fraction of equipartition magnetic field strength
-  double precision :: frac_seed= 0.01d0
+  double precision :: frac_seed = 0.01d0
 
   ! CEILING ON ALPHA EFFECT
   ! Set to T to put a ceiling for alpha at alpceil*v
-  logical :: Alp_ceiling= .true.
-
-  ! BRANDT ROTATION CURVE
-  ! Set to T to use a Brandt rotation curve
-  logical :: Om_Brandt = .true.
+  logical :: Alp_ceiling = .true.
 
   ! ALPHA^2 EFFECT
   ! Set to T to include alpha^2 effect; set to F to use alpha-omega approximation equations
@@ -72,10 +63,6 @@ module global_input_parameters
   ! KRAUSE'S LAW
   ! Set to T for alpha effect to decrease in proportion to omega (Krause's formula)
   logical :: Krause= .true.
-
-  ! OMEGA EFFECT
-  ! Set to T to include Omega effect in dynamo, 0 for alpha^2 dynamo
-!   logical :: Shear= .true.
 
   ! ADVECTION
   ! Set to F to turn off advection of the magnetic field
@@ -114,7 +101,7 @@ module global_input_parameters
   ! Blitz&Rosolowsky P0 (in erg/cm^3)
   double precision :: p_Rmol_P0 = 4.787d-12
 
-  ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble')
+  ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble/wind')
   character(len=21) :: p_outflow_type = 'superbubble'
   ! Mechanical luminosity associated with the superbubble (in erg/s)
   double precision :: p_outflow_Lsn = 1d38
@@ -134,8 +121,6 @@ module global_input_parameters
   double precision :: p_outflow_alphahot = -3.2
   ! Velocity scale in Galform's parametrization of the mass loading
   double precision :: p_outflow_Vhot = 425 !
-
-
 
   ! Check whether the hydrostatic equilibrium solution is correct
   logical :: p_check_hydro_solution = .false.
@@ -166,17 +151,15 @@ module global_input_parameters
   double precision :: Mgas_disk_min=1d4 ! solar masses
 
   namelist /global_pars/ &
-    path_to_input_directories, model_name, &
+    model_name, &
     output_file_name, input_file_name, &
     nsteps_0, &
-    Time_evol, &
     info, &
     Dyn_quench, Alg_quench, &
     lFloor, &
     Damp, &
     Rand_seed, &
     Alp_ceiling, &
-    Om_Brandt, &
     Alp_squared, &
     Krause, &
     Advect, &

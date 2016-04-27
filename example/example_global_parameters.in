@@ -29,16 +29,27 @@
 ! -------------------------------------------------------
 ! Dynamo equations parameters and switches
 ! -------------------------------------------------------
-  dyn_quench = .true.
+  ! Works with alg_quench=F; Set to T for dynamical quenching (d_alpha_m/dt eqn incl in sim)
+  Dyn_quench = .true.
+  ! Works with dyn_quench=F; Set to T for algebraic alpha quenching; F for no quenching
   alg_quench = .false.
+  ! Strength of the rms random magnetic field brms in units of Beq
   lfloor = .true.
-  damp = .false.
-  rand_seed = .false.
+  ! Set to T for FOSA, F for minimal tau approximation
+  Damp = .false.
+  ! Set to F for random seed magnetic field, T for some other seed
+  rand_seed = .true.
+  ! Set to T to put a ceiling for alpha at alpceil*v
   alp_ceiling = .true.
-  alp_squared = .true.
-  krause = .true.
-  advect = .true.
+  ! Set to T to include alpha^2 effect; set to F to use alpha-omega approximation equations
+  alp_squared = .false.
+  ! Set to T for alpha effect to decrease in proportion to omega (Krause's formula)
+  Krause = .true.
+  ! Set to F to turn off advection of the magnetic field
+  Advect = .true.
+  ! Set to F to turn off turbulent diffusion
   turb_dif = .true.
+  !Seed field amplitude as a fraction of equipartition magnetic field strength
   frac_seed = 1.0000000000000000e-002
 !
 ! -------------------------------------------------------

@@ -47,7 +47,7 @@ module global_input_parameters
 
   ! SEED MAGNETIC FIELD
   ! Set to F for random seed magnetic field, T for some other seed
-  logical :: Rand_seed = .false.
+  logical :: Rand_seed = .true.
 
   !Seed field amplitude as a fraction of equipartition magnetic field strength
   double precision :: frac_seed = 0.01d0
@@ -58,7 +58,7 @@ module global_input_parameters
 
   ! ALPHA^2 EFFECT
   ! Set to T to include alpha^2 effect; set to F to use alpha-omega approximation equations
-  logical :: Alp_squared= .true.
+  logical :: Alp_squared= .false.
 
   ! KRAUSE'S LAW
   ! Set to T for alpha effect to decrease in proportion to omega (Krause's formula)

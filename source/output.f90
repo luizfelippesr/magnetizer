@@ -138,12 +138,10 @@ contains
     s = -1d0; if (status) s = 1d0
     call IO_write_dataset('status', gal_id,                         &
                           [s],                                        &
-                          units='s',                                &
                           description='Status of the calculation',  &
                           is_log=.true.)
     call IO_write_dataset('nsteps', gal_id,                         &
                           [dble(nsteps)],                             &
-                          units='s',                                &
                           description='Number of timesteps',        &
                           is_log=.true.)
   end subroutine write_log_output

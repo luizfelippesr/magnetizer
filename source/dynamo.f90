@@ -211,13 +211,13 @@ module dynamo
       end do  ! snapshots loop
       
       !Writes final simulation output
+      call cpu_time(cpu_time_finish)
       call write_output(gal_id, ok, cpu_time_finish - cpu_time_start)
 
       call reset_input_params()  !Reset iread
       ! Resets the arrays which store the time series
       call reset_ts_arrays()
 
-      call cpu_time(cpu_time_finish)
 
       call message('Finished after ', (cpu_time_finish - cpu_time_start),  &
                    gal_id= gal_id, msg_end='s  CPU time', info=1)

@@ -102,7 +102,7 @@ module global_input_parameters
   double precision :: p_Rmol_P0 = 4.787d-12
 
   ! Outflow calculation ('no_outflow'/'vturb'/'superbubble_simple'/'superbubble/wind')
-  character(len=21) :: p_outflow_type = 'superbubble'
+  character(len=21) :: p_outflow_type = 'no_outflow'
   ! Mechanical luminosity associated with the superbubble (in erg/s)
   double precision :: p_outflow_Lsn = 1d38
   ! Ratio between OB associations (superbubbles) rate and supernovae rate
@@ -167,6 +167,7 @@ module global_input_parameters
     p_ISM_xi, &
     p_ISM_sound_speed_km_s, &
     p_ISM_gamma, &
+    p_ISM_kappa, &
     p_ISM_turbulent_length, &
     p_limit_turbulent_scale, &
     p_gasScaleRadiusToStellarScaleRadius_ratio, &

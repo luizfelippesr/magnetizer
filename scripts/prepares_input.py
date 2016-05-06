@@ -164,14 +164,14 @@ if __name__ == "__main__"  :
                                 minimum_final_stellar_mass=1e7,
                                 maximum_final_stellar_mass=1e15,
                                 minimum_final_gas_mass=1e6,
-                                number_of_galaxies=5000,
+                                number_of_galaxies=500,
                                 minimum_final_disk_size=5e-4,#Gpc, i.e. 0.5kpc
                                 empirical_disks=False,
                                 ivol_dir='ivol1')
     middle = time.time()
     #odir = '../input/GON/ivol0'
     #prepares_text_input(data_dict, odir)
-    prepares_hdf5_input(data_dict, '/tmp/c.hdf5')
+    prepares_hdf5_input(data_dict, 'example_input.hdf5')
     end = time.time()
 
     print 'read_time_data', middle-start,'s'

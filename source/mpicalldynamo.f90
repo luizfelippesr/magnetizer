@@ -61,7 +61,7 @@ program mpicalldynamo
     call message('Using global parameters file: '// trim(command_argument), &
                  master_only=.true., set_info=info)
   endif
-  
+
   ! Initializes IO
   call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL)
 

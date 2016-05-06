@@ -58,7 +58,7 @@
   ! Ratio between total gas scale length and stellar scale length
   p_gasScaleRadiusToStellarScaleRadius_ratio = 2.0
   ! Ratio between stellar scale-height and stellar scale-radius
-  p_stellarHeightToRadiusScale = 1d0/7.3
+  p_stellarHeightToRadiusScale = 0.1369863013698630137
   ! Ratio between molecular scale-height and molecular scale-radius
   p_molecularHeightToRadiusScale = 0.032
   ! When set to false, this substitutes any positive shear by 0
@@ -82,7 +82,7 @@
   ! turbulent pressure and _total_ magnetic field pressure
   p_ISM_xi = 1d0
   ! Adiabatic index of the ISM
-  p_ISM_gamma = 5d0/3d0
+  p_ISM_gamma = 1.66666666666666666667
   ! Turbulent length (in kpc)
   p_ISM_turbulent_length = 0.1
   ! Uses the scale height as an upper limit for the turbulent scale
@@ -109,7 +109,7 @@
 ! -------------------------------------------------------
   ! Outflow type. Options:
   ! 'no_outflow'/'vturb'/'superbubble_simple'/'superbubble/wind
-  p_outflow_type = 'superbubble'
+  p_outflow_type = "no_outflow"
   ! Mechanical luminosity associated with the superbubble (in erg/s)
   p_outflow_Lsn = 1d38
   ! Ratio between OB associations (superbubbles) rate and supernovae rate

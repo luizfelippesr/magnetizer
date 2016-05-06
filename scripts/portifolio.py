@@ -100,7 +100,6 @@ def generate_portifolio(input_filename, selected_quantities, pdf_filename,
     for k in foutput:
         if 'Units' in foutput[k].attrs.keys():
             units_dict[k] = foutput[k].attrs['Units'][0]
-            print foutput[k].attrs['Units'][0]
         if k not in selected_quantities:
             continue
         data_dict[k] = foutput[k]
@@ -143,7 +142,7 @@ def single_galaxy_portifolio(igal, data_dict, nrows=5, ncols=3, mstars=None):
   if not igal:
       return
   if mstars != None:
-      info = r' $--$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
+      info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
         N.log10(mstars[igal]))
   else:
       infor =''

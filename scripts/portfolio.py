@@ -1,4 +1,4 @@
-""" Contains a script and functions to produce a "portifolio" of a model
+""" Contains a script and functions to produce a "portfolio" of a model
     output, i.e. a file containing a series of plots showing radial profiles
     of several quantites for a sample of galaxies. """
 from matplotlib.backends.backend_pdf import PdfPages
@@ -51,7 +51,7 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
         ok = data_dict['Omega'][igal,:,it] > 0
         ok *= r>0
         data = data_dict[quantity][igal,:,it]
-        ax.plot(r[ok], data[ok], marker='.',color=color)
+        ax.plot(r[ok], data[ok], marker='.',color=color, rasterized=True)
 
         ax.set_xlabel(r'$r\,[\rm kpc]$')
 
@@ -72,10 +72,16 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
 
         ax.set_ylabel(r'${0}$'.format(q))
         ax.grid(alpha=0.2)
+        if quantity=='alp_m' or quantity=='alp':
+          ax.set_ylim([-6,6])
+        if quantity in ('Beq','n','h'):
+          ax.set_yscale('log')
 
 
 
-def generate_portifolio(input_filename, selected_quantities, pdf_filename,
+
+
+def generate_portfolio(input_filename, selected_quantities, pdf_filename,
                         output_filename=None, galaxies_per_bin=6,
                         mass_bins = (
                                       [1e8,10**8.75],
@@ -106,6 +112,7 @@ def generate_portifolio(input_filename, selected_quantities, pdf_filename,
 
     # Gets the disk stellar mass in the final redshift
     mstars = finput['Mstars_disk'][:,-1]
+    radius = finput['r_disk'][:,-1]
 
     selected_igals = []
     igals = N.arange(mstars.size)
@@ -124,7 +131,8 @@ def generate_portifolio(input_filename, selected_quantities, pdf_filename,
     # The following was meant to be parallelized with parmap
     # however, multiprocessing breaks h5py!
     print 'Producing all figures'
-    figures = [single_galaxy_portifolio(igal, data_dict, mstars=mstars) for igal in selected_igals]
+
+    figures = [single_galaxy_portfolio(igal, data_dict, mstars=mstars, radius=radius) for igal in selected_igals]
 
     pdf = PdfPages(pdf_filename)
     for fig in figures:
@@ -138,14 +146,17 @@ def generate_portifolio(input_filename, selected_quantities, pdf_filename,
 
 
 
-def single_galaxy_portifolio(igal, data_dict, nrows=5, ncols=3, mstars=None):
+def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None):
   if not igal:
       return
   if mstars != None:
       info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
         N.log10(mstars[igal]))
   else:
-      infor =''
+      info =''
+  if radius != None:
+      info += r' $-$  $r_{{\rm disk}} = {0}$'.format(radius[igal])
+
   print 'galaxy', igal
   fig = P.figure(figsize=(8.268,11.69))
   subplot_idx = 0
@@ -166,6 +177,7 @@ def single_galaxy_portifolio(igal, data_dict, nrows=5, ncols=3, mstars=None):
       ax = fig.add_axes([.065, .04, .9, .01])
       x = P.mpl.colorbar.ColorbarBase(ax, cmap=P.cm.YlGnBu, norm=norm,
                                       orientation='horizontal')
+
       x.set_label(r'$t\,\,[{{\rm Gyr }}]$')
       #x.set_ticks([1.0,1.5,2.0,2.5,3.0])
       #x.set_ticklabels(['$1.0$','$1.5$','$2$','$2.5$','$3.0$'])
@@ -193,6 +205,6 @@ if __name__ == "__main__"  :
                             'n',
                             'tau'
                           ]
-    generate_portifolio('example/example_SAM_input.hdf5',
-                        selected_quantities, 'example/example_portifolio.pdf',
+    generate_portfolio('example/example_SAM_input.hdf5',
+                        selected_quantities, 'example/example_portfolio.pdf',
   output_filename='example/example_magnetized_SAM_output.hdf5')

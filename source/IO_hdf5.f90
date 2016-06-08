@@ -253,16 +253,16 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     integer, intent(in) :: gal_id
     double precision, intent(out) :: data
     integer ::  idx, error
-    integer, parameter :: rank = 2
-    integer(hssize_t), dimension(2) :: offset
+    integer, parameter :: rank = 1
+    integer(hssize_t), dimension(1) :: offset
 
-    integer(hsize_t), dimension(2) :: dimsf_sca
-    integer(hsize_t), dimension(2) :: dimsf_sca_1gal
+    integer(hsize_t), dimension(1) :: dimsf_sca
+    integer(hsize_t), dimension(1) :: dimsf_sca_1gal
 
     ! Sets dataset dimensions.
-    dimsf_sca = [1,gals_number]
+    dimsf_sca = [gals_number]
     ! Sets the dimensions associated with writing a single galaxy
-    dimsf_sca_1gal = [1,1]
+    dimsf_sca_1gal = [1]
 
     ! Tries to find a previously opened dataset (-1 signals new)
     idx = find_dset(dataset_name)
@@ -275,7 +275,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     end if
 
     ! Selects hyperslab in the file.
-    offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
+    offset = [gal_id-1] ! Means: in second dimension, start from gal_id-1
     call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
     ! At last, reads the dataset

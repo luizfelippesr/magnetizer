@@ -2,8 +2,8 @@
 ! using interpolation routines from the FGSL
 module interpolation
   implicit none
-  private
-  public :: interpolate,
+!   private
+!   public :: interpolate,
 
   contains
 
@@ -11,7 +11,8 @@ module interpolation
     ! Interpolates using FGSL
     ! Input: x, y -> 1d-arrays containing the known values of the function
     !        xi -> 1d-array with the point one want to interpolate into
-    !      optional, method -> either 'linear', 'polynomial' or 'cubic_spline'
+    !        optional, method -> either 'linear', 'polynomial', 'cubic_spline'
+    !                            or 'akima'
     ! Output: yi -> 1d-array containing the interpolated values
     use FGSL
     real(fgsl_double), dimension(:), intent(in) :: x, y
@@ -34,6 +35,8 @@ module interpolation
           interp_type = fgsl_interp_polynomial
         case('cubic_spline')
           interp_type = fgsl_interp_cspline
+        case('akima')
+          interp_type = fgsl_interp_akima
         case default
           print *, 'interpolate: Unrecognized option ',method
       end select
@@ -51,5 +54,52 @@ module interpolation
     call fgsl_spline_free (spline)
     call fgsl_interp_accel_free (acc)
   end subroutine interpolate
+
+  function rescale_array(y, n_new) result(y_new)
+    ! Interpolates the n-array y into an n_new array, with the same endpoints
+    double precision, dimension(:), intent(in) :: y
+    double precision, dimension(size(y)) :: x
+    integer, intent(in) :: n_new
+    integer :: n, i
+    double precision, dimension(n_new) :: y_new
+    double precision, dimension(n_new) :: x_new
+
+    n = size(y)
+    ! If the old and new grid sizes are the same, do nothing
+    if (n==n_new) then
+      y_new = y
+      return
+    endif
+
+    ! Generates x, and x_new
+    ! I.e two 0 to 1 uniform arrays, with the correct number of points
+    x_new = 0.0d0
+    x = 0.0d0
+    do i=1, n
+      x(i) = dble(i-1)/dble(n-1)
+    enddo
+    do i=1, n_new
+      x_new(i) = dble(i-1)/dble(n_new-1)
+    enddo
+    ! Calls the interpolation routine
+    call interpolate(x, y, x_new, y_new)
+
+  end function
+
+  subroutine rescale_f_array(f, f_rescaled)
+    ! Interpolates the f-array into the f_rescaled array
+    double precision, dimension(:,:), intent(in) :: f
+    double precision, dimension(:,:), intent(out) :: f_rescaled
+    integer, dimension(2) :: shape_f_new
+    integer :: nvar, nx_new, i
+
+    shape_f_new = shape(f_rescaled)
+    nx_new = shape_f_new(1)
+
+    do i=1,nvar
+      f_rescaled(:,i) = rescale_array(f(:,i), nx_new)
+    enddo
+
+  end subroutine rescale_f_array
 
 end module interpolation

@@ -150,6 +150,7 @@ module global_input_parameters
   double precision :: rmin_over_rmax=0.001
   double precision :: Mgas_disk_min=1d4 ! solar masses
 
+  integer :: p_nx_ref=51
   namelist /global_pars/ &
     model_name, &
     output_file_name, input_file_name, &
@@ -200,7 +201,8 @@ module global_input_parameters
     p_IO_compression_level, &
     p_IO_separate_output, &
     Mgas_disk_min, &
-    rmin_over_rmax
+    rmin_over_rmax, &
+    p_nx_ref
 
   contains
 

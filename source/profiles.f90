@@ -12,7 +12,6 @@ module profiles
   double precision, dimension(nx) :: v, v_kms, dvdr
   double precision, dimension(nx) :: etat, etat_cm2s, etat_kmskpc
   double precision, dimension(nx) :: tau, tau_Gyr, tau_s
-  double precision :: tau_sol, tau_sol_Gyr, tau_sol_s
   double precision, dimension(nx) :: Beq, Beq_mkG
   double precision, dimension(nx) :: alp_k, alp_k_kms
   double precision, dimension(nx), private :: Om_d, Om_b, Om_h
@@ -52,9 +51,6 @@ contains
 
     construct_profiles = .true.
 
-    ! Sets the 'reference radius' to the disk half-mass radius
-    ! (actually, the maximum half mass radius over history)
-    r_sol = r_disk/r_max_kpc
     ! Sets the minimum radius to be followed (for the disk rotation curve)
     r_disk_min = r_max_kpc*rmin_over_rmax
 
@@ -90,7 +86,7 @@ contains
     Uphi_halfmass_kms = Om_kmskpc(i_halfmass)*r_kpc(i_halfmass)
 
     ! RADIAL VELOCITY PROFILE (not currently being used?)
-    Ur = Ur_sol
+    Ur = 0d0
     dUrdr = 0.d0
     d2Urdr2 = 0.d0
 
@@ -193,9 +189,6 @@ contains
     tau=          ctau*l/v  !Formula for tau from mixing length theory
     tau_Gyr=      ctau*tau*t0_Gyr/t0
     tau_s=        ctau*tau*t0_s/t0
-    tau_sol=      ctau*l_sol/v_sol
-    tau_sol_Gyr = ctau*tau_sol*t0_Gyr/t0
-    tau_sol_s=    ctau*tau_sol*t0_s/t0
 
     ! KINETIC ALPHA PROFILE
     if (.not.Krause) then

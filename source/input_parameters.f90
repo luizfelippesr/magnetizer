@@ -168,33 +168,9 @@ module calc_params
                       Ur_sol,om0,r_om,r1
   contains
     subroutine set_calc_params
-!     DIMENSIONAL PARAMETERS THAT CAN BE CALCULATED FROM SPECIFIED DIMENSIONAL PARAMETERS OR THAT ARE NOT NORMALLY VARIED:
-!     TURBULENCE
-      etat_sol_kmskpc= 1.d0/3*l_sol_kpc*v_sol_kms  !Typical value of etat in units of km kpc/s
-      etat_sol_cm2s= 1.d0/3*l_sol_kpc*cm_kpc*v_sol_kms*cm_km  !Typical turbulent diffusivity in units of cm^2/s
-      td_sol_kpcskm= h0_kpc**2/etat_sol_kmskpc  !Typical vertical turbulent diffusion timescale in units of kpc s/km
-      td_sol_Gyr= h0_kpc**2/etat_sol_cm2s/s_Gyr*cm_kpc*cm_kpc  !Typical vertical turbulent diffusion timescale in units of Gyr
-      td_sol_s= td_sol_Gyr*s_Gyr  !Typical vertical turbulent diffusion timescale in units of seconds
-
-!     RADIAL FLOW
-      Ur_sol_kms=   0.0d0  !Radial mean velocity at r=r_sol in km/s
-
 !     DIMENSIONLESS PARAMETERS THAT CAN BE CALCULATED OR THAT ARE NOT NORMALLY VARIED:
 !     NUMERICAL
       lambda=h0_kpc/r_max_kpc  !Typical aspect ratio of disk
-
-!     TURBULENCE
-      h_sol= h_sol_kpc/h0_kpc*h0  !Disk thickness at r=r_sol in units of h0
-      r_h= r_h_kpc/r_max_kpc  !Exponential scale radius of disk scale height
-      l_sol= l_sol_kpc/h0_kpc*h0  !Size of largest turbulent eddies
-      r_l= r_l_kpc/r_max_kpc  !Exponential scale radius of turbulent scale
-      v_sol=v_sol_kms/h0_km*t0_s*h0/t0  !Turbulent velocity
-      !r_v= r_v_kpc/r_max_kpc  !Exponential scale radius of rms turbulent velocity
-      etat_sol=1.d0/3*l_sol*v_sol  !Typical turbulent diffusivity
-      td_sol= h_sol**2/etat_sol  !Typical vertical turbulent diffusion timescale
-
-!     RADIAL FLOW
-      Ur_sol=Ur_sol_kms/h0_km*t0_s*h0/t0  !Radial mean velocity at r=r_sol
 
 !     SEED FIELD
       r1= r1_kpc/r_max_kpc !Only relevant if Rand_seed=F

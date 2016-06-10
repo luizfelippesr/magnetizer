@@ -28,9 +28,6 @@ module units  !Specifies code units
   double precision, parameter :: n0=     B0**2/h0**2*t0**2
 
   ! DIMENSIONAL UNITS
-  ! Chosen radius at which to specify param values
-  ! (e.g. radius of solar neighbourhood)
-  double precision, parameter :: r_sol_kpc=    8.0d0
   ! Unit of etat, corresp to a typical value, in km*kpc/s
   double precision, parameter :: etat0_kmskpc= 1.d0/3*0.1d0*10.d0
   ! Unit of etat, corresp to a typical value, in cm^2/s

@@ -8,7 +8,7 @@ module messages
 
   integer :: MPI_rank = -1
   integer :: verbosity_setting = 10
-  public message, str
+  public message, str, str2int
 
 
   interface str
@@ -128,5 +128,19 @@ module messages
   character(len=str_dp_len(r, "(f0." // str_int(n) // ")")) :: s
   write(s, "(f0." // str_int(n) // ")") r
   end function str_dp_n
+
+  function str2int(str) result(i)
+    implicit none
+    ! Arguments
+    character(len=*),intent(in) :: str
+    integer :: i
+    integer :: stat
+
+    read(str,*,iostat=stat)  i
+    if (stat /= 0) then
+      print *, 'Error: conversion of string ',str,' failed!'
+      stop
+    endif
+  end function str2int
 
 end module messages

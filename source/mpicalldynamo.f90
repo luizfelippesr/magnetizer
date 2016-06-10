@@ -9,13 +9,13 @@ program mpicalldynamo
 !
   implicit none 
 !
-  logical, parameter :: master_participate= .false. 
   integer :: igal, jgal, nmygals
   integer, parameter :: master=0
   integer, allocatable, dimension(:) :: mygals
   character(len=100) :: command_argument
   integer :: i
   logical :: lstop
+  logical :: lsingle_galaxy_mode = .false.
 
   character(len=8) :: date
   double precision :: tstart,tfinish
@@ -39,6 +39,19 @@ program mpicalldynamo
     tstart= MPI_wtime()
   endif
 
+  ! Tries to read the parameter filename from the command argument (or --help)
+  call get_command_argument(1, command_argument)
+  ! If --help is detected, prints help information
+  if (trim(command_argument)=='--help' .or. &
+                  trim(command_argument)=='-h') then
+    call get_command_argument(0, command_argument)
+    print *, 'Galform Magnetizer'
+    print *, trim(command_argument), ' <input_parameters_file> [galaxy number]'
+    print *, 'One day this will be a nice help message'
+    stop
+  endif
+
+  ! Welcome messages
   if (nproc==1) then
     call message('Starting galform magnetizer', rank=-1)
     call message('Runnning on a single processor')
@@ -49,30 +62,50 @@ program mpicalldynamo
                  master_only=.true.)
   endif
 
-  call get_command_argument(1, command_argument)
   if (len_trim(command_argument) == 0) then
+    ! Uses example parameter file if nothing was found
     command_argument = 'example/example_global_parameters.in'
     call read_global_parameters(trim(command_argument))
     call message('No parameter file provided. Using standard: '// &
                   trim(command_argument), master_only=.true.,&
                    set_info=info)
   else
+    ! Uses specified parameter file
     call read_global_parameters(trim(command_argument))
     call message('Using global parameters file: '// trim(command_argument), &
                  master_only=.true., set_info=info)
+
+    ! Checks whether single galaxy mode was activated
+    call get_command_argument(2, command_argument)
+    if (len_trim(command_argument) /= 0) then
+      call message('Single galaxy mode. igal='// trim(command_argument), &
+                 master_only=.true., set_info=info)
+      lsingle_galaxy_mode = .true.
+    endif
   endif
 
   ! Initializes IO
   call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL)
 
-  allocate(mygals(ngals))
-  nmygals = 0
-  do i=0,ngals
-    igal = rank + i*nproc+1
-    if (igal>ngals) exit
-    mygals(i+1) = igal
-    nmygals = nmygals + 1
-  end do
+  if (.not.lsingle_galaxy_mode) then
+    ! Distributes galaxies between processors
+    allocate(mygals(ngals))
+    nmygals = 0
+    do i=0,ngals
+      igal = rank + i*nproc+1
+      if (igal>ngals) exit
+      mygals(i+1) = igal
+      nmygals = nmygals + 1
+    end do
+  else
+    allocate(mygals(1))
+    if (rank==0) then
+      mygals(1) = str2int(command_argument)-1
+      nmygals = 1
+    else
+      nmygals = 0
+    endif
+  endif
 
   call message('List of galaxies to run', rank=rank)
   ! The following doesn't work because an interface for printing vectors

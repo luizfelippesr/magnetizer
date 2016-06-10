@@ -17,7 +17,9 @@ module grid
   double precision, dimension(nx) :: r_kpc
 !
   contains
-    subroutine construct_grid
+
+
+  subroutine construct_grid
 
     integer :: i
 
@@ -28,4 +30,28 @@ module grid
       enddo
       r=x !use explicit name
     endsubroutine construct_grid
+
+  subroutine check_allocate(v, nv)
+    ! Helper subroutine that checks whether 1d-array has the correct format,
+    ! allocating it when necessary
+    ! v -> the array that will be checked and possibly reallocated
+    ! nv -> the expected length of the array
+    double precision, dimension(:), allocatable, intent(inout) :: v
+    integer, intent(in) :: nv
+
+    if (allocated(v)) then
+      if (size(v)==nv) then
+        ! If the v was allocated and has the correct shape
+        ! then there is nothing to do..
+        return
+      else
+        ! If the shape is wrong, deallocates
+        deallocate(v)
+      endif
+    endif
+    ! Allocates v with the correct shape
+    allocate(v(nv))
+    return
+  end subroutine check_allocate
+
 end module grid

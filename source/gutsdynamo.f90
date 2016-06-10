@@ -136,78 +136,115 @@ module equ  !Contains the partial differential equations to be solved
   use deriv
   use boundary_conditions
   use bzcalc
-!
+
   implicit none
-!
-  double precision, dimension(nx) :: Br, Bp, Fr, Fp, Er, Ep, dBrdr, d2Brdr2, dBpdr, d2Bpdr2
-  double precision, dimension(nx) :: alp_m, alp, dalp_mdr, d2alp_mdr2, dalpdr, detatdr
-  double precision, dimension(nx) :: Bsqtot, DivVishniac, Dyn_gen
-  double precision, dimension(nx) :: brms, B_floor
   integer, private :: i
+  double precision, dimension(:), allocatable :: alp_m, alp
   double precision :: rmax, delta_r, hmax, lmax, Ncells
-!
+
   contains
     subroutine pde(f,dfdt)
-!
-      double precision, dimension(nx,nvar) :: f, dfdt
-      intent(inout) :: f
-      intent(out) :: dfdt
-!
+      !     LIST OF VARIABLE NAMES FOR f ARRAY
+      !
+      !     UNDER FOSA          UNDER TAU APPROXIMATION
+      !     f(:,1)=Br           f(:,1)=Br
+      !     f(:,2)=Bp           f(:,2)=Bp
+      !     f(:,3)=alp_m        f(:,3)=Fr
+      !                         f(:,4)=Fp
+      !                         f(:,5)=Er
+      !                         f(:,6)=Ep
+      !                         f(:,7)=alp_m
+      !
+      double precision, dimension(:,:), target, intent(inout) :: f
+      double precision, dimension(:,:), target, intent(out) :: dfdt
+      ! Convenience pointers to positions in the f-array
+      double precision, dimension(:), pointer :: Br, Bp
+      double precision, dimension(:), pointer :: Fr, Fp, Er, Ep
+      ! Auxiliary arrays
+      double precision, dimension(:), allocatable :: dBrdr, d2Brdr2
+      double precision, dimension(:), allocatable :: dBpdr,d2Bpdr2
+      double precision, dimension(:), allocatable :: dalp_mdr, d2alp_mdr2
+      double precision, dimension(:), allocatable :: detatdr
+      double precision, dimension(:), allocatable :: Bsqtot, Dyn_gen
+      double precision, dimension(:), allocatable :: brms, B_floor
+      ! Other
+      double precision, dimension(:), allocatable, target :: zeros_array
+      integer, dimension(2) :: shape_f
+      integer :: this_nx
+
       call impose_bc(f)
-!
-!     USE EXPLICIT NAMES
-      Br=f(:,1)
-      Bp=f(:,2)
-!
+
+      shape_f = shape(f)
+      this_nx = shape_f(1)
+
+      ! Sets first convenience pointers and variables
+      Br => f(:,1)
+      Bp => f(:,2)
+
       if (Damp) then
-        Fr=f(:,3)
-        Fp=f(:,4)
+        Fr => f(:,3)
+        Fp => f(:,4)
         if (Dyn_quench) then
-          Er=f(:,5)
-          Ep=f(:,6)
+          Er => f(:,5)
+          Ep => f(:,6)
+          call check_allocate(alp_m, this_nx)
           alp_m=f(:,7)
         endif
       else
-        Fr=0*Br
-        Fp=0*Bp
+        call check_allocate(zeros_array, this_nx)
+        Fr => zeros_array
+        Fp => zeros_array
         if (Dyn_quench) then
+          call check_allocate(alp_m, this_nx)
           alp_m=f(:,3)
         endif
       endif
-!
-      dBrdr=xder(Br)
-      d2Brdr2=xder2(Br)
-      dBpdr=xder(Bp)
-      d2Bpdr2=xder2(Bp)
-!
+
+      ! Computes derivatives
+      call check_allocate(dBrdr, this_nx)
+      dBrdr = xder(Br)
+      call check_allocate(d2Brdr2, this_nx)
+      d2Brdr2 = xder2(Br)
+      call check_allocate(dBpdr, this_nx)
+      dBpdr = xder(Bp)
+      call check_allocate(d2Bpdr2, this_nx)
+      d2Bpdr2 = xder2(Bp)
+
       if (Dyn_quench) then
-        dalp_mdr=xder(alp_m)
-        d2alp_mdr2=xder2(alp_m)
+        call check_allocate(dalp_mdr, this_nx)
+        dalp_mdr = xder(alp_m)
+        call check_allocate(d2alp_mdr2, this_nx)
+        d2alp_mdr2 = xder2(alp_m)
       endif
 
       ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
-      Bsqtot=Br**2 +Bp**2 +Bzmod**2
+      call check_allocate(Bsqtot, this_nx)
+      Bsqtot= Br**2 + Bp**2 + Bzmod**2
 
+      call check_allocate(alp, this_nx)
       if (Alg_quench) then
-        alp= alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching
+        alp = alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching
       elseif (Dyn_quench) then
-        alp= alp_k +alp_m  !Total alpha is equal to the sum of kinetic and magnetic parts
+        alp = alp_k +alp_m  !Total alpha is equal to the sum of kinetic and magnetic parts
       else
-        alp= alp_k
+        alp = alp_k
       endif
-!
-      detatdr= 1.d0/3*l*dvdr + 1.d0/3*v*dldr
-!
-!     IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT FLUCTUATING MAGNETIC FIELD
-!
-!     CALCULATE DYNAMO NUMBER
-      Dyn_gen=G*alp*h**3/etat**2
-!
+
+      call check_allocate(detatdr, this_nx)
+      detatdr = 1.d0/3*l*dvdr + 1.d0/3*v*dldr
+
+      ! CALCULATE DYNAMO NUMBER
+      call check_allocate(Dyn_gen, this_nx)
+      Dyn_gen = G*alp*h**3/etat**2
+
+      ! IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT
+      ! FLUCTUATING MAGNETIC FIELD
       if (lFloor) then
         do i=nxghost+1,nx-nxghost
           if (abs(Bp(i))==maxval(abs(Bp))) then
             rmax=r(i)  !radius at max of Bp(r)
-            delta_r= 2*dsqrt(abs(Bp(i)/d2Bpdr2(i)))  !width of Gaussian approx to Bp(r)
+            delta_r= 2*dsqrt(abs(Bp(i)/d2Bpdr2(i)))  !width of Gaussian approx
+                                                     ! to Bp(r)
             hmax=h(i)  !scale height at max of Bp(r)
             lmax=l(i)  !turbulent scale at max of Bp(r)
           endif
@@ -219,7 +256,7 @@ module equ  !Contains the partial differential equations to be solved
 !mark2
         alp= alp*(1.d0 +B_floor**2/Bsqtot)  !Formula for simple alpha quenching
       endif
-!
+
 !     LIST OF VARIABLE NAMES FOR f ARRAY
 !
 !     UNDER FOSA          UNDER TAU APPROXIMATION
@@ -232,7 +269,7 @@ module equ  !Contains the partial differential equations to be solved
 !                         f(:,7)=alp_m
 !
 !     METHOD: ALL ARRAYS ARE 2-DIMENSIONAL
-!
+
       r(nxghost+1)=0.000001d0
       dalp_mdr(nxghost+1)=0.d0
 !
@@ -281,6 +318,7 @@ module equ  !Contains the partial differential equations to be solved
         endif
       endif
     end subroutine pde
+
 end module equ
 !*****************************************************
 module timestep  !Contains time-stepping routine

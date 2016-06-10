@@ -70,7 +70,7 @@ module initial_conditions  !Set initial conditions
 
       integer :: iseed,var
       double precision, dimension(nx) :: Bseed
-      double precision, dimension(nx,nvar), intent(inout) :: f
+      double precision, dimension(:,:), intent(inout) :: f
 
       Bseed=frac_seed*Beq
 
@@ -112,15 +112,16 @@ module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
   use input_params
   use deriv
   use profiles
-!
   implicit none
-!
-  double precision, dimension(nx) :: Bzmod
-!
+  double precision, dimension(:), allocatable :: Bzmod
+
   contains
     subroutine estimate_Bzmod(f)
-      double precision, dimension(nx,nvar), intent(in) :: f
+      double precision, dimension(:,:), intent(in) :: f
       double precision, dimension(nx) :: dBrdr
+
+      ! Checks if Bzmod has the correct shape
+      call check_allocate(Bzmod)
       ! Computes dB_r/dr
       dBrdr = xder(f(:,1))
       ! Estimates Bzmod
@@ -161,21 +162,20 @@ module equ  !Contains the partial differential equations to be solved
       double precision, dimension(:), pointer :: Br, Bp
       double precision, dimension(:), pointer :: Fr, Fp, Er, Ep
       ! Auxiliary arrays
-      double precision, dimension(:), allocatable :: dBrdr, d2Brdr2
-      double precision, dimension(:), allocatable :: dBpdr,d2Bpdr2
-      double precision, dimension(:), allocatable :: dalp_mdr, d2alp_mdr2
-      double precision, dimension(:), allocatable :: detatdr
-      double precision, dimension(:), allocatable :: Bsqtot, Dyn_gen
-      double precision, dimension(:), allocatable :: brms, B_floor
+      double precision, dimension(nx) :: dBrdr, d2Brdr2
+      double precision, dimension(nx) :: dBpdr,d2Bpdr2
+      double precision, dimension(nx) :: dalp_mdr, d2alp_mdr2
+      double precision, dimension(nx) :: detatdr
+      double precision, dimension(nx) :: Bsqtot, Dyn_gen
+      double precision, dimension(nx) :: brms, B_floor
       ! Other
-      double precision, dimension(:), allocatable, target :: zeros_array
-      integer, dimension(2) :: shape_f
-      integer :: this_nx
+      double precision, dimension(nx), target :: zeros_array
 
       call impose_bc(f)
 
-      shape_f = shape(f)
-      this_nx = shape_f(1)
+      zeros_array = 0.0
+      call check_allocate(alp_m)
+      call check_allocate(alp)
 
       ! Sets first convenience pointers and variables
       Br => f(:,1)
@@ -187,41 +187,30 @@ module equ  !Contains the partial differential equations to be solved
         if (Dyn_quench) then
           Er => f(:,5)
           Ep => f(:,6)
-          call check_allocate(alp_m, this_nx)
           alp_m=f(:,7)
         endif
       else
-        call check_allocate(zeros_array, this_nx)
         Fr => zeros_array
         Fp => zeros_array
         if (Dyn_quench) then
-          call check_allocate(alp_m, this_nx)
           alp_m=f(:,3)
         endif
       endif
 
       ! Computes derivatives
-      call check_allocate(dBrdr, this_nx)
       dBrdr = xder(Br)
-      call check_allocate(d2Brdr2, this_nx)
       d2Brdr2 = xder2(Br)
-      call check_allocate(dBpdr, this_nx)
       dBpdr = xder(Bp)
-      call check_allocate(d2Bpdr2, this_nx)
       d2Bpdr2 = xder2(Bp)
 
       if (Dyn_quench) then
-        call check_allocate(dalp_mdr, this_nx)
         dalp_mdr = xder(alp_m)
-        call check_allocate(d2alp_mdr2, this_nx)
         d2alp_mdr2 = xder2(alp_m)
       endif
 
       ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
-      call check_allocate(Bsqtot, this_nx)
       Bsqtot= Br**2 + Bp**2 + Bzmod**2
 
-      call check_allocate(alp, this_nx)
       if (Alg_quench) then
         alp = alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching
       elseif (Dyn_quench) then
@@ -230,11 +219,9 @@ module equ  !Contains the partial differential equations to be solved
         alp = alp_k
       endif
 
-      call check_allocate(detatdr, this_nx)
       detatdr = 1.d0/3*l*dvdr + 1.d0/3*v*dldr
 
       ! CALCULATE DYNAMO NUMBER
-      call check_allocate(Dyn_gen, this_nx)
       Dyn_gen = G*alp*h**3/etat**2
 
       ! IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT

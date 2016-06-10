@@ -35,12 +35,20 @@ module grid
     ! Helper subroutine that checks whether 1d-array has the correct format,
     ! allocating it when necessary
     ! v -> the array that will be checked and possibly reallocated
-    ! nv -> the expected length of the array
+    ! otpional, nv -> the expected length of the array
+    !                 (if absent, use current value of nx)
     double precision, dimension(:), allocatable, intent(inout) :: v
-    integer, intent(in) :: nv
+    integer, intent(in), optional :: nv
+    integer :: nv_actual
+
+    if (present(nv)) then
+      nv_actual = nv
+    else
+      nv_actual = nx
+    endif
 
     if (allocated(v)) then
-      if (size(v)==nv) then
+      if (size(v)==nv_actual) then
         ! If the v was allocated and has the correct shape
         ! then there is nothing to do..
         return
@@ -50,7 +58,7 @@ module grid
       endif
     endif
     ! Allocates v with the correct shape
-    allocate(v(nv))
+    allocate(v(nv_actual))
     return
   end subroutine check_allocate
 

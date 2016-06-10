@@ -2,23 +2,14 @@
 module profiles
   use grid
   implicit none
+  double precision, dimension(:), allocatable :: h, n
+  double precision, dimension(:), allocatable :: l, dldr, l_kpc
+  double precision, dimension(:), allocatable :: v, dvdr
+  double precision, dimension(:), allocatable :: etat, tau, Beq, alp_k
+  double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
+  double precision, dimension(:), allocatable :: Om, G
 
-  double precision, dimension(nx) :: h, h_kpc
-  double precision, dimension(nx) :: Om, G, Om_kmskpc, G_kmskpc
-  double precision, dimension(nx) :: Uz, Uz_kms
-  double precision, dimension(nx) :: Ur, dUrdr, d2Urdr2, Ur_kms
-  double precision, dimension(nx) :: n, n_cm3
-  double precision, dimension(nx) :: l, l_kpc, dldr
-  double precision, dimension(nx) :: v, v_kms, dvdr
-  double precision, dimension(nx) :: etat, etat_cm2s, etat_kmskpc
-  double precision, dimension(nx) :: tau, tau_Gyr, tau_s
-  double precision, dimension(nx) :: Beq, Beq_mkG
-  double precision, dimension(nx) :: alp_k, alp_k_kms
-  double precision, dimension(nx), private :: Om_d, Om_b, Om_h
-  double precision, dimension(nx), private :: G_d, G_b, G_h
-  double precision, private :: rreg
-  double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
-
+  private :: prepare_profiles_module_public_variables
 contains
   logical function construct_profiles(B)
     ! Computes the radial of variation of all relevant physical constants
@@ -34,14 +25,24 @@ contains
     use pressureEquilibrium
     use input_constants
     use messages
+    double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
     double precision, dimension(nx), intent(in), optional :: B
-    double precision, dimension(nx) :: B_actual
+    double precision, dimension(nx) :: d2Urdr2, Ur_kms, Uz_kms
+    double precision, dimension(nx) :: Om_kmskpc, G_kmskpc
+    double precision, dimension(nx) :: etat_cm2s, etat_kmskpc
+    double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms
+    double precision, dimension(nx) :: Om_d, Om_b, Om_h, Beq_mkG
+    double precision, dimension(nx) :: G_d, G_b, G_h
+    double precision, dimension(nx) :: B_actual, tau_Gyr, tau_s
     double precision, dimension(nx) :: rho_cgs
     double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
     double precision, dimension(nx,3) :: all_roots
     double precision, parameter :: P_TOL=1e-10
+    double precision :: rreg
     double precision :: r_disk_min
     integer :: i_halfmass
+
+    call prepare_profiles_module_public_variables()
 
     if (present(B)) then
       B_actual = B
@@ -270,4 +271,24 @@ contains
     Omega = exp_minus_rxi_over_r*(Omega-Omega_xi)+Omega_xi
 
   end subroutine regularize
+
+  subroutine prepare_profiles_module_public_variables()
+    ! Helper to check whether the module variables have the correct shape
+    call check_allocate(h)
+    call check_allocate(n)
+    call check_allocate(l)
+    call check_allocate(dldr)
+    call check_allocate(l_kpc)
+    call check_allocate(v)
+    call check_allocate(dvdr)
+    call check_allocate(etat)
+    call check_allocate(tau)
+    call check_allocate(Beq)
+    call check_allocate(alp_k)
+    call check_allocate(Uz)
+    call check_allocate(Ur)
+    call check_allocate(dUrdr)
+    call check_allocate(Om)
+    call check_allocate(G)
+  end subroutine prepare_profiles_module_public_variables
 end module profiles

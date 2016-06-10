@@ -27,7 +27,6 @@ module input_params
   double precision :: l_sol_kpc, r_l_kpc
   double precision :: v_sol_kms, r_v_kpc
   double precision :: Uz_sol_kms, r_Uz_kpc
-  double precision :: h_sol_kpc, r_h_kpc
   double precision :: r_disk, v_disk
   double precision :: r_bulge, v_bulge
   double precision :: r_halo, v_halo, nfw_cs1 

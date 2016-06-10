@@ -20,6 +20,7 @@ module dynamo
 
   contains
     subroutine dynamo_run(gal_id, test_run, rank)
+      use interpolation
       integer, intent(in) :: gal_id
       integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
@@ -27,7 +28,7 @@ module dynamo
       integer :: fail_count, rank_actual
       integer, parameter :: MAX_FAILS=3
       double precision, dimension(nx) :: Btmp
-      double precision :: this_t
+      double precision :: this_t, r_disk_old
 
       if (present(rank)) then
           rank_actual = rank
@@ -36,7 +37,7 @@ module dynamo
       endif
 
       call cpu_time(cpu_time_start)
-      
+
       ! Sets the number of variables
       call init_var
       ! Allocates f-array (which contains all the data for the calculations)
@@ -45,8 +46,11 @@ module dynamo
       if (.not. allocated(f_old)) allocate(f_old(nx,nvar))
       if (.not. allocated(dfdt_old)) allocate(dfdt_old(nx,nvar)) 
       
+      ! Initializes the f-arrays
       f=0
       dfdt=0
+      f_old=0
+      dfdt_old=0
 
       ! Prepares the grid where the computation will be made
       call construct_grid()
@@ -75,7 +79,7 @@ module dynamo
         ! Traps the case of negligible disks
         ! (a recent major merger can convert the galaxy into an elliptical,
         !  making Mdisk=rdisk=0)
-        if (r_disk < r_max_kpc*rmin_over_rmax .or.  &
+        if (r_disk < 0.17 .or.  &
               Mgas_disk < Mgas_disk_min) then
             elliptical = .true.
             ! Resets the f array and adds a seed field
@@ -98,11 +102,13 @@ module dynamo
         if (it /= init_it) then
           if (p_oneSnaphotDebugMode) exit
           if (p_simplified_pressure) then
+!             call adjust_grid(f, f_old, r_disk, r_disk_old)
             able_to_construct_profiles = construct_profiles()
-            ! If unable to construct the profiles, exit and write output
+            ! If unable to construct the profiles, write output and exit loop
             if (.not. able_to_construct_profiles) then
               last_output = .true.
-              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
+                                  alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               exit
             endif
           endif
@@ -112,16 +118,25 @@ module dynamo
         ! timestep choices, if there is no success, aborts.
         do fail_count=0, MAX_FAILS
           ok = .true.
-          ! If a run without magnetic field evolution was requested
-          if (test_run .or. elliptical) exit
+          ! If a run without magnetic field evolution was requested or
+          ! if it is an elliptical galaxy, exits before the magnetic field
+          ! calculations (adjusts unused arrays for output)
+          if (test_run .or. elliptical) then
+            call check_allocate(alp); alp = 0.0
+            call check_allocate(Bzmod); Bzmod = 0.0
+            exit
+          endif
 
           ! Loops through the timesteps
           do jt=1,nsteps
             this_t = t_Gyr +dt*t0_Gyr*jt
             call message('Inner loop: jt = ',gal_id=gal_id, val_int=jt, info=3)
-            call message('Inner loop: fail_count =',val_int=fail_count,gal_id=gal_id, info=3)
-            call message('Inner loop: nsteps = ',gal_id=gal_id, val_int=nsteps, info=4)
-            call message('Inner loop: t (Gyr) = ', t_Gyr +dt*t0_Gyr*jt,gal_id=gal_id, info=4)
+            call message('Inner loop: fail_count =', val_int=fail_count, &
+                         gal_id=gal_id, info=3)
+            call message('Inner loop: nsteps = ', gal_id=gal_id, &
+                         val_int=nsteps, info=4)
+            call message('Inner loop: t (Gyr) = ', t_Gyr +dt*t0_Gyr*jt, &
+                         gal_id=gal_id, info=4)
 
             call estimate_Bzmod(f)
             ! If not using the simplified pressure, all profiles need to be
@@ -134,7 +149,8 @@ module dynamo
               able_to_construct_profiles = construct_profiles(sqrt(Btmp))
               ! If not able to construct profiles, flags and exit the loop
               if (.not.able_to_construct_profiles) then
-                call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+                call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau, &
+                                    alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
                 ok = .false.
                 exit
               endif
@@ -148,13 +164,15 @@ module dynamo
               ok = .false.
               ! Stores the bogus profiles
               ! NB the magnetic field info is out of date
-              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
+                                  alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               exit
             endif
 
             if (p_oneSnaphotDebugMode) then
               ! Then, stores simulation output in arrays containing the time series
-              call make_ts_arrays(jt,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+              call make_ts_arrays(jt,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
+                                  alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
             endif
           end do ! timesteps loop
           
@@ -166,7 +184,7 @@ module dynamo
           ! Otherwise, the calculation needs to be remade with a smaller
           ! timestep
           call message('NANs or unrealistically large magnetic fields detected, changing time step', &
-                         gal_id=gal_id, info=2)
+                       gal_id=gal_id, info=2)
           
           ! Doubles the number of timesteps
           nsteps = nsteps * 2
@@ -178,23 +196,27 @@ module dynamo
           call set_ts_params()
         
         end do ! try or fail loop
-        
+
         if (ok) then
-          ! If the run was sucessful prepares to store and store
-          f_old = f
-          dfdt_old = dfdt
-          ! Impose boundary conditions before writing output
+          ! Impose boundary conditions to the final result
           call impose_bc(f)
-          ! Estimates the value of |B_z| using Div B =0 condition
+          ! Estimates the value of |B_z| using Div B = 0 condition
           call estimate_Bzmod(f)
-          ! Then, stores simulation output in arrays containing the time series
-          call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+
+          ! Stores simulation output in arrays containing the time series
+          call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,&
+                              alp,Uz,Ur,n,Beq,rmax,delta_r)
+
+          ! Interpolates back if the grid had been extended
+          ! saving the result to f_old
+          call rescale_f_array(f, f_old)
+          call rescale_f_array(dfdt, dfdt_old)
         else
           ! If the run was unsuccessful, leaves the ts arrays with INVALID 
           ! values, except for ts_t (so that one knows when did things break)
           if (.not.p_oneSnaphotDebugMode) &
             call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
-                              alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run=.true.)
+                             alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run=.true.)
           ! Resets the f array and adds a seed field 
           dfdt = 0.0
           f = 0.0
@@ -205,9 +227,20 @@ module dynamo
 
         ! Breaks loop if there are no more snapshots in the input
         if (last_output .or. p_oneSnaphotDebugMode) exit
-        
+
+        ! Stores the half mass radius of the disk
+        r_disk_old = r_disk
+
         ! Reads in the model parameters for the next snapshot
         call set_input_params(gal_id)
+
+!         ! Extends the grid in the case of a larger disk
+!         if (r_disk_old > r_disk) then
+!
+!         endif
+
+
+
       end do  ! snapshots loop
       
       !Writes final simulation output

@@ -100,7 +100,7 @@ program mpicalldynamo
   else
     allocate(mygals(1))
     if (rank==0) then
-      mygals(1) = str2int(command_argument)-1
+      mygals(1) = str2int(command_argument)+1
       nmygals = 1
     else
       nmygals = 0

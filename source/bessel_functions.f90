@@ -1,5 +1,5 @@
 ! Contains a module which implements calculations of Bessel functions.
-
+! (currently this is a wrapper to use the bessel functions from FGSL)
 module Bessel_Functions
   use FGSL
   implicit none

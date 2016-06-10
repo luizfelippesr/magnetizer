@@ -42,8 +42,8 @@ $(srcdir)/grid.f90: ${builddir}/constants.o
 $(srcdir)/deriv.f90: ${builddir}/grid.o
 $(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/$(IO).o
 $(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o
-$(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o
-$(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o
+$(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o ${builddir}/interpolation.o
+$(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o ${builddir}/ts_arrays.o ${builddir}/interpolation.o
 $(srcdir)/output.f90: ${builddir}/$(IO).o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o
 $(srcdir)/$(IO).f90: ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o ${builddir}/grid.o

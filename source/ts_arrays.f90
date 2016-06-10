@@ -5,6 +5,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   use grid
   use input_params
   use messages
+
   implicit none
   private
 
@@ -38,26 +39,29 @@ contains
   subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
+    ! N.B. If the grid was extended (i.e. if the galaxy grew in this snapshot)
+    ! result will be interpolated into the standard (coarser) grid
+    use interpolation
     implicit none
     integer, intent(in) :: it
     double precision, intent(in) :: this_t
     double precision, intent(in) :: rmax
     double precision, intent(in) :: delta_r
-    double precision, dimension(nx,nvar), intent(in) :: f
-    double precision, dimension(nx), intent(in) :: Bzmod
-    double precision, dimension(nx), intent(in) :: h
-    double precision, dimension(nx), intent(in) :: om
-    double precision, dimension(nx), intent(in) :: G
-    double precision, dimension(nx), intent(in) :: l
-    double precision, dimension(nx), intent(in) :: v
-    double precision, dimension(nx), intent(in) :: etat
-    double precision, dimension(nx), intent(in) :: tau
-    double precision, dimension(nx), intent(in) :: alp_k
-    double precision, dimension(nx), intent(in) :: alp
-    double precision, dimension(nx), intent(in) :: Uz
-    double precision, dimension(nx), intent(in) :: Ur
-    double precision, dimension(nx), intent(in) :: n
-    double precision, dimension(nx), intent(in) :: Beq
+    double precision, dimension(:,:), intent(in) :: f
+    double precision, dimension(:), intent(in) :: Bzmod
+    double precision, dimension(:), intent(in) :: h
+    double precision, dimension(:), intent(in) :: om
+    double precision, dimension(:), intent(in) :: G
+    double precision, dimension(:), intent(in) :: l
+    double precision, dimension(:), intent(in) :: v
+    double precision, dimension(:), intent(in) :: etat
+    double precision, dimension(:), intent(in) :: tau
+    double precision, dimension(:), intent(in) :: alp_k
+    double precision, dimension(:), intent(in) :: alp
+    double precision, dimension(:), intent(in) :: Uz
+    double precision, dimension(:), intent(in) :: Ur
+    double precision, dimension(:), intent(in) :: n
+    double precision, dimension(:), intent(in) :: Beq
     logical, optional, intent(in) :: invalid_run
     
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
@@ -73,31 +77,31 @@ contains
     ts_Dt(it) = t*t0_Gyr
     ts_rmax(it) = rmax
     ts_delta_r(it) = delta_r
-    ts_Br(it,:) = f(:,1)
-    ts_Bp(it,:) = f(:,2)
+    ts_Br(it,:) = rescale_array(f(:,1), p_nx_ref)
+    ts_Bp(it,:) = rescale_array(f(:,2), p_nx_ref)
 
     if (Dyn_quench) then   
       if (.not.Damp) then
-        ts_alp_m(it,:) = f(:,3)
+        ts_alp_m(it,:) = rescale_array(f(:,3), p_nx_ref)
       else
-        ts_alp_m(it,:) = f(:,7)
+        ts_alp_m(it,:) = rescale_array(f(:,7), p_nx_ref)
       endif
     endif
-    ts_h(it,:) = h(:)
-    ts_om(it,:) = om(:)
-    ts_G(it,:) = G(:)
-    ts_l(it,:) = l(:)
-    ts_v(it,:) = v(:)
-    ts_etat(it,:) = etat(:)
-    ts_tau(it,:) = tau(:)
-    ts_alp_k(it,:) = alp_k(:)
-    ts_alp(it,:) = alp(:)
-    ts_Uz(it,:) = Uz(:)
-    ts_Ur(it,:) = Ur(:)
-    ts_n(it,:) =  n(:)
-    ts_Beq(it,:) = Beq(:)
-    ts_Bzmod(it,:) = Bzmod(:)
-    ts_rkpc(it,:) = r_kpc(:)
+    ts_h(it,:) = rescale_array(h(:), p_nx_ref)
+    ts_om(it,:) = rescale_array(om(:), p_nx_ref)
+    ts_G(it,:) = rescale_array(G(:), p_nx_ref)
+    ts_l(it,:) = rescale_array(l(:), p_nx_ref)
+    ts_v(it,:) = rescale_array(v(:), p_nx_ref)
+    ts_etat(it,:) = rescale_array(etat(:), p_nx_ref)
+    ts_tau(it,:) = rescale_array(tau(:), p_nx_ref)
+    ts_alp_k(it,:) = rescale_array(alp_k(:), p_nx_ref)
+    ts_alp(it,:) = rescale_array(alp(:), p_nx_ref)
+    ts_Uz(it,:) = rescale_array(Uz(:), p_nx_ref)
+    ts_Ur(it,:) = rescale_array(Ur(:), p_nx_ref)
+    ts_n(it,:) =  rescale_array(n(:), p_nx_ref)
+    ts_Beq(it,:) = rescale_array(Beq(:), p_nx_ref)
+    ts_Bzmod(it,:) = rescale_array(Bzmod(:), p_nx_ref)
+    ts_rkpc(it,:) = rescale_array(r_kpc(:), p_nx_ref)
   end subroutine make_ts_arrays
   
   subroutine allocate_ts_arrays()

@@ -95,6 +95,7 @@ module interpolation
 
     shape_f_new = shape(f_rescaled)
     nx_new = shape_f_new(1)
+    nvar = shape_f_new(2)
 
     do i=1,nvar
       f_rescaled(:,i) = rescale_array(f(:,i), nx_new)

@@ -22,15 +22,15 @@ module input_params
   double precision, private :: time_between_inputs=0
   
   ! Galaxy parameters
-  double precision :: t_Gyr
-  double precision :: r_max_kpc, R_kappa
-  double precision :: l_sol_kpc, r_l_kpc
-  double precision :: v_sol_kms, r_v_kpc
-  double precision :: Uz_sol_kms, r_Uz_kpc
-  double precision :: r_disk, v_disk
-  double precision :: r_bulge, v_bulge
-  double precision :: r_halo, v_halo, nfw_cs1 
-  double precision :: Mstars_disk, Mgas_disk, SFR
+  double precision, protected :: t_Gyr
+  double precision, protected :: r_max_kpc, R_kappa
+  double precision, protected :: l_sol_kpc, r_l_kpc
+  double precision, protected :: v_sol_kms, r_v_kpc
+  double precision, protected :: Uz_sol_kms, r_Uz_kpc
+  double precision, protected :: r_disk, v_disk
+  double precision, protected :: r_bulge, v_bulge
+  double precision, protected :: r_halo, v_halo, nfw_cs1
+  double precision, protected :: Mstars_disk, Mgas_disk, SFR
 
   ! All galaxy data (private!)
   integer, private, parameter :: number_of_columns=11 ! Maximum umber of columns in the galaxy input files
@@ -171,11 +171,6 @@ module calc_params
 !     NUMERICAL
       lambda=h0_kpc/r_max_kpc  !Typical aspect ratio of disk
 
-!     SEED FIELD
-      r1= r1_kpc/r_max_kpc !Only relevant if Rand_seed=F
-
-!     PHYSICAL GRID
-      r_kpc=r*r_max_kpc
 
   endsubroutine set_calc_params
 end module calc_params

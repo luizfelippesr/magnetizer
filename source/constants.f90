@@ -65,10 +65,6 @@ module input_constants  ! Contains physical, model-dependent, constants
   double precision, parameter :: C_U=0.25d0
   !No-z correction term for terms involving Uz*alp_m
   double precision, parameter :: C_a=1.d0!0.3d0
-  ! SEED FIELD
-  !Only relevant if Rand_seed=F
-  double precision, parameter :: r1_kpc= 15.0d0
-  integer, parameter :: nn=2 !Only relevant if Rand_seed=F
   ! DIFFUSIVE MAGNETIC HELICITY FLUX
   !No-z correction term for terms involving diffusive flux
   double precision, parameter :: C_d= -pi**2

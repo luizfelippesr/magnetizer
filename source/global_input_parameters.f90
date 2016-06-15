@@ -46,11 +46,19 @@ module global_input_parameters
   logical :: Damp = .false.
 
   ! SEED MAGNETIC FIELD
-  ! Set to F for random seed magnetic field, T for some other seed
-  logical :: Rand_seed = .true.
-
   !Seed field amplitude as a fraction of equipartition magnetic field strength
   double precision :: frac_seed = 0.01d0
+  ! Selects seed type: 'random', 'decaying' or 'fraction'
+  ! fraction -> The seed field is a fixed fraction of the equipartition field
+  !             Bseed = Bs = frac_seed*Beq
+  ! random   -> The value is drew from a Gaussian distribution with variance Bs
+  !             Bseed = Bs*random_gaussian
+  ! decaying -> The value decays exponentially with radius
+  !             Bseed = r/rmax*(1.d0-r/rmax)**p_nn_seed*dexp(-r/p_r_seed_decay)
+  character(len=20) :: p_seed_choice = 'random'
+  double precision :: p_r_seed_decay = 15.0d0
+  integer:: p_nn_seed = 2 !Only relevant if Rand_seed=F
+
 
   ! CEILING ON ALPHA EFFECT
   ! Set to T to put a ceiling for alpha at alpceil*v
@@ -150,7 +158,26 @@ module global_input_parameters
   double precision :: rmin_over_rmax=0.001
   double precision :: Mgas_disk_min=1d4 ! solar masses
 
+  ! Grid settings
+
+  ! If rdisk(t_i) < rdisk(t_{i-1}), rescale the B and alpha WITH the disk
+  ! (this keeps the number of grid points and is equivalent to a change of
+  !  units)
+  logical :: p_rescale_field_for_shrinking_disks=.true.
+  ! If rdisk(t_i) > rdisk(t_{i-1}), rescale the B and alpha WITH the disk
+  ! (this keeps the number of grid points and is equivalent to a change of
+  !  units)
+  logical :: p_rescale_field_for_expanding_disks=.false.
+
+  ! Reference grid size (used both initially and for storage)
   integer :: p_nx_ref=51
+  ! Maximum grid size, in the case of varying number of grid points
+  integer :: p_nx_MAX
+
+  ! Uses a fixed dimensional grid, with r_max_kpc set using the the maximum
+  ! half mass radius the galaxy reaches over the entire History
+  logical :: p_use_fixed_physical_grid=.false.
+
   namelist /global_pars/ &
     model_name, &
     output_file_name, input_file_name, &
@@ -159,7 +186,6 @@ module global_input_parameters
     Dyn_quench, Alg_quench, &
     lFloor, &
     Damp, &
-    Rand_seed, &
     Alp_ceiling, &
     Alp_squared, &
     Krause, &
@@ -202,7 +228,12 @@ module global_input_parameters
     p_IO_separate_output, &
     Mgas_disk_min, &
     rmin_over_rmax, &
-    p_nx_ref
+    p_use_fixed_physical_grid, &
+    p_rescale_field_for_shrinking_disks, &
+    p_rescale_field_for_expanding_disks, &
+    p_nx_ref, &
+    p_nx_MAX
+
 
   contains
 

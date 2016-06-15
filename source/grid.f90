@@ -2,33 +2,50 @@
 module grid
   use math_constants
   use units
-!
+  use global_input_parameters
+
   implicit none
-!
-  integer, parameter :: nxphys= 51!201!61!91  !Resolution in r (excluding ghost zones) (for convenience should be N*r_max_kpc+1)
-  integer, parameter :: nxghost= 3  !Number of ghost cells at each end in r
-  integer, parameter :: nx= nxphys +2*nxghost  !Resolution in r
+
+  integer :: nxphys= -1 !Resolution in r (excluding ghost zones) (for convenience should be N*r_max_kpc+1)
+  integer, parameter :: nxghost= 3 !Number of ghost cells at each end in r
+  integer, protected :: nx=-1  !Resolution in r
   double precision, parameter :: len_phi= 2*pi !phi domain
-  double precision, parameter :: r_in=1.0d-6 ! min radius of disk
+  double precision, parameter :: r_in=1.0d-6 ! min radius of disk in code units
                                              ! NB the max radius of disk is 1.0 in code units
-  double precision :: dx
-  double precision, dimension(nx) :: x
-  double precision, dimension(nx) :: r
-  double precision, dimension(nx) :: r_kpc
-!
+  double precision, protected :: dx
+  double precision, dimension(:), allocatable, protected :: x
+  ! x and r have actually the exact same meaning
+  ! one of them can be removed later
+  double precision, dimension(:), allocatable, protected :: r
+  double precision, dimension(:), allocatable, protected :: r_kpc
+  double precision, protected :: dr_kpc
+
   contains
 
 
-  subroutine construct_grid
-
+  subroutine construct_grid(r_max_kpc)
+    double precision, intent(in) :: r_max_kpc
     integer :: i
 
-      dx= (1.0 - r_in)/(nxphys-1)  !x corresponds to r coordinate
-                                   !NB the max radius of disk is 1.0 in code units
-      do i=1,nx
-        x(i)=r_in -nxghost*dx +(dble(i)-1.)*dx
-      enddo
-      r=x !use explicit name
+    ! Initializes nxphys using the global input parameter value
+    nxphys = p_nx_ref
+    ! Includes the ghost zones
+    nx= nxphys +2*nxghost
+    ! First, prepares a grid from r_in to 1
+    dx= (1.0 - r_in)/(nxphys-1)  !x corresponds to r coordinate
+                                 !NB the max radius of disk is 1.0 in code units
+    call check_allocate(x, nx)
+    call check_allocate(r, nx)
+    call check_allocate(r_kpc, nx)
+
+    do i=1,nx
+      x(i)=r_in -nxghost*dx +(dble(i)-1.)*dx
+    enddo
+    r=x !use explicit name
+
+    ! Save the dimensional r grid
+    r_kpc = r*r_max_kpc
+
     endsubroutine construct_grid
 
   subroutine check_allocate(v, nv)
@@ -61,5 +78,27 @@ module grid
     allocate(v(nv_actual))
     return
   end subroutine check_allocate
+
+  subroutine adjust_grid(f, previous_f, r_disk, previous_r_disk)
+    double precision, dimension(:,:), intent(inout) :: f
+    double precision, dimension(:,:), intent(inout) :: previous_f
+    double precision, intent(in) :: r_disk
+    double precision, intent(in) :: previous_r_disk
+
+    if (p_use_fixed_physical_grid) then
+      f = previous_f
+    endif
+!     else if (r_disk > previous_r_disk) then
+!       if (p_rescale_field_for_expanding_disks) then
+!         f = previous_f
+!       else`
+!     p_rescale_field_for_shrinking_disks,
+!     p_rescale_field_for_expanding_disks,
+!     p_nx_ref,
+!     p_nx_MAX,
+!
+!
+
+  end subroutine adjust_grid
 
 end module grid

@@ -67,31 +67,39 @@ module initial_conditions  !Set initial conditions
 !
   contains
     subroutine init_seed(f)
-
+      use global_input_parameters
       integer :: iseed,var
       double precision, dimension(nx) :: Bseed
       double precision, dimension(:,:), intent(inout) :: f
-
+      double precision :: r1
+      ! Initializes the seed field to a fraction of the equipartition field
       Bseed=frac_seed*Beq
+      ! Initializes f
+      f(:,:)=0.d0
 
-      f(:,:)=0.d0 !Initialize
-
-      if (Rand_seed) then
-        do var=1,2 !Seed r and phi components of B
-          do iseed=1,nx
-            f(iseed,var)=Bseed(iseed)*random_normal()
+      select case (trim(p_seed_choice))
+        case('fraction')
+          ! The field is a fixed fraction of the equipartition field
+          f(:,1)=-Bseed
+          f(:,2)= Bseed
+        case('decaying')
+          ! The field
+          r1 = p_r_seed_decay/r_max_kpc
+          f(:,1)=-Bseed*r*(1.d0-r)**p_nn_seed*dexp(-r/r1)
+          f(:,2)= Bseed*r*(1.d0-r)**p_nn_seed*dexp(-r/r1)
+        case('random')
+          ! The field at each point (and component) is a Gaussian drawing from
+          ! a distribution with variance Bseed
+          do var=1,2 !Seed r and phi components of B
+            do iseed=1,nx
+              f(iseed,var)=Bseed(iseed)*random_normal()
+            enddo
           enddo
-        enddo
-      else
-        ! NB the old 'r_disk' variable is now always 1.0 in code units
-!       f(:,1)=-Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
-        f(:,1)=-Bseed*r*(1.d0-r)**nn*dexp(-r/r1)
-!       f(:,2)= Bseed*r/r_disk*(1.d0-r/r_disk)**nn*dexp(-r/r1)
-        f(:,2)= Bseed*r*(1.d0-r)**nn*dexp(-r/r1)
-      endif
-
+        case default
+          print *, 'init_seed: Invalid option ',p_seed_choice
+          stop
+      end select
       call impose_bc(f)
-
     end subroutine init_seed
 end module initial_conditions
 !*****************************************************
@@ -257,7 +265,7 @@ module equ  !Contains the partial differential equations to be solved
 !
 !     METHOD: ALL ARRAYS ARE 2-DIMENSIONAL
 
-      r(nxghost+1)=0.000001d0
+!       r(nxghost+1)=0.000001d0  ! LFSR: this seems to be spurious
       dalp_mdr(nxghost+1)=0.d0
 !
       if (.not.Damp) then

@@ -40,22 +40,19 @@ module dynamo
 
       ! Sets the number of variables
       call init_var
+
+
+      ! Reads in the model parameters (for the first snapshot)
+      call set_input_params(gal_id)
+      ! Prepares the grid where the computation will be made
+      call construct_grid(r_max_kpc)
       ! Allocates f-array (which contains all the data for the calculations)
       if (.not. allocated(f)) allocate(f(nx,nvar)) 
       if (.not. allocated(dfdt)) allocate(dfdt(nx,nvar)) 
       if (.not. allocated(f_old)) allocate(f_old(nx,nvar))
       if (.not. allocated(dfdt_old)) allocate(dfdt_old(nx,nvar)) 
-      
       ! Initializes the f-arrays
-      f=0
-      dfdt=0
-      f_old=0
-      dfdt_old=0
-
-      ! Prepares the grid where the computation will be made
-      call construct_grid()
-      ! Reads in the model parameters (for the first snapshot)
-      call set_input_params(gal_id)
+      f=0; dfdt=0; f_old=0; dfdt_old=0
       ! Sets other necessary parameters
       call set_calc_params  
       ! Constructs galaxy model for the initial snapshot
@@ -102,7 +99,7 @@ module dynamo
         if (it /= init_it) then
           if (p_oneSnaphotDebugMode) exit
           if (p_simplified_pressure) then
-!             call adjust_grid(f, f_old, r_disk, r_disk_old)
+            call adjust_grid(f, f_old, r_disk, r_disk_old)
             able_to_construct_profiles = construct_profiles()
             ! If unable to construct the profiles, write output and exit loop
             if (.not. able_to_construct_profiles) then
@@ -238,7 +235,6 @@ module dynamo
 !         if (r_disk_old > r_disk) then
 !
 !         endif
-
 
 
       end do  ! snapshots loop

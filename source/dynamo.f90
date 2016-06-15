@@ -45,7 +45,7 @@ module dynamo
       ! Reads in the model parameters (for the first snapshot)
       call set_input_params(gal_id)
       ! Prepares the grid where the computation will be made
-      call construct_grid(r_max_kpc)
+      call construct_grid(r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
       if (.not. allocated(f)) allocate(f(nx,nvar)) 
       if (.not. allocated(dfdt)) allocate(dfdt(nx,nvar)) 

@@ -112,8 +112,6 @@ def prepares_hdf5_input(data_dict, output_file):
 
             tmp['r_disk'][j] = r_disk
 
-            r_disk_max = max(r_disk, r_disk_max)
-
             tmp['v_disk'][j] = data_dict[t]['vdisk'][select][0]
 
             tmp['r_bulge'][j] = data_dict[t]['rbulge'][select][0]
@@ -131,9 +129,6 @@ def prepares_hdf5_input(data_dict, output_file):
             tmp['r_halo'][j] = r_halo
 
             tmp['nfw_cs1'][j] = data_dict[t]['strc'][select][0]
-
-        tmp['r_max'] = r_disk_max
-
 
         for dataset_name in tmp:
             add_dataset(input_grp, dataset_name, [tmp[dataset_name],])

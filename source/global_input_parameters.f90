@@ -159,7 +159,6 @@ module global_input_parameters
   double precision :: Mgas_disk_min=1d4 ! solar masses
 
   ! Grid settings
-
   ! If rdisk(t_i) < rdisk(t_{i-1}), rescale the B and alpha WITH the disk
   ! (this keeps the number of grid points and is equivalent to a change of
   !  units)
@@ -173,10 +172,12 @@ module global_input_parameters
   integer :: p_nx_ref=51
   ! Maximum grid size, in the case of varying number of grid points
   integer :: p_nx_MAX
-
   ! Uses a fixed dimensional grid, with r_max_kpc set using the the maximum
   ! half mass radius the galaxy reaches over the entire History
   logical :: p_use_fixed_physical_grid=.false.
+  ! The maximum radius to use for computations divided by the half mass radius
+  ! i.e. rmax = p_rmax_over_rdisk * rdisk
+  double precision :: p_rmax_over_rdisk = 1d0
 
   namelist /global_pars/ &
     model_name, &
@@ -232,7 +233,8 @@ module global_input_parameters
     p_rescale_field_for_shrinking_disks, &
     p_rescale_field_for_expanding_disks, &
     p_nx_ref, &
-    p_nx_MAX
+    p_nx_MAX, &
+    p_rmax_over_rdisk
 
 
   contains

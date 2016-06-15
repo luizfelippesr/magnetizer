@@ -23,7 +23,8 @@ module input_params
   
   ! Galaxy parameters
   double precision, protected :: t_Gyr
-  double precision, protected :: r_max_kpc, R_kappa
+  double precision, protected :: r_max_kpc_history
+  double precision, protected :: R_kappa
   double precision, protected :: l_sol_kpc, r_l_kpc
   double precision, protected :: v_sol_kms, r_v_kpc
   double precision, protected :: Uz_sol_kms, r_Uz_kpc
@@ -83,8 +84,9 @@ module input_params
       call IO_read_dataset_scalar('Mgas_disk', gal_id, galaxy_data(:,8))
       call IO_read_dataset_scalar('Mstars_disk', gal_id, galaxy_data(:,9))
       call IO_read_dataset_scalar('SFR', gal_id, galaxy_data(:,10))
-      ! Reads the maximum radius for this galaxy
-      call IO_read_dataset_single('r_max', gal_id, r_max_kpc)
+
+      ! Determines the maximum radius for this galaxy over the whole history
+      r_max_kpc_history = maxval(galaxy_data(:,1)) * p_rmax_over_rdisk
 
       ! Sets n1, maximum number of snapshots
       n1 = number_of_redshifts

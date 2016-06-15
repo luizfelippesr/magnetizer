@@ -19,12 +19,12 @@ module grid
   double precision, dimension(:), allocatable, protected :: r
   double precision, dimension(:), allocatable, protected :: r_kpc
   double precision, protected :: dr_kpc
-
+  double precision, protected :: r_max_kpc
   contains
 
 
-  subroutine construct_grid(r_max_kpc)
-    double precision, intent(in) :: r_max_kpc
+  subroutine construct_grid(r_max_kpc_history)
+    double precision, intent(in) :: r_max_kpc_history
     integer :: i
 
     ! Initializes nxphys using the global input parameter value
@@ -43,6 +43,8 @@ module grid
     enddo
     r=x !use explicit name
 
+
+    r_max_kpc = r_max_kpc_history
     ! Save the dimensional r grid
     r_kpc = r*r_max_kpc
 
@@ -87,7 +89,10 @@ module grid
 
     if (p_use_fixed_physical_grid) then
       f = previous_f
+      return
     endif
+
+
 !     else if (r_disk > previous_r_disk) then
 !       if (p_rescale_field_for_expanding_disks) then
 !         f = previous_f

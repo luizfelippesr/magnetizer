@@ -61,7 +61,6 @@ module dynamo
       ! Loops through the SAM's snapshots
       do it=init_it,n1
         this_t = t_Gyr
-        print *, 'adasdas'
 
         call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
         ! Initializes the number of steps to the global input value

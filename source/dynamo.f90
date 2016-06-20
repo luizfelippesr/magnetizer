@@ -65,11 +65,11 @@ module dynamo
         call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
         ! Initializes the number of steps to the global input value
         call set_timestep()
-
+        print *, r_max_kpc
         ! Traps the case of negligible disks
         ! (a recent major merger can convert the galaxy into an elliptical,
         !  making Mdisk=rdisk=0)
-        if (r_disk < 0.17 .or.  Mgas_disk < Mgas_disk_min) then
+        if (r_disk < p_rdisk_min .or.  Mgas_disk < Mgas_disk_min) then
             elliptical = .true.
             ! Resets the f array and adds a seed field
             dfdt = 0.0

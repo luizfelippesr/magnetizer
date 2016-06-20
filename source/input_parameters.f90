@@ -111,7 +111,7 @@ module input_params
     n1 = number_of_redshifts
     ! Sets the initial valid snapshot (uses the disk size as a marker)
     do i=1,n1
-      if (galaxy_data(i,1)>=0) then
+      if (galaxy_data(i,1)>=p_rdisk_min) then
         init_it = i
         exit
       endif

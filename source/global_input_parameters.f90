@@ -155,8 +155,9 @@ module global_input_parameters
   double precision :: p_rreg_to_rdisk = 0.15
 
   ! Defines what it means to have a negligible disk
-  double precision :: rmin_over_rmax=0.001
+  double precision :: p_rdisk_min=0.5 !kpc
   double precision :: Mgas_disk_min=1d4 ! solar masses
+  double precision :: rmin_over_rmax=0.001
 
   ! Grid settings
   ! If rdisk(t_i) < rdisk(t_{i-1}), rescale the B and alpha WITH the disk
@@ -236,7 +237,8 @@ module global_input_parameters
     p_nx_ref, &
     p_nx_MAX, &
     p_rmax_over_rdisk,&
-    p_scale_back_f_array
+    p_scale_back_f_array, &
+    p_seed_choice
 
 
   contains

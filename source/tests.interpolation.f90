@@ -1,8 +1,7 @@
 program testInterpolation
   use interpolation
   implicit none
-  double precision, dimension(30,4) :: f
-  double precision, dimension(13,4) :: f_old
+  double precision, dimension(:,:), allocatable :: f
   double precision, dimension(30) :: y
   double precision, dimension(20) :: y_new
   integer :: i
@@ -35,14 +34,17 @@ program testInterpolation
     print *, y_new(i)
   enddo
 
+  allocate(f(30,4))
   do i=1,3
     f(:,i) = y
   enddo
 
   print *, '#----------'
-  call rescale_f_array(f,f_old)
-  do i=1,13
-    print *, f_old(i,2)
+  print *, shape(f)
+  call rescale_f_array(f,3)
+  print *, shape(f)
+  do i=1,3
+    print *, f(i,2)
   enddo
 
 end program testInterpolation

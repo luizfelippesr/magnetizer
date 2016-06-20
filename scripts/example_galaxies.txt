@@ -27,11 +27,11 @@
 #            Table 1.2 of BT08: r_halfmass= 1.68 R_D with r_D= 2.5 kpc
 #            average of models I and II of BT08, Table 2.3: r_halfmass= 1.68 R_D with r_D= 2.6 kpc
 #            Alternate: Widrow+08 Table 2 r_halfmass= 1.68 R_D with r_D= 2.8 kpc
-#       D - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 175 and 120 km/s) 
+#       D - Average of models I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 175 and 120 km/s)
 #       E - 
-#       F - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 65 and 55 km/s) 
+#       F - Average of models I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 65 and 55 km/s)
 #       G - Widrow+08 Table 2 r_halfmass= R_e/(sqrt(2)-1) with Sersic profile parameter R_e= 0.64 kpc
-#       H - Average of modles I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 90 and 175 km/s)
+#       H - Average of models I and II (Figs 2.20 and 2.22 of BT08) at their respective R_halfmass=3.4 and 5.4 kpc (avg of 90 and 175 km/s)
 #       I -
 #       J -
 #
@@ -43,7 +43,7 @@
 # (units)   (Msun)     (Msun)       (kpc)     (km/s)   (Msun/yr)   (km/s)  (kpc)   (km/s)  (Msun)
 # ref       A          B            C         D        E           F       G       H       I               J
    M31      2.84e9     7.1e10       9.4       110.     0.4         90.     3.1     146     1e12            0.05
-   M31b      2.84e9     7.1e10       9.4       110.     0.4         90.     3.1     146.    1e12            0.05
+   M31b     2.84e9     7.1e10       9.4       110.     0.4         90.     3.1     146.    1e12            0.05
 #   MW                               4.4       150.                60.     1.5
 #Old values:
 #   MW       8e9        2.85e10      5.035     200      1.5         100     2.0     75      1e3             0.0944

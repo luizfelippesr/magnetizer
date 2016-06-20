@@ -86,19 +86,39 @@ module interpolation
 
   end function
 
-  subroutine rescale_f_array(f, f_rescaled)
-    ! Interpolates the f-array into the f_rescaled array
-    double precision, dimension(:,:), intent(in) :: f
-    double precision, dimension(:,:), intent(out) :: f_rescaled
-    integer, dimension(2) :: shape_f_new
-    integer :: nvar, nx_new, i
+  subroutine rescale_array_in_place(y, n)
+    ! Interpolates the n-array into the f_rescaled array
+    double precision, dimension(:), allocatable, intent(inout) :: y
+    double precision, dimension(:), allocatable :: ytmp
+    integer, intent(in) :: n
+    ! Backups the array contents
+    call move_alloc(y,ytmp)
+    ! Allocates the new array
+    allocate(y(n))
+    ! Interpolates
+    y = rescale_array(ytmp, n)
+  end subroutine rescale_array_in_place
 
-    shape_f_new = shape(f_rescaled)
-    nx_new = shape_f_new(1)
-    nvar = shape_f_new(2)
+
+
+  subroutine rescale_f_array(f, n)
+    ! Interpolates the f-array into the f_rescaled array
+    double precision, dimension(:,:), allocatable, intent(inout) :: f
+    double precision, dimension(:,:), allocatable :: ftmp
+    integer, intent(in) :: n
+
+    integer, dimension(2) :: shape_f
+    integer :: nvar, nx, i
+
+    shape_f = shape(f)
+    nx   = shape_f(1)
+    nvar = shape_f(2)
+
+    call move_alloc(f,ftmp)
+    allocate(f(n,nvar))
 
     do i=1,nvar
-      f_rescaled(:,i) = rescale_array(f(:,i), nx_new)
+      f(:,i) = rescale_array(ftmp(:,i), n)
     enddo
 
   end subroutine rescale_f_array

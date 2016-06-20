@@ -37,7 +37,7 @@ module messages
     integer, optional, intent(in) :: gal_id, rank, ndec
     character(len=*), optional, intent(in) :: msg_end
     logical, optional, intent(in) :: master_only
-    character(len=500) :: p_rank, p_msg_end, p_val, p_gal
+    character(len=5000) :: p_rank, p_msg_end, p_val, p_gal
     integer :: verbosity
     verbosity = 1
     p_rank=''; p_val=''; p_gal=''; p_msg_end=''

@@ -14,7 +14,8 @@ module dynamo
   integer :: it=0, jt=0
   double precision :: cpu_time_start, cpu_time_finish
   double precision, allocatable, dimension(:,:) :: f, dfdt
-  double precision, allocatable, dimension(:,:) :: f_old, dfdt_old
+  double precision, allocatable, dimension(:,:) :: f_snapshot_beginning
+  double precision, allocatable, dimension(:,:) :: dfdt_snapshot_beginning
 
   public dynamo_run
 
@@ -28,8 +29,9 @@ module dynamo
       integer :: fail_count, rank_actual
       integer, parameter :: MAX_FAILS=3
       double precision, dimension(nx) :: Btmp
-      double precision :: this_t, r_disk_old
+      double precision :: this_t
 
+      elliptical = .false.
       if (present(rank)) then
           rank_actual = rank
       else
@@ -40,44 +42,35 @@ module dynamo
 
       ! Sets the number of variables
       call init_var
-
-
       ! Reads in the model parameters (for the first snapshot)
       call set_input_params(gal_id)
       ! Prepares the grid where the computation will be made
-      call construct_grid(r_max_kpc_history)
+      call construct_grid(r_disk, r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
-      if (.not. allocated(f)) allocate(f(nx,nvar)) 
-      if (.not. allocated(dfdt)) allocate(dfdt(nx,nvar)) 
-      if (.not. allocated(f_old)) allocate(f_old(nx,nvar))
-      if (.not. allocated(dfdt_old)) allocate(dfdt_old(nx,nvar)) 
-      ! Initializes the f-arrays
-      f=0; dfdt=0; f_old=0; dfdt_old=0
+      call check_allocate_f_array(f, nvar)
+      call check_allocate_f_array(dfdt, nvar)
       ! Sets other necessary parameters
-      call set_calc_params  
+      call set_calc_params
       ! Constructs galaxy model for the initial snapshot
       able_to_construct_profiles = construct_profiles()
       ! Adds a seed field to the f-array (uses the profile info)
       call init_seed(f)
       ! Calculates |Bz| (uses profile info)
       call estimate_Bzmod(f)
-      ! Backs up initial state
-      f_old = f
-      dfdt_old = dfdt ! this one is probably not necessary...
-      
+
       ! Loops through the SAM's snapshots
       do it=init_it,n1
         this_t = t_Gyr
-        call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
+        print *, 'adasdas'
 
+        call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
         ! Initializes the number of steps to the global input value
-        nsteps = nsteps_0
+        call set_timestep()
 
         ! Traps the case of negligible disks
         ! (a recent major merger can convert the galaxy into an elliptical,
         !  making Mdisk=rdisk=0)
-        if (r_disk < 0.17 .or.  &
-              Mgas_disk < Mgas_disk_min) then
+        if (r_disk < 0.17 .or.  Mgas_disk < Mgas_disk_min) then
             elliptical = .true.
             ! Resets the f array and adds a seed field
             dfdt = 0.0
@@ -94,12 +87,11 @@ module dynamo
             elliptical = .false.
         endif
 
-        call set_ts_params()
         ! Constructs galaxy model for the present snapshot
         if (it /= init_it) then
           if (p_oneSnaphotDebugMode) exit
           if (p_simplified_pressure) then
-            call adjust_grid(f, f_old, r_disk, r_disk_old)
+            call adjust_grid(f, dfdt, r_disk)
             able_to_construct_profiles = construct_profiles()
             ! If unable to construct the profiles, write output and exit loop
             if (.not. able_to_construct_profiles) then
@@ -110,6 +102,12 @@ module dynamo
             endif
           endif
         endif
+
+        ! Backs up state at the beginning of the snapshot
+        call check_allocate_f_array(f_snapshot_beginning, nvar)
+        f_snapshot_beginning = f
+        call check_allocate_f_array(dfdt_snapshot_beginning, nvar)
+        dfdt_snapshot_beginning = dfdt
 
         ! Will try to solve the equations a few times, with different
         ! timestep choices, if there is no success, aborts.
@@ -183,15 +181,12 @@ module dynamo
           call message('NANs or unrealistically large magnetic fields detected, changing time step', &
                        gal_id=gal_id, info=2)
           
-          ! Doubles the number of timesteps
-          nsteps = nsteps * 2
-          
-          ! Resets the f array
-          f = f_old
-          dfdt = dfdt_old
-
-          call set_ts_params()
-        
+          ! Double the number of timesteps
+          call set_timestep(reduce_timestep=.true.)
+          ! Resets the f array to the initial state in the beginning of the
+          ! snapshot
+          f = f_snapshot_beginning
+          dfdt = dfdt_snapshot_beginning
         end do ! try or fail loop
 
         if (ok) then
@@ -203,11 +198,6 @@ module dynamo
           ! Stores simulation output in arrays containing the time series
           call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,&
                               alp,Uz,Ur,n,Beq,rmax,delta_r)
-
-          ! Interpolates back if the grid had been extended
-          ! saving the result to f_old
-          call rescale_f_array(f, f_old)
-          call rescale_f_array(dfdt, dfdt_old)
         else
           ! If the run was unsuccessful, leaves the ts arrays with INVALID 
           ! values, except for ts_t (so that one knows when did things break)
@@ -225,18 +215,9 @@ module dynamo
         ! Breaks loop if there are no more snapshots in the input
         if (last_output .or. p_oneSnaphotDebugMode) exit
 
-        ! Stores the half mass radius of the disk
-        r_disk_old = r_disk
 
         ! Reads in the model parameters for the next snapshot
         call set_input_params(gal_id)
-
-!         ! Extends the grid in the case of a larger disk
-!         if (r_disk_old > r_disk) then
-!
-!         endif
-
-
       end do  ! snapshots loop
       
       !Writes final simulation output
@@ -251,5 +232,6 @@ module dynamo
       call message('Finished after ', (cpu_time_finish - cpu_time_start),  &
                    gal_id= gal_id, msg_end='s  CPU time', info=1)
     end subroutine dynamo_run
+
 end module dynamo
 !*****************************************************

@@ -167,17 +167,18 @@ module global_input_parameters
   ! (this keeps the number of grid points and is equivalent to a change of
   !  units)
   logical :: p_rescale_field_for_expanding_disks=.false.
-
+  logical :: p_scale_back_f_array = .true.
   ! Reference grid size (used both initially and for storage)
   integer :: p_nx_ref=51
-  ! Maximum grid size, in the case of varying number of grid points
-  integer :: p_nx_MAX
+  ! Maximum possible grid size, in the case of varying number of grid points
+  ! (this is mostly for debugging)
+  integer :: p_nx_MAX=10000
   ! Uses a fixed dimensional grid, with r_max_kpc set using the the maximum
   ! half mass radius the galaxy reaches over the entire History
   logical :: p_use_fixed_physical_grid=.false.
   ! The maximum radius to use for computations divided by the half mass radius
   ! i.e. rmax = p_rmax_over_rdisk * rdisk
-  double precision :: p_rmax_over_rdisk = 1d0
+  double precision :: p_rmax_over_rdisk = 5d0
 
   namelist /global_pars/ &
     model_name, &
@@ -234,7 +235,8 @@ module global_input_parameters
     p_rescale_field_for_expanding_disks, &
     p_nx_ref, &
     p_nx_MAX, &
-    p_rmax_over_rdisk
+    p_rmax_over_rdisk,&
+    p_scale_back_f_array
 
 
   contains

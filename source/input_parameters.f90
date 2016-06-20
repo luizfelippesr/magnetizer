@@ -13,11 +13,12 @@ module input_params
   logical :: last_output = .false.
 
   ! Time-stepping parameters
-  integer :: n1 = -1 !Total number of snapshots (set to -1 to flag it is uninitialized)
-  integer :: init_it = -1 ! Index of the initial snapshot (set to -1 to flag it is uninitialized)
-  double precision :: tsnap !Time between successive snapshots
-  integer :: nsteps=20  !Number of timesteps in between snapshots
-  double precision :: dt,t=0,first=0.d0 !Timestep variables (lfsr: a very bad place to define them, indeed)
+  integer, protected :: n1 = -1 !Total number of snapshots (set to -1 to flag it is uninitialized)
+  integer, protected :: init_it = -1 ! Index of the initial snapshot (set to -1 to flag it is uninitialized)
+  double precision, protected :: tsnap !Time between successive snapshots
+  integer, protected :: nsteps=20  !Number of timesteps in between snapshots
+  double precision, protected :: dt ! Timestep
+  double precision :: t=0,first=0.d0 !Timestep variables (lfsr: this looks a bit dangerous..)
 
   double precision, private :: time_between_inputs=0
   
@@ -33,125 +34,143 @@ module input_params
   double precision, protected :: r_halo, v_halo, nfw_cs1
   double precision, protected :: Mstars_disk, Mgas_disk, SFR
 
-  ! All galaxy data (private!)
+  ! All galaxy data
   integer, private, parameter :: number_of_columns=11 ! Maximum umber of columns in the galaxy input files
   double precision, allocatable, dimension(:,:),private :: galaxy_data
   double precision, allocatable, dimension(:), private :: output_times
   integer, private ::  current_gal_id
 
   contains
-   subroutine set_ts_params()
-      use units
-      use messages
 
-      tsnap = time_between_inputs/t0_Gyr
-      dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
-      call message('Set_ts_params  dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
-              gal_id=current_gal_id)
-      
-    endsubroutine set_ts_params
+  subroutine set_timestep(reduce_timestep)
+    ! Sets the timestep
+    ! if reduce_timestep=False, nsteps=nsteps_0
+    ! otherwise nsteps*=2
+    use units
+    use messages
+    logical, intent(in), optional :: reduce_timestep
+    logical :: reduce_ts
 
+    if (present(reduce_timestep)) then
+      reduce_ts = reduce_timestep
+    else
+      reduce_ts = .false.
+    endif
 
-    subroutine read_input_parameters(gal_id)
-      ! Reads the input parameters file to RAM
-      use iso_fortran_env
-      use IO
-      integer, intent(in) :: gal_id
-      integer :: i
+    if (.not.reduce_ts) then
+      ! Initializes the number of steps to the global input value
+      nsteps = nsteps_0
+    else
+      nsteps = 2*nsteps
+    endif
 
-      if (.not.allocated(galaxy_data)) then
-        allocate(galaxy_data(number_of_redshifts,number_of_columns))
-        allocate(output_times(number_of_redshifts))
-        output_times = 0
-        ! Reads the output times
-        call IO_read_dataset_scalar('t', gal_id, output_times, &
-                                    nrows=number_of_redshifts)
+    tsnap = time_between_inputs/t0_Gyr
+    dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
+    call message('Set_ts_params  dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
+            gal_id=current_gal_id)
+
+  end subroutine set_timestep
+
+  subroutine read_input_parameters(gal_id)
+    ! Reads the input parameters file to RAM
+    use iso_fortran_env
+    use IO
+    integer, intent(in) :: gal_id
+    integer :: i
+
+    if (.not.allocated(galaxy_data)) then
+      allocate(galaxy_data(number_of_redshifts,number_of_columns))
+      allocate(output_times(number_of_redshifts))
+      output_times = 0
+      ! Reads the output times
+      call IO_read_dataset_scalar('t', gal_id, output_times, &
+                                  nrows=number_of_redshifts)
+    endif
+
+    ! Saves current galaxy identifier
+    current_gal_id = gal_id
+    ! Resets galaxy data array
+    galaxy_data(:,:) = -1
+
+    ! Reads time dependent parameters for this galaxy
+    call IO_read_dataset_scalar('r_disk', gal_id, galaxy_data(:,1))
+    call IO_read_dataset_scalar('v_disk', gal_id, galaxy_data(:,2))
+    call IO_read_dataset_scalar('r_bulge', gal_id, galaxy_data(:,3))
+    call IO_read_dataset_scalar('v_bulge', gal_id, galaxy_data(:,4))
+    call IO_read_dataset_scalar('r_halo', gal_id, galaxy_data(:,5))
+    call IO_read_dataset_scalar('v_halo', gal_id, galaxy_data(:,6))
+    call IO_read_dataset_scalar('nfw_cs1', gal_id, galaxy_data(:,7))
+    call IO_read_dataset_scalar('Mgas_disk', gal_id, galaxy_data(:,8))
+    call IO_read_dataset_scalar('Mstars_disk', gal_id, galaxy_data(:,9))
+    call IO_read_dataset_scalar('SFR', gal_id, galaxy_data(:,10))
+
+    ! Determines the maximum radius for this galaxy over the whole history
+    r_max_kpc_history = maxval(galaxy_data(:,1)) * p_rmax_over_rdisk
+
+    ! Sets n1, maximum number of snapshots
+    n1 = number_of_redshifts
+    ! Sets the initial valid snapshot (uses the disk size as a marker)
+    do i=1,n1
+      if (galaxy_data(i,1)>=0) then
+        init_it = i
+        exit
       endif
-
-      ! Saves current galaxy identifier
-      current_gal_id = gal_id
-      ! Resets galaxy data array
-      galaxy_data(:,:) = -1
-
-      ! Reads time dependent parameters for this galaxy
-      call IO_read_dataset_scalar('r_disk', gal_id, galaxy_data(:,1))
-      call IO_read_dataset_scalar('v_disk', gal_id, galaxy_data(:,2))
-      call IO_read_dataset_scalar('r_bulge', gal_id, galaxy_data(:,3))
-      call IO_read_dataset_scalar('v_bulge', gal_id, galaxy_data(:,4))
-      call IO_read_dataset_scalar('r_halo', gal_id, galaxy_data(:,5))
-      call IO_read_dataset_scalar('v_halo', gal_id, galaxy_data(:,6))
-      call IO_read_dataset_scalar('nfw_cs1', gal_id, galaxy_data(:,7))
-      call IO_read_dataset_scalar('Mgas_disk', gal_id, galaxy_data(:,8))
-      call IO_read_dataset_scalar('Mstars_disk', gal_id, galaxy_data(:,9))
-      call IO_read_dataset_scalar('SFR', gal_id, galaxy_data(:,10))
-
-      ! Determines the maximum radius for this galaxy over the whole history
-      r_max_kpc_history = maxval(galaxy_data(:,1)) * p_rmax_over_rdisk
-
-      ! Sets n1, maximum number of snapshots
-      n1 = number_of_redshifts
-      ! Sets the initial valid snapshot (uses the disk size as a marker)
-      do i=1,n1
-        if (galaxy_data(i,1)>=0) then
-          init_it = i
-          exit
-        endif
-      enddo
-      iread = init_it-1
-    endsubroutine read_input_parameters
+    enddo
+    iread = init_it-1
+  endsubroutine read_input_parameters
 
 
-    subroutine reset_input_params()
-      ! Resets the reading of the input parameters file
-      iread = 0
-      last_output = .false.
-    end subroutine reset_input_params
+  subroutine reset_input_params()
+    ! Resets the reading of the input parameters file
+    iread = 0
+    last_output = .false.
+  end subroutine reset_input_params
 
 
-    subroutine set_input_params(gal_id)
-      ! Reads dimensional input parameters that must be specified and may vary
-      ! from galaxy to galaxy and from timestep to timestep
-      integer, intent(in) :: gal_id
-      double precision :: next_time_input
-      double precision :: current_time_input
+  subroutine set_input_params(gal_id)
+    ! Reads dimensional input parameters that must be specified and may vary
+    ! from galaxy to galaxy and from timestep to timestep
+    integer, intent(in) :: gal_id
+    double precision :: next_time_input
+    double precision :: current_time_input
 
-      ! Reads the whole file on first access
-      if (gal_id /= current_gal_id ) then
-        call read_input_parameters(gal_id)
-      endif
+    ! Reads the whole file on first access
+    if (gal_id /= current_gal_id ) then
+      call read_input_parameters(gal_id)
+    endif
 
-      iread=iread+1
-      
-      current_time_input = output_times(iread)
+    iread=iread+1
 
-      if ( iread < number_of_redshifts ) then
-        next_time_input = output_times(iread+1)
-        time_between_inputs = next_time_input-current_time_input
-        t = 0 ! At each snapshot, reset the time variable
-      else
-        last_output = .true.
-      endif
+    current_time_input = output_times(iread)
 
-      t_Gyr   = next_time_input
-      r_disk  = galaxy_data(iread,1)
-      v_disk  = galaxy_data(iread,2)
-      r_bulge = galaxy_data(iread,3)
-      v_bulge = galaxy_data(iread,4)
-      r_halo  = galaxy_data(iread,5)
-      v_halo  = galaxy_data(iread,6)
-      nfw_cs1 = galaxy_data(iread,7)
-      Mgas_disk = galaxy_data(iread,8)
-      Mstars_disk = galaxy_data(iread,9)
-      SFR = galaxy_data(iread,10)
-      ! Temporarily setting v_sol_kms to the turbulent speed
-      v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
-      l_sol_kpc = p_ISM_turbulent_length
+    if ( iread < number_of_redshifts ) then
+      next_time_input = output_times(iread+1)
+      time_between_inputs = next_time_input-current_time_input
+      t = 0 ! At each snapshot, reset the time variable
+    else
+      last_output = .true.
+    endif
+
+    t_Gyr   = next_time_input
+    r_disk  = galaxy_data(iread,1)
+    v_disk  = galaxy_data(iread,2)
+    r_bulge = galaxy_data(iread,3)
+    v_bulge = galaxy_data(iread,4)
+    r_halo  = galaxy_data(iread,5)
+    v_halo  = galaxy_data(iread,6)
+    nfw_cs1 = galaxy_data(iread,7)
+    Mgas_disk = galaxy_data(iread,8)
+    Mstars_disk = galaxy_data(iread,9)
+    SFR = galaxy_data(iread,10)
+    ! Temporarily setting v_sol_kms to the turbulent speed
+    v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
+    l_sol_kpc = p_ISM_turbulent_length
 
 !     DIMENSIONLESS PARAMETERS THAT MUST BE SPECIFIED BUT WILL NOT NORMALLY VARY FROM GALAXY TO GALAXY
 !     DIFFUSIVE MAGNETIC HELICITY FLUX (DEFAULTS)
-      R_kappa=         1.0d0 !Ratio kappa_t/eta_t of turbulent diffusivities of alpha_m and B
+    R_kappa=         1.0d0 !Ratio kappa_t/eta_t of turbulent diffusivities of alpha_m and B
 
-    endsubroutine set_input_params
+  endsubroutine set_input_params
 end module input_params
 !*****************************************************
 module calc_params

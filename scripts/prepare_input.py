@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Contains routines which prepare galaxy input files for the magnetic field
     evolution code. """
 from read_data import read_time_data
@@ -148,25 +149,44 @@ def prepares_hdf5_input(data_dict, output_file):
 
 if __name__ == "__main__"  :
     import time
+    import argparse
 
-    model_dir = 'test'
+    parser = argparse.ArgumentParser(
+             description='Prepares and input file for the magnetizer.')
+    parser.add_argument("OUTPUT_FILE", help="Name of the output file." )
+    parser.add_argument("MODEL_DIR", help="Directory of the galform run." )
+    parser.add_argument("IVOL", help="Subvolume to be used (can be a "
+                        "comma separated lists, without spaces")
+    parser.add_argument('-n', '--number_of_galaxies', default=1e10,
+                        help='Approximate number of galaxies to extract.')
+    parser.add_argument('-BoT', "--maximum_B_over_T", default=0.5,
+                        help='Maximum bulge to total mass ratio.')
+    parser.add_argument('-ms', "--minimum_stellar_mass", default=1e7,
+                        help="Minimum disk stellar mass at z=0 (in Msun).")
+    parser.add_argument('-mg', "--minimum_gas_mass", default=1e6,
+                        help="Minimum disk gas mass at z=0 (in Msun).")
+    parser.add_argument('-Ms', "--maximum_stellar_mass", default=1e15,
+                        help="Maximum disk stellar mass at z=0 (in Msun).")
+    parser.add_argument('-r', "--minimum_disk_size", default=0.5,
+                        help="Minimum disk half mass radius at z=0 (in kpc).")
+    parser.add_argument('-z', "--max_redshift", default=5,
+                        help="Maximum redshift to use.")
 
-    model_dir = '/home/nlfsr/galform_models/GON'
+    args = parser.parse_args()
+
     start = time.time()
-    data_dict = read_time_data( model_dir,
-                                max_z = 5,
-                                maximum_final_B_over_T=0.5,
-                                minimum_final_stellar_mass=1e7,
-                                maximum_final_stellar_mass=1e15,
-                                minimum_final_gas_mass=1e6,
-                                number_of_galaxies=500,
-                                minimum_final_disk_size=5e-4,#Gpc, i.e. 0.5kpc
+    data_dict = read_time_data( args.MODEL_DIR,
+                                max_z = args.max_redshift,
+                                maximum_final_B_over_T=args.maximum_B_over_T,
+                                minimum_final_stellar_mass=args.minimum_stellar_mass,
+                                maximum_final_stellar_mass=args.maximum_stellar_mass,
+                                minimum_final_gas_mass=args.minimum_gas_mass,
+                                number_of_galaxies=args.number_of_galaxies,
+                                minimum_final_disk_size=1e-3*args.minimum_disk_size,
                                 empirical_disks=False,
-                                ivol_dir='ivol1')
+                                ivol_dir='ivol{0}'.format(args.IVOL))
     middle = time.time()
-    #odir = '../input/GON/ivol0'
-    #prepares_text_input(data_dict, odir)
-    prepares_hdf5_input(data_dict, 'example_input.hdf5')
+    prepares_hdf5_input(data_dict, args.OUTPUT_FILE)
     end = time.time()
 
     print 'read_time_data', middle-start,'s'

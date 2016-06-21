@@ -30,6 +30,9 @@ module global_input_parameters
   ! PARAMETER INPUTS
   ! Number of timesteps used in the calculation between 2 snapshots
   integer :: nsteps_0 = 180
+  double precision :: p_courant_v = 0.02
+  double precision :: p_courant_eta = 0.01
+  logical :: p_variable_timesteps = .false.
 
   ! ALPHA QUENCHING
   ! Works with alg_quench=F; Set to T for dynamical quenching (d_alpha_m/dt eqn incl in sim)
@@ -185,6 +188,9 @@ module global_input_parameters
     model_name, &
     output_file_name, input_file_name, &
     nsteps_0, &
+    p_courant_v, &
+    p_courant_eta, &
+    p_variable_timesteps, &
     info, &
     Dyn_quench, Alg_quench, &
     lFloor, &

@@ -63,9 +63,7 @@ module dynamo
         this_t = t_Gyr
 
         call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
-        ! Initializes the number of steps to the global input value
-        call set_timestep()
-        print *, r_max_kpc
+
         ! Traps the case of negligible disks
         ! (a recent major merger can convert the galaxy into an elliptical,
         !  making Mdisk=rdisk=0)
@@ -101,6 +99,9 @@ module dynamo
             endif
           endif
         endif
+
+        ! Sets the timestep
+        call set_timestep(h, v, etat)
 
         ! Backs up state at the beginning of the snapshot
         call check_allocate_f_array(f_snapshot_beginning, nvar)
@@ -180,7 +181,7 @@ module dynamo
           call message('NANs or unrealistically large magnetic fields detected, changing time step', &
                        gal_id=gal_id, info=2)
           
-          ! Double the number of timesteps
+          ! Doubles the number of timesteps
           call set_timestep(reduce_timestep=.true.)
           ! Resets the f array to the initial state in the beginning of the
           ! snapshot

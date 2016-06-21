@@ -33,6 +33,8 @@ module input_params
   double precision, protected :: r_bulge, v_bulge
   double precision, protected :: r_halo, v_halo, nfw_cs1
   double precision, protected :: Mstars_disk, Mgas_disk, SFR
+  ! other
+  double precision :: lambda
 
   ! All galaxy data
   integer, private, parameter :: number_of_columns=11 ! Maximum umber of columns in the galaxy input files
@@ -42,19 +44,36 @@ module input_params
 
   contains
 
-  subroutine set_timestep(reduce_timestep)
+  subroutine set_timestep(h,v,etat,reduce_timestep)
     ! Sets the timestep
     ! if reduce_timestep=False, nsteps=nsteps_0
     ! otherwise nsteps*=2
     use units
+    use grid
     use messages
     logical, intent(in), optional :: reduce_timestep
+    double precision, dimension(:), optional :: h,v,etat
     logical :: reduce_ts
-
     if (present(reduce_timestep)) then
       reduce_ts = reduce_timestep
     else
       reduce_ts = .false.
+    endif
+
+    tsnap = time_between_inputs/t0_Gyr
+
+    if (p_variable_timesteps) then
+      if (present(h) .and. present(v) .and. present(etat)) then
+        dt = minval([ p_courant_v * dx/lambda/maxval(v), &
+                      p_courant_eta * 0.01*minval(h)**2/maxval(etat) ])
+        nsteps = int(tsnap/dt)
+        call message('set_timestep: dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
+                    gal_id=current_gal_id)
+        return
+      else
+        call message('set_timestep: missing arguments. Falling back to fixed number of timesteps scheme.', &
+                     info=1, gal_id=current_gal_id)
+      endif
     endif
 
     if (.not.reduce_ts) then
@@ -64,9 +83,9 @@ module input_params
       nsteps = 2*nsteps
     endif
 
-    tsnap = time_between_inputs/t0_Gyr
     dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
-    call message('Set_ts_params  dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
+
+    call message('set_timestep:  dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
             gal_id=current_gal_id)
 
   end subroutine set_timestep
@@ -184,7 +203,7 @@ module calc_params
   implicit none
 !
   double precision :: etat_sol,etat_sol_kmskpc,etat_sol_cm2s,td_sol,td_sol_kpcskm,td_sol_Gyr,td_sol_s,om0_kmskpc, &
-                      Ur_sol_kms,r_sol,lambda,n_sol,r_n,h_sol,r_h,l_sol,r_l,v_sol,r_v,Uz_sol,r_Uz, &
+                      Ur_sol_kms,r_sol,n_sol,r_n,h_sol,r_h,l_sol,r_l,v_sol,r_v,Uz_sol,r_Uz, &
                       Ur_sol,om0,r_om,r1
   contains
     subroutine set_calc_params

@@ -6,10 +6,9 @@ import pylab as P
 import numpy as N
 import h5py, random
 
-P.rc( ('axes'),labelsize=8)
-P.rc( ('xtick','ytick'),labelsize=7)
-#P.rc("font",size=5)
-P.rc(("legend"),fontsize=6)
+
+units_dict = {}
+
 
 formatted_units_dict = {'microgauss':r'\mu{{\rm G}}',
               'cm^-3':r'{{\rm cm}}^{{-3}}',
@@ -88,7 +87,9 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
                                       [10**8.75,10**9.5],
                                       [10**9.5, 10**10.25],
                                       [10**10.25,10**12]
-                                    )):
+                                    ),
+                        selected_galaxies=None
+                        ):
 
     fi = h5py.File(input_filename,'r')
     if output_filename:
@@ -118,15 +119,18 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     igals = N.arange(mstars.size)
 
     # Creates a list of galaxy indices satisfying the selection criteria
-    for (m_min, m_max) in mass_bins:
-        ok  = mstars > m_min
-        ok *= mstars < m_max
-        tmp = igals[ok]
-        if tmp.size > galaxies_per_bin:
-            random.shuffle(tmp)
-            tmp = tmp[:galaxies_per_bin]
-        selected_igals = N.append(selected_igals,tmp)
-    selected_igals = selected_igals.astype(int)
+    if selected_galaxies==None:
+        for (m_min, m_max) in mass_bins:
+            ok  = mstars > m_min
+            ok *= mstars < m_max
+            tmp = igals[ok]
+            if tmp.size > galaxies_per_bin:
+                random.shuffle(tmp)
+                tmp = tmp[:galaxies_per_bin]
+            selected_igals = N.append(selected_igals,tmp)
+        selected_igals = selected_igals.astype(int)
+    else:
+        selected_igals = N.array(selected_galaxies)
 
     # The following was meant to be parallelized with parmap
     # however, multiprocessing breaks h5py!
@@ -187,6 +191,11 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
 
 
 if __name__ == "__main__"  :
+
+    P.rc( ('axes'),labelsize=8)
+    P.rc( ('xtick','ytick'),labelsize=7)
+    #P.rc("font",size=5)
+    P.rc(("legend"),fontsize=6)
     selected_quantities = [
                             'Beq',
                             'Bp',

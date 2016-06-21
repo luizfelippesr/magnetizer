@@ -38,7 +38,8 @@ if __name__ == "__main__"  :
     if quantities == None:
         quantities = Input.keys()
         quantities.remove('t')
-        quantities.remove('r_max')
+        if 'r_max' in quantities:
+          quantities.remove('r_max')
         quantities.remove('z')
     else:
         quantities = quantities.split(',')

@@ -135,9 +135,7 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     # The following was meant to be parallelized with parmap
     # however, multiprocessing breaks h5py!
     print 'Producing all figures'
-
     figures = [single_galaxy_portfolio(igal, data_dict, mstars=mstars, radius=radius) for igal in selected_igals]
-
     pdf = PdfPages(pdf_filename)
     for fig in figures:
         if not fig:
@@ -151,7 +149,7 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
 
 
 def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None):
-  if not igal:
+  if igal==None:
       return
   if mstars != None:
       info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(

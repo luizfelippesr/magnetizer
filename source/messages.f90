@@ -8,8 +8,7 @@ module messages
 
   integer :: MPI_rank = -1
   integer :: verbosity_setting = 10
-  public message, str, str2int
-
+  public message, str, str2int, str2dbl
 
   interface str
       module procedure str_int, str_dp, str_dp_n
@@ -130,7 +129,6 @@ module messages
   end function str_dp_n
 
   function str2int(str) result(i)
-    implicit none
     ! Arguments
     character(len=*),intent(in) :: str
     integer :: i
@@ -142,5 +140,18 @@ module messages
       stop
     endif
   end function str2int
+
+  function str2dbl(str) result(d)
+    ! Arguments
+    character(len=*),intent(in) :: str
+    double precision :: d
+    integer :: stat
+
+    read(str,*,iostat=stat)  d
+    if (stat /= 0) then
+      print *, 'Error: conversion of string ',str,' failed!'
+      stop
+    endif
+  end function str2dbl
 
 end module messages

@@ -16,7 +16,7 @@ OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 mpi: $(OBJ) ${builddir}/mpicalldynamo.o
 	$(FC) $^ $(FCFLAGS) -o magnetize_galform.exe
 
-# Builds serial version
+# Builds serial version (currently not working!)
 serial: $(OBJ) ${builddir}/calldynamo.o
 	$(FC_nonMPI) $^ $(FCFLAGS) -o magnetize_galform_serial.exe
 
@@ -25,8 +25,10 @@ testProfiles: pressureEquilibrium.o tests.printProfiles.o global_input_parameter
 	$(FC) $(FCFLAGS) ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe
 testInterpolation: ${builddir}/interpolation.o ${builddir}/tests.interpolation.o
 	$(FC) $(FCFLAGS) ${builddir}/interpolation.o ${builddir}/tests.interpolation.o -o testInterpolation.exe
-testRoots: root_finder.o tests.testRoots.o
+testRoots: ${builddir}/root_finder.o ${builddir}/tests.testRoots.o
 	$(FC) ${builddir}/root_finder.o ${builddir}/tests.testRoots.o $(FCFLAGS) -o testRoots.exe
+testPressureEquilibrium: ${builddir}/constants.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.pressureEquilibrium.o
+	$(FC) ${builddir}/constants.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.pressureEquilibrium.o $(FCFLAGS) -o testPressureEquilibrium.exe
 
 # All programs
 all: testRoots testProfiles mpi

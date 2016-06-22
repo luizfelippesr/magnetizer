@@ -31,10 +31,15 @@ contains
     !         B -> magnetic field array (microgauss)
     ! Output: rho_d -> density profile of the gas at the midplane (g/cm^3)
     !         h_d   -> scaleheight profile of the gas at the midplane (kpc)
+    ! Optional outputs (all as function of r)
+    !         Sigma_star_out -> The surface density profile of stars (n-array)
+    !         Sigma_d_out -> The surface density profile of diffuse gas (n-array)
+    !         Rm_out -> Molecular to atomic gas ratio profile (n-array)
+    !         all_roots -> outputs all roots from the solve (nx3-array)
+    !
     use input_constants
     use global_input_parameters
     use root_finder
-    use fgsl
     double precision, intent(in) :: rdisk, M_g, M_star
     double precision, dimension(:), intent(in) :: r, B
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d

@@ -1,14 +1,14 @@
 !*****************************************************
-program mpicalldynamo
+program magnetizer
   use mpi
   use dynamo
   use input_params
   use global_input_parameters
   use IO
   use messages
-!
+
   implicit none 
-!
+
   integer :: igal, jgal, nmygals
   integer, parameter :: master=0
   integer, allocatable, dimension(:) :: mygals
@@ -160,5 +160,4 @@ program mpicalldynamo
 
   call message('Total wall time in seconds =',tfinish-tstart, &
        master_only=.true., info=0)
-end program mpicalldynamo
-!*****************************************************
+end program magnetizer

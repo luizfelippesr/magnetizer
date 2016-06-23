@@ -85,7 +85,7 @@ module dynamo
         endif
 
         ! Constructs galaxy model for the present snapshot
-        if (it /= init_it) then
+        if (it /= init_it .and. .not.elliptical) then
           if (p_oneSnaphotDebugMode) exit
           if (p_simplified_pressure) then
             call adjust_grid(f, dfdt, r_disk)

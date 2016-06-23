@@ -8,7 +8,7 @@ def filter_dict(data_dict, ok, ignore_list=[]):
     """
     new_dict = dict()
     for key in data_dict:
-        if k not in ignore_list:
+        if key not in ignore_list:
             new_dict[key] = data_dict[key][ok]
     return new_dict
 

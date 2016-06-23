@@ -18,6 +18,7 @@ description_dictionary = {
         't':'Time since the Big Bang.',
         'SFR' : 'Star formation rate',
         'Mstars_disk':'Stelar mass of the galaxy disc',
+        'Mstars_bulge':'Stelar mass of the galaxy bulge',
         'Mgas_disk': 'Total gas mass of the galaxy disc',
         'r_disk': 'Half mass radius of the galaxy disc',
         'v_disk': 'Circular velocity at the half-mass radius of the galaxy disc',
@@ -33,6 +34,7 @@ units_dictionary = {
         't' :'Gyr',
         'SFR': 'Msun/yr',
         'Mstars_disk': 'Msun',
+        'Mstars_bulge': 'Msun',
         'Mgas_disk': 'Msun',
         'r_disk' : 'kpc',
         'v_disk' : 'km/s',
@@ -73,6 +75,7 @@ def prepares_hdf5_input(data_dict, output_file):
                'nfw_cs1',
                'Mgas_disk',
                'Mstars_disk',
+               'Mstars_bulge',
                'SFR')
 
     for i in N.argsort(ts):
@@ -103,12 +106,13 @@ def prepares_hdf5_input(data_dict, output_file):
             tmp['Mstars_disk'][j] = data_dict[t]['mstars_disk'][select][0]/h0
 
             tmp['Mgas_disk'][j] = data_dict[t]['mcold'][select][0]/h0
+            tmp['Mstars_bulge'][j] = data_dict[t]['mstars_bulge'][select][0]/h0
             # NB mstars_bulge and mcold_burst not used
 
             tmp['SFR'][j] = data_dict[t]['mstardot'][select][0]
             tmp['SFR'][j] *= 1e-9 /h0 # Msun/Gyr/h -> Msun/yr
 
-            r_disk = data_dict[t]['rdisk'][select][0]/h0
+            r_disk = data_dict[t]['rdisk'][select][0]
             r_disk *= Mpc_to_kpc/h0
 
             tmp['r_disk'][j] = r_disk

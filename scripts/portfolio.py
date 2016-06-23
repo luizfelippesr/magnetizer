@@ -114,6 +114,7 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     # Gets the disk stellar mass in the final redshift
     mstars = finput['Mstars_disk'][:,-1]
     radius = finput['r_disk'][:,-1]
+    mgas = finput['Mgas_disk'][:,-1]
 
     selected_igals = []
     igals = N.arange(mstars.size)
@@ -135,7 +136,7 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     # The following was meant to be parallelized with parmap
     # however, multiprocessing breaks h5py!
     print 'Producing all figures'
-    figures = [single_galaxy_portfolio(igal, data_dict, mstars=mstars, radius=radius) for igal in selected_igals]
+    figures = [single_galaxy_portfolio(igal, data_dict, mstars=mstars, radius=radius, mgas=mgas) for igal in selected_igals]
     pdf = PdfPages(pdf_filename)
     for fig in figures:
         if not fig:
@@ -148,16 +149,19 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
 
 
 
-def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None):
+def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None, mgas=None):
   if igal==None:
       return
   if mstars != None:
-      info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
-        N.log10(mstars[igal]))
+      #info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
+        #N.log10(mstars[igal]))
+      info = r' $-$  $M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}} = {0:.3g}$'.format(mstars[igal])
   else:
       info =''
   if radius != None:
       info += r' $-$  $r_{{\rm disk}} = {0}$'.format(radius[igal])
+  if mgas != None:
+      info += r' $-$  $M_{{\rm gas,disk}} = {0:.3g}$'.format(mgas[igal])
 
   print 'galaxy', igal
   fig = P.figure(figsize=(8.268,11.69))

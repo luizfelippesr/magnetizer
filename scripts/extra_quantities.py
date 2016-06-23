@@ -40,6 +40,9 @@ def compute_extra_quantity(qname, f):
     elif qname == 'l/h':
           return f['l'][...]/f['h'][...]
 
+    elif qname == 'h/r':
+          return f['h'][...]/f['r'][...]/1e3
+
     elif qname == 'q/(l/h)^2':
           return -f['Shear'][...]/f['Omega'][...]/(f['l'][...]/f['h'][...])**2
 

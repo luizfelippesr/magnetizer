@@ -159,16 +159,22 @@ if __name__ == "__main__"  :
                         "comma separated lists, without spaces")
     parser.add_argument('-n', '--number_of_galaxies', default=1e10,
                         help='Approximate number of galaxies to extract.')
+
     parser.add_argument('-BoT', "--maximum_B_over_T", default=0.5,
                         help='Maximum bulge to total mass ratio.')
+
     parser.add_argument('-ms', "--minimum_stellar_mass", default=1e7,
                         help="Minimum disk stellar mass at z=0 (in Msun).")
+
     parser.add_argument('-mg', "--minimum_gas_mass", default=1e6,
                         help="Minimum disk gas mass at z=0 (in Msun).")
+
     parser.add_argument('-Ms', "--maximum_stellar_mass", default=1e15,
                         help="Maximum disk stellar mass at z=0 (in Msun).")
+
     parser.add_argument('-r', "--minimum_disk_size", default=0.5,
                         help="Minimum disk half mass radius at z=0 (in kpc).")
+
     parser.add_argument('-z', "--max_redshift", default=5,
                         help="Maximum redshift to use.")
 
@@ -176,13 +182,13 @@ if __name__ == "__main__"  :
 
     start = time.time()
     data_dict = read_time_data( args.MODEL_DIR,
-                                max_z = args.max_redshift,
-                                maximum_final_B_over_T=args.maximum_B_over_T,
-                                minimum_final_stellar_mass=args.minimum_stellar_mass,
-                                maximum_final_stellar_mass=args.maximum_stellar_mass,
-                                minimum_final_gas_mass=args.minimum_gas_mass,
-                                number_of_galaxies=args.number_of_galaxies,
-                                minimum_final_disk_size=1e-3*args.minimum_disk_size,
+                                max_z = float(args.max_redshift),
+                                maximum_final_B_over_T=float(args.maximum_B_over_T),
+                                minimum_final_stellar_mass=float(args.minimum_stellar_mass),
+                                maximum_final_stellar_mass=float(args.maximum_stellar_mass),
+                                minimum_final_gas_mass=float(args.minimum_gas_mass),
+                                number_of_galaxies=int(args.number_of_galaxies),
+                                minimum_final_disk_size=1e-3*float(args.minimum_disk_size),
                                 empirical_disks=False,
                                 ivol_dir='ivol{0}'.format(args.IVOL))
     middle = time.time()

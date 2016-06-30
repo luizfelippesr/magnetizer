@@ -137,21 +137,34 @@ module grid
     shape_f = shape(f)
     nvar = shape_f(2)
 
-    if (p_scale_back_f_array) then
+    if (p_scale_back_f_array .and. nx/=p_nx_ref+2*nxghost) then
       ! Restores the grid to the default resolution
-      nx = p_nx_ref
-      ! Rescales the f_array
-      call rescale_f_array(f, nx)
-      ! Rescales the dimensional grid
-      call rescale_array_in_place(r_kpc, nx)
+      nx = p_nx_ref + 2*nxghost
+
+      ! Allocates the new dimensional grid
+      ! call move_alloc(r_kpc, tmp) ! BUG in gfortran?
+      allocate(tmp(size(r_kpc)))
+      tmp = r_kpc
+      call check_allocate(r_kpc, nx)
+      ! Rescales it avoiding the ghost zone
+      r_kpc(nxghost+1:) = rescale_array(tmp(nxghost+1:), nx-nxghost)
+      deallocate(tmp)
+      ! Updates the resolution
+      dr_kpc = r_kpc(nxghost+2)-r_kpc(nxghost+1)
+      ! Reconstrucs the ghost zone
+      do i=nxghost,0,-1
+        r_kpc(i) = r_kpc(i+1)-dr_kpc
+      enddo
+
+      ! Rescales the f_array (avoiding the ghost zone)
+      call rescale_f_array(f, nx, nxghost)
+
       ! Rescales the dimensionless grid
       call check_allocate(x, nx)
       x = r_kpc/r_max_kpc
       nullify(r); r => x
       ! Adjusts the shape of dfdt
       call check_allocate_f_array(dfdt, nx)
-      ! Updates the resolution
-      dr_kpc = r_kpc(2)-r_kpc(1)
     endif
 
     ! Saves previous state and computes targed r_max_kpc
@@ -200,12 +213,15 @@ module grid
 
         ! Adjusts the shape of the grid itself to the new nx:
         ! - First makes a copy of the dimensional grid
-        call move_alloc(r_kpc, tmp)
+        ! call move_alloc(r_kpc, tmp2) -- BUG in gfortran?
+        allocate(tmp(size(r_kpc)))
+        tmp = r_kpc
         ! - Allocates the new dimensional grid
         call check_allocate(r_kpc, nv=nx_new)
         ! - Adds previous grid data
         r_kpc(:nx)=tmp
         deallocate(tmp)
+
         ! - Extends the grid
         do i=nx,nx_new
           r_kpc(i) = r_kpc(i-1)+dr_kpc
@@ -213,12 +229,16 @@ module grid
         ! - Adjusts and sets the dimensionless grid
         call check_allocate(x, nv=nx_new)
         x = r_kpc/r_max_kpc
+
         nullify(r); r => x
         ! - Updates dx
         dx = x(2)-x(1)
-
         ! Prepares allocates new f-array
-        call move_alloc(f, ftmp)
+        ! call move_alloc(f, ftmp) ! Move alloc seems to have a bug!
+        allocate(ftmp(nx,nvar))
+        ftmp = f
+        deallocate(f)
+        !------------
         allocate(f(nx_new,nvar))
         ! Moves the content from the previous to the new f-array (avoiding the
         ! boundary)

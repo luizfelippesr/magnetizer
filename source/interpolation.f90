@@ -86,26 +86,12 @@ module interpolation
 
   end function
 
-  subroutine rescale_array_in_place(y, n)
-    ! Interpolates the n-array into the f_rescaled array
-    double precision, dimension(:), allocatable, intent(inout) :: y
-    double precision, dimension(:), allocatable :: ytmp
-    integer, intent(in) :: n
-    ! Backups the array contents
-    call move_alloc(y,ytmp)
-    ! Allocates the new array
-    allocate(y(n))
-    ! Interpolates
-    y = rescale_array(ytmp, n)
-  end subroutine rescale_array_in_place
 
-
-
-  subroutine rescale_f_array(f, n)
+  subroutine rescale_f_array(f, n, nghost)
     ! Interpolates the f-array into the f_rescaled array
     double precision, dimension(:,:), allocatable, intent(inout) :: f
     double precision, dimension(:,:), allocatable :: ftmp
-    integer, intent(in) :: n
+    integer, intent(in) :: n, nghost
 
     integer, dimension(2) :: shape_f
     integer :: nvar, nx, i
@@ -118,7 +104,11 @@ module interpolation
     allocate(f(n,nvar))
 
     do i=1,nvar
-      f(:,i) = rescale_array(ftmp(:,i), n)
+      ! Rescales, avoiding the ghost zone
+!       print *, shape(ftmp(nghost+1:,i)), n-nghost
+!       print *, shape(f(nghost+1:,i))
+!       stop
+      f(nghost+1:,i) = rescale_array(ftmp(nghost+1:,i), n-nghost)
     enddo
 
   end subroutine rescale_f_array

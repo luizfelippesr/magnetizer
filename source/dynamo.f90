@@ -27,7 +27,7 @@ module dynamo
       logical, intent(in) :: test_run
       logical :: ok, able_to_construct_profiles, elliptical
       integer :: fail_count, rank_actual
-      integer, parameter :: MAX_FAILS=3
+      integer, parameter :: MAX_FAILS=10
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
 
@@ -89,12 +89,14 @@ module dynamo
           if (p_oneSnaphotDebugMode) exit
           if (p_simplified_pressure) then
             call adjust_grid(f, dfdt, r_disk)
+            ! Impose boundary conditions
+            call impose_bc(f)
             able_to_construct_profiles = construct_profiles()
             ! If unable to construct the profiles, write output and exit loop
             if (.not. able_to_construct_profiles) then
               last_output = .true.
-              call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
-                                  alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+!               call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
+!                                   alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               exit
             endif
           endif
@@ -144,14 +146,15 @@ module dynamo
               able_to_construct_profiles = construct_profiles(sqrt(Btmp))
               ! If not able to construct profiles, flags and exit the loop
               if (.not.able_to_construct_profiles) then
-                call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau, &
-                                    alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+!                 call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau, &
+!                                     alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
                 ok = .false.
                 exit
               endif
             endif
             ! Runs Runge-Kutta time-stepping routine
             call rk(f, dfdt)
+
             ! Impose boundary conditions
             call impose_bc(f)
             ! If the magnetic field blows up, flags and exits the loop
@@ -203,7 +206,8 @@ module dynamo
           ! values, except for ts_t (so that one knows when did things break)
           if (.not.p_oneSnaphotDebugMode) &
             call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
-                             alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run=.true.)
+                             alp,Uz,Ur,n,Beq,rmax,delta_r)
+          last_output = .true.
           ! Resets the f array and adds a seed field 
           dfdt = 0.0
           f = 0.0

@@ -71,37 +71,39 @@ contains
 
     if (present(invalid_run)) then
       call message('INVALID RUN', info=2)
+      stop
       if (invalid_run) return
     endif
 
     ts_Dt(it) = t*t0_Gyr
     ts_rmax(it) = rmax
     ts_delta_r(it) = delta_r
-    ts_Br(it,:) = rescale_array(f(:,1), p_nx_ref)
-    ts_Bp(it,:) = rescale_array(f(:,2), p_nx_ref)
 
-    if (Dyn_quench) then   
+    ts_Br(it,:) = rescale_array(f(nxghost+1:nx-nxghost,1), p_nx_ref)
+    ts_Bp(it,:) = rescale_array(f(nxghost+1:nx-nxghost,2), p_nx_ref)
+
+    if (Dyn_quench) then
       if (.not.Damp) then
-        ts_alp_m(it,:) = rescale_array(f(:,3), p_nx_ref)
+        ts_alp_m(it,:) = rescale_array(f(nxghost+1:nx-nxghost,3), p_nx_ref)
       else
-        ts_alp_m(it,:) = rescale_array(f(:,7), p_nx_ref)
+        ts_alp_m(it,:) = rescale_array(f(nxghost+1:nx-nxghost,7), p_nx_ref)
       endif
     endif
-    ts_h(it,:) = rescale_array(h(:), p_nx_ref)
-    ts_om(it,:) = rescale_array(om(:), p_nx_ref)
-    ts_G(it,:) = rescale_array(G(:), p_nx_ref)
-    ts_l(it,:) = rescale_array(l(:), p_nx_ref)
-    ts_v(it,:) = rescale_array(v(:), p_nx_ref)
-    ts_etat(it,:) = rescale_array(etat(:), p_nx_ref)
-    ts_tau(it,:) = rescale_array(tau(:), p_nx_ref)
-    ts_alp_k(it,:) = rescale_array(alp_k(:), p_nx_ref)
-    ts_alp(it,:) = rescale_array(alp(:), p_nx_ref)
-    ts_Uz(it,:) = rescale_array(Uz(:), p_nx_ref)
-    ts_Ur(it,:) = rescale_array(Ur(:), p_nx_ref)
-    ts_n(it,:) =  rescale_array(n(:), p_nx_ref)
-    ts_Beq(it,:) = rescale_array(Beq(:), p_nx_ref)
-    ts_Bzmod(it,:) = rescale_array(Bzmod(:), p_nx_ref)
-    ts_rkpc(it,:) = rescale_array(r_kpc(:), p_nx_ref)
+    ts_h(it,:) = rescale_array(h(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_om(it,:) = rescale_array(om(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_G(it,:) = rescale_array(G(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_l(it,:) = rescale_array(l(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_v(it,:) = rescale_array(v(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_etat(it,:) = rescale_array(etat(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_tau(it,:) = rescale_array(tau(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_alp_k(it,:) = rescale_array(alp_k(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_alp(it,:) = rescale_array(alp(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_Uz(it,:) = rescale_array(Uz(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_Ur(it,:) = rescale_array(Ur(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_n(it,:) =  rescale_array(n(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_Beq(it,:) = rescale_array(Beq(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_Bzmod(it,:) = rescale_array(Bzmod(nxghost+1:nx-nxghost), p_nx_ref)
+    ts_rkpc(it,:) = rescale_array(r_kpc(nxghost+1:nx-nxghost), p_nx_ref)
   end subroutine make_ts_arrays
   
   subroutine allocate_ts_arrays()
@@ -122,24 +124,24 @@ contains
     allocate(ts_Dt(max_outputs))
     allocate(ts_rmax(max_outputs))
     allocate(ts_delta_r(max_outputs))
-    allocate(ts_Br(max_outputs,nx))
-    allocate(ts_Bp(max_outputs,nx))
-    allocate(ts_alp_m(max_outputs,nx))
-    allocate(ts_h(max_outputs,nx))
-    allocate(ts_om(max_outputs,nx))
-    allocate(ts_G(max_outputs,nx))
-    allocate(ts_l(max_outputs,nx))
-    allocate(ts_v(max_outputs,nx))
-    allocate(ts_etat(max_outputs,nx))
-    allocate(ts_tau(max_outputs,nx))
-    allocate(ts_alp_k(max_outputs,nx))
-    allocate(ts_alp(max_outputs,nx))
-    allocate(ts_Uz(max_outputs,nx))
-    allocate(ts_Ur(max_outputs,nx))
-    allocate(ts_n(max_outputs,nx))
-    allocate(ts_Beq(max_outputs,nx))
-    allocate(ts_Bzmod(max_outputs,nx))
-    allocate(ts_rkpc(max_outputs,nx))
+    allocate(ts_Br(max_outputs,nx-2*nxghost))
+    allocate(ts_Bp(max_outputs,nx-2*nxghost))
+    allocate(ts_alp_m(max_outputs,nx-2*nxghost))
+    allocate(ts_h(max_outputs,nx-2*nxghost))
+    allocate(ts_om(max_outputs,nx-2*nxghost))
+    allocate(ts_G(max_outputs,nx-2*nxghost))
+    allocate(ts_l(max_outputs,nx-2*nxghost))
+    allocate(ts_v(max_outputs,nx-2*nxghost))
+    allocate(ts_etat(max_outputs,nx-2*nxghost))
+    allocate(ts_tau(max_outputs,nx-2*nxghost))
+    allocate(ts_alp_k(max_outputs,nx-2*nxghost))
+    allocate(ts_alp(max_outputs,nx-2*nxghost))
+    allocate(ts_Uz(max_outputs,nx-2*nxghost))
+    allocate(ts_Ur(max_outputs,nx-2*nxghost))
+    allocate(ts_n(max_outputs,nx-2*nxghost))
+    allocate(ts_Beq(max_outputs,nx-2*nxghost))
+    allocate(ts_Bzmod(max_outputs,nx-2*nxghost))
+    allocate(ts_rkpc(max_outputs,nx-2*nxghost))
 
     ts_t_Gyr = INVALID
     ts_Dt = INVALID

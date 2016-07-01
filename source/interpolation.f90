@@ -17,7 +17,7 @@ module interpolation
     use FGSL
     real(fgsl_double), dimension(:), intent(in) :: x, y
     real(fgsl_double), dimension(:), intent(in) :: xi
-    real(fgsl_double), dimension(size(xi)), intent(out) :: yi
+    real(fgsl_double), dimension(:), intent(inout) :: yi
     character(len=*), intent(in), optional :: method
     integer(fgsl_size_t) :: n, i
     integer(fgsl_int) :: status
@@ -55,52 +55,11 @@ module interpolation
     call fgsl_interp_accel_free (acc)
   end subroutine interpolate
 
-  function rescale_array_old(y, n_new, method) result(y_new)
-    ! Interpolates the n-array y into an n_new array, with the same endpoints
-    double precision, dimension(:), intent(in) :: y
-    double precision, dimension(size(y)) :: x
-    integer, intent(in) :: n_new
-    character(len=*), intent(in), optional :: method
-    character(len=1000) :: method_actual
-    integer :: n, i
-    double precision, dimension(n_new) :: y_new
-    double precision, dimension(n_new) :: x_new
-    n = size(y)
-    ! If the old and new grid sizes are the same, do nothing
-    if (n==n_new) then
-      y_new = y
-      return
-    endif
-
-    print *, 'oi', n, n_new
-
-    if (.not.present(method)) then
-      method_actual = 'polynomial'
-    else
-      method_actual = method
-    endif
-
-    ! Generates x, and x_new
-    ! I.e two 0 to 1 uniform arrays, with the correct number of points
-    x_new = 0.0d0
-    x = 0.0d0
-    do i=1, n
-      x(i) = dble(i-1)/dble(n-1)
-    enddo
-    do i=1, n_new
-      x_new(i) = dble(i-1)/dble(n_new-1)
-    enddo
-
-    ! Calls the interpolation routine
-    call interpolate(x, y, x_new, y_new, method=trim(method_actual))
-
-  end function rescale_array_old
-
 
   subroutine rescale_array(y, y_new, method)
     ! Interpolates the n-array y into an n_new array, with the same endpoints
     double precision, dimension(:), intent(in) :: y
-    double precision, dimension(:), intent(out) :: y_new
+    double precision, dimension(:), intent(inout) :: y_new
     double precision, dimension(size(y)) :: x
     double precision, dimension(size(y_new)) :: x_new
     character(len=*), intent(in), optional :: method

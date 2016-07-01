@@ -323,12 +323,13 @@ module timestep  !Contains time-stepping routine
   use equ
 !
 contains
-  subroutine rk(f,dfdt)
+  subroutine rk(f)
 !
   implicit none
 !
   double precision :: gam1, gam2, gam3, zet1, zet2
-  double precision, dimension(nx,nvar), intent(inout) :: f, dfdt
+  double precision, dimension(nx,nvar), intent(inout) :: f
+  double precision, dimension(nx,nvar) :: dfdt
   double precision, dimension(nx,nvar) :: pdef, ftmp
   double precision :: ttmp
 !

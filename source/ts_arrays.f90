@@ -64,17 +64,14 @@ contains
     double precision, dimension(:), intent(in) :: n
     double precision, dimension(:), intent(in) :: Beq
     logical, optional, intent(in) :: invalid_run
-    real :: okok =0
+
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
 
     ts_t_Gyr(it) = this_t
 
     if (present(invalid_run)) then
-      print *, invalid_run
-      stop
       call message('INVALID RUN', info=2)
-      print *, 17d0/okok
       stop
       if (invalid_run) return
     endif

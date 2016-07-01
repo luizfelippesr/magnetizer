@@ -114,14 +114,14 @@ module grid
     return
   end subroutine check_allocate_f_array
 
-  subroutine adjust_grid(f, dfdt, r_disk)
+  subroutine adjust_grid(f, r_disk)
     ! Rescales the grid acording to the global input parameters
     ! The grid can be extended, keeping the resolution dr_kpc or the grid
     ! can be kept, and the r_kpc changed to accomodate the new disk size.
     ! The f-array is updated accordingly.
     use messages
     use interpolation
-    double precision, dimension(:,:), allocatable, intent(inout) :: f, dfdt
+    double precision, dimension(:,:), allocatable, intent(inout) :: f
     double precision, intent(in) :: r_disk
     double precision, dimension(:), allocatable :: tmp
     double precision, dimension(:,:), allocatable :: ftmp
@@ -146,25 +146,6 @@ module grid
       ! call move_alloc(r_kpc, tmp) ! BUG in gfortran?
       allocate(tmp(size(r_kpc)))
       tmp = r_kpc
-
-
-
-
-
-!       print *, 'tmp', shape(tmp),nxghost+1
-!       deallocate(r_kpc)
-!       print *, 'is allocated rkpc? ', allocated(r_kpc)
-!       nx = 150
-!       allocate(r_kpc(nx))
-!       r_kpc(0) = 17
-!       print *, 'works ok', nx
-!       stop
-!       print *, 'r_kpc', shape(r_kpc),nxghost+1
-!
-
-
-
-
       call check_allocate(r_kpc, nx)
       ! Rescales it avoiding the ghost zone
       call rescale_array(tmp(nxghost+1:), r_kpc(nxghost+1:))
@@ -183,8 +164,6 @@ module grid
       call check_allocate(x, nx)
       x = r_kpc/r_max_kpc
       nullify(r); r => x
-      ! Adjusts the shape of dfdt
-      call check_allocate_f_array(dfdt, nx)
     endif
 
     ! Saves previous state and computes targed r_max_kpc
@@ -269,9 +248,6 @@ module grid
           f(i,:) = ftmp(nx-nxghost-1,:) * r_kpc(nx-nxghost-1)/r_kpc(i)
         enddo
         deallocate(ftmp)
-
-        ! Checks the allocation of the dfdt array
-        call check_allocate_f_array(dfdt, nx_new)
 
         ! Saves the new number of grid points
         nx = nx_new

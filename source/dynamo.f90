@@ -13,9 +13,8 @@ module dynamo
   
   integer :: it=0, jt=0
   double precision :: cpu_time_start, cpu_time_finish
-  double precision, allocatable, dimension(:,:) :: f, dfdt
+  double precision, allocatable, dimension(:,:) :: f
   double precision, allocatable, dimension(:,:) :: f_snapshot_beginning
-  double precision, allocatable, dimension(:,:) :: dfdt_snapshot_beginning
 
   public dynamo_run
 
@@ -27,7 +26,7 @@ module dynamo
       logical, intent(in) :: test_run
       logical :: ok, able_to_construct_profiles, elliptical
       integer :: fail_count, rank_actual
-      integer, parameter :: MAX_FAILS=10
+      integer, parameter :: MAX_FAILS=4
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
 
@@ -48,7 +47,6 @@ module dynamo
       call construct_grid(r_disk, r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
       call check_allocate_f_array(f, nvar)
-      call check_allocate_f_array(dfdt, nvar)
       ! Sets other necessary parameters
       call set_calc_params
       ! Constructs galaxy model for the initial snapshot
@@ -70,7 +68,6 @@ module dynamo
         if (r_disk < p_rdisk_min .or.  Mgas_disk < Mgas_disk_min) then
             elliptical = .true.
             ! Resets the f array and adds a seed field
-            dfdt = 0.0
             f = 0.0
             call init_seed(f)
         else
@@ -88,7 +85,7 @@ module dynamo
         if (it /= init_it .and. .not.elliptical) then
           if (p_oneSnaphotDebugMode) exit
           if (p_simplified_pressure) then
-            call adjust_grid(f, dfdt, r_disk)
+            call adjust_grid(f, r_disk)
             ! Impose boundary conditions
             call impose_bc(f)
             able_to_construct_profiles = construct_profiles()
@@ -108,8 +105,6 @@ module dynamo
         ! Backs up state at the beginning of the snapshot
         call check_allocate_f_array(f_snapshot_beginning, nvar)
         f_snapshot_beginning = f
-        call check_allocate_f_array(dfdt_snapshot_beginning, nvar)
-        dfdt_snapshot_beginning = dfdt
 
         ! Will try to solve the equations a few times, with different
         ! timestep choices, if there is no success, aborts.
@@ -153,12 +148,12 @@ module dynamo
               endif
             endif
             ! Runs Runge-Kutta time-stepping routine
-            call rk(f, dfdt)
+            call rk(f)
 
             ! Impose boundary conditions
             call impose_bc(f)
             ! If the magnetic field blows up, flags and exits the loop
-            if (isnan(f(nxghost+1+nxphys/2,1)) .or. maxval(f)>1.d10) then
+            if (maxval(f)>1.d7) then
               ok = .false.
               ! Stores the bogus profiles
               ! NB the magnetic field info is out of date
@@ -189,7 +184,6 @@ module dynamo
           ! Resets the f array to the initial state in the beginning of the
           ! snapshot
           f = f_snapshot_beginning
-          dfdt = dfdt_snapshot_beginning
         end do ! try or fail loop
 
         if (ok) then
@@ -206,10 +200,9 @@ module dynamo
           ! values, except for ts_t (so that one knows when did things break)
           if (.not.p_oneSnaphotDebugMode) &
             call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
-                             alp,Uz,Ur,n,Beq,rmax,delta_r)
+                             alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run=.true.)
           last_output = .true.
           ! Resets the f array and adds a seed field 
-          dfdt = 0.0
           f = 0.0
           call init_seed(f)
           ! Calculates |Bz|

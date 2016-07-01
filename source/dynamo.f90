@@ -199,7 +199,7 @@ module dynamo
           call estimate_Bzmod(f)
 
           ! Stores simulation output in arrays containing the time series
-          call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,&
+          call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
                               alp,Uz,Ur,n,Beq,rmax,delta_r)
         else
           ! If the run was unsuccessful, leaves the ts arrays with INVALID 

@@ -26,24 +26,25 @@ program testInterpolation
         0.28812186,  0.31973156,  0.32330388,  0.29723662,  0.24299389, &
         0.16493829,  0.06987072, -0.03366414, -0.13622948, -0.22841741, &
         -0.3017493,  -0.3494712,  -0.36717296, -0.35317848, -0.30867717]
-  y_new = rescale_array(y,size(y_new))
+  call rescale_array(y,y_new)
 
-  print *, '#----------'
 
   do i=1,size(y_new)
     print *, y_new(i)
   enddo
 
+  print *, '#----------'
   allocate(f(30,4))
   do i=1,3
     f(:,i) = y
   enddo
+  print *, y
 
   print *, '#----------'
   print *, shape(f)
-  call rescale_f_array(f,3)
+  call rescale_f_array(f,10,2)
   print *, shape(f)
-  do i=1,3
+  do i=1,10
     print *, f(i,2)
   enddo
 

@@ -55,20 +55,29 @@ module interpolation
     call fgsl_interp_accel_free (acc)
   end subroutine interpolate
 
-  function rescale_array(y, n_new) result(y_new)
+  function rescale_array_old(y, n_new, method) result(y_new)
     ! Interpolates the n-array y into an n_new array, with the same endpoints
     double precision, dimension(:), intent(in) :: y
     double precision, dimension(size(y)) :: x
     integer, intent(in) :: n_new
+    character(len=*), intent(in), optional :: method
+    character(len=1000) :: method_actual
     integer :: n, i
     double precision, dimension(n_new) :: y_new
     double precision, dimension(n_new) :: x_new
-
     n = size(y)
     ! If the old and new grid sizes are the same, do nothing
     if (n==n_new) then
       y_new = y
       return
+    endif
+
+    print *, 'oi', n, n_new
+
+    if (.not.present(method)) then
+      method_actual = 'polynomial'
+    else
+      method_actual = method
     endif
 
     ! Generates x, and x_new
@@ -81,18 +90,60 @@ module interpolation
     do i=1, n_new
       x_new(i) = dble(i-1)/dble(n_new-1)
     enddo
+
     ! Calls the interpolation routine
-    call interpolate(x, y, x_new, y_new)
+    call interpolate(x, y, x_new, y_new, method=trim(method_actual))
 
-  end function
+  end function rescale_array_old
 
 
-  subroutine rescale_f_array(f, n, nghost)
+  subroutine rescale_array(y, y_new, method)
+    ! Interpolates the n-array y into an n_new array, with the same endpoints
+    double precision, dimension(:), intent(in) :: y
+    double precision, dimension(:), intent(out) :: y_new
+    double precision, dimension(size(y)) :: x
+    double precision, dimension(size(y_new)) :: x_new
+    character(len=*), intent(in), optional :: method
+    character(len=100) :: method_actual
+    integer :: n, n_new, i
+    n = size(y)
+    n_new = size(y_new)
+
+    ! If the old and new grid sizes are the same, do nothing
+    if (n==n_new) then
+      y_new = y
+      return
+    endif
+
+    if (.not.present(method)) then
+      method_actual = 'linear'
+    else
+      method_actual = method
+    endif
+
+    ! Generates x, and x_new
+    ! I.e two 0 to 1 uniform arrays, with the correct number of points
+    x_new = 0.0d0
+    x = 0.0d0
+    do i=1, n
+      x(i) = dble(i-1)/dble(n-1)
+    enddo
+    do i=1, n_new
+      x_new(i) = dble(i-1)/dble(n_new-1)
+    enddo
+
+    ! Calls the interpolation routine
+    call interpolate(x, y, x_new, y_new, method=trim(method_actual))
+
+  end subroutine rescale_array
+
+
+  subroutine rescale_f_array(f, nx_new, nghost)
     ! Interpolates the f-array into the f_rescaled array
+    ! NB the ghost zone of the new f-array has to be corrected afterwards
     double precision, dimension(:,:), allocatable, intent(inout) :: f
-    double precision, dimension(:,:), allocatable :: ftmp
-    integer, intent(in) :: n, nghost
-
+    double precision, dimension(:,:), allocatable :: f_old
+    integer, intent(in) :: nx_new, nghost
     integer, dimension(2) :: shape_f
     integer :: nvar, nx, i
 
@@ -100,15 +151,19 @@ module interpolation
     nx   = shape_f(1)
     nvar = shape_f(2)
 
-    call move_alloc(f,ftmp)
-    allocate(f(n,nvar))
+    ! Copies f -> tmp
+    ! move_alloc avoids copying data unnecessarily however
+    ! there seems to be a fortran bug... which is very sad
+    !call move_alloc(f,f_old)
+    allocate(f_old(nx, nvar))
+    f_old = f
+    ! Allocates new f-array
+    deallocate(f)
+    allocate(f(nx_new,nvar))
 
     do i=1,nvar
       ! Rescales, avoiding the ghost zone
-!       print *, shape(ftmp(nghost+1:,i)), n-nghost
-!       print *, shape(f(nghost+1:,i))
-!       stop
-      f(nghost+1:,i) = rescale_array(ftmp(nghost+1:,i), n-nghost)
+      call rescale_array(f_old(nghost+1:,i), f(nghost+1:,i))
     enddo
 
   end subroutine rescale_f_array

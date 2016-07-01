@@ -36,7 +36,8 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, allocatable, dimension(:,:),public :: ts_rkpc
 
 contains
-  subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run)
+  subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau, &
+                            alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
     ! N.B. If the grid was extended (i.e. if the galaxy grew in this snapshot)
@@ -63,14 +64,17 @@ contains
     double precision, dimension(:), intent(in) :: n
     double precision, dimension(:), intent(in) :: Beq
     logical, optional, intent(in) :: invalid_run
-    
+    real :: okok =0
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
 
     ts_t_Gyr(it) = this_t
 
     if (present(invalid_run)) then
+      print *, invalid_run
+      stop
       call message('INVALID RUN', info=2)
+      print *, 17d0/okok
       stop
       if (invalid_run) return
     endif
@@ -79,31 +83,31 @@ contains
     ts_rmax(it) = rmax
     ts_delta_r(it) = delta_r
 
-    ts_Br(it,:) = rescale_array(f(nxghost+1:nx-nxghost,1), p_nx_ref)
-    ts_Bp(it,:) = rescale_array(f(nxghost+1:nx-nxghost,2), p_nx_ref)
+    call rescale_array(f(nxghost+1:nx-nxghost,1), ts_Br(it,:))
+    call rescale_array(f(nxghost+1:nx-nxghost,2), ts_Bp(it,:))
 
     if (Dyn_quench) then
       if (.not.Damp) then
-        ts_alp_m(it,:) = rescale_array(f(nxghost+1:nx-nxghost,3), p_nx_ref)
+        call rescale_array(f(nxghost+1:nx-nxghost,3), ts_alp_m(it,:))
       else
-        ts_alp_m(it,:) = rescale_array(f(nxghost+1:nx-nxghost,7), p_nx_ref)
+        call rescale_array(f(nxghost+1:nx-nxghost,7), ts_alp_m(it,:))
       endif
     endif
-    ts_h(it,:) = rescale_array(h(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_om(it,:) = rescale_array(om(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_G(it,:) = rescale_array(G(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_l(it,:) = rescale_array(l(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_v(it,:) = rescale_array(v(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_etat(it,:) = rescale_array(etat(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_tau(it,:) = rescale_array(tau(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_alp_k(it,:) = rescale_array(alp_k(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_alp(it,:) = rescale_array(alp(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_Uz(it,:) = rescale_array(Uz(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_Ur(it,:) = rescale_array(Ur(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_n(it,:) =  rescale_array(n(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_Beq(it,:) = rescale_array(Beq(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_Bzmod(it,:) = rescale_array(Bzmod(nxghost+1:nx-nxghost), p_nx_ref)
-    ts_rkpc(it,:) = rescale_array(r_kpc(nxghost+1:nx-nxghost), p_nx_ref)
+    call rescale_array(h(nxghost+1:nx-nxghost), ts_h(it,:))
+    call rescale_array(om(nxghost+1:nx-nxghost), ts_om(it,:))
+    call rescale_array(G(nxghost+1:nx-nxghost), ts_G(it,:))
+    call rescale_array(l(nxghost+1:nx-nxghost), ts_l(it,:))
+    call rescale_array(v(nxghost+1:nx-nxghost), ts_v(it,:))
+    call rescale_array(etat(nxghost+1:nx-nxghost), ts_etat(it,:))
+    call rescale_array(tau(nxghost+1:nx-nxghost), ts_tau(it,:))
+    call rescale_array(alp_k(nxghost+1:nx-nxghost), ts_alp_k(it,:))
+    call rescale_array(alp(nxghost+1:nx-nxghost), ts_alp(it,:))
+    call rescale_array(Uz(nxghost+1:nx-nxghost), ts_Uz(it,:))
+    call rescale_array(Ur(nxghost+1:nx-nxghost), ts_Ur(it,:))
+    call rescale_array(n(nxghost+1:nx-nxghost), ts_n(it,:))
+    call rescale_array(Beq(nxghost+1:nx-nxghost), ts_Beq(it,:))
+    call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
+    call rescale_array(r_kpc(nxghost+1:nx-nxghost), ts_rkpc(it,:))
   end subroutine make_ts_arrays
   
   subroutine allocate_ts_arrays()
@@ -121,49 +125,48 @@ contains
     endif
 
     allocate(ts_t_Gyr(max_outputs))
-    allocate(ts_Dt(max_outputs))
-    allocate(ts_rmax(max_outputs))
-    allocate(ts_delta_r(max_outputs))
-    allocate(ts_Br(max_outputs,nx-2*nxghost))
-    allocate(ts_Bp(max_outputs,nx-2*nxghost))
-    allocate(ts_alp_m(max_outputs,nx-2*nxghost))
-    allocate(ts_h(max_outputs,nx-2*nxghost))
-    allocate(ts_om(max_outputs,nx-2*nxghost))
-    allocate(ts_G(max_outputs,nx-2*nxghost))
-    allocate(ts_l(max_outputs,nx-2*nxghost))
-    allocate(ts_v(max_outputs,nx-2*nxghost))
-    allocate(ts_etat(max_outputs,nx-2*nxghost))
-    allocate(ts_tau(max_outputs,nx-2*nxghost))
-    allocate(ts_alp_k(max_outputs,nx-2*nxghost))
-    allocate(ts_alp(max_outputs,nx-2*nxghost))
-    allocate(ts_Uz(max_outputs,nx-2*nxghost))
-    allocate(ts_Ur(max_outputs,nx-2*nxghost))
-    allocate(ts_n(max_outputs,nx-2*nxghost))
-    allocate(ts_Beq(max_outputs,nx-2*nxghost))
-    allocate(ts_Bzmod(max_outputs,nx-2*nxghost))
-    allocate(ts_rkpc(max_outputs,nx-2*nxghost))
-
     ts_t_Gyr = INVALID
+    allocate(ts_Dt(max_outputs))
     ts_Dt = INVALID
+    allocate(ts_rmax(max_outputs))
     ts_rmax = INVALID
+    allocate(ts_delta_r(max_outputs))
     ts_delta_r = INVALID
+    allocate(ts_Br(max_outputs,p_nx_ref))
     ts_Br = INVALID
+    allocate(ts_Bp(max_outputs,p_nx_ref))
     ts_Bp = INVALID
+    allocate(ts_alp_m(max_outputs,p_nx_ref))
     ts_alp_m = INVALID
-    ts_Bzmod = INVALID
+    allocate(ts_h(max_outputs,p_nx_ref))
     ts_h = INVALID
+    allocate(ts_om(max_outputs,p_nx_ref))
     ts_om = INVALID
+    allocate(ts_G(max_outputs,p_nx_ref))
     ts_G = INVALID
+    allocate(ts_l(max_outputs,p_nx_ref))
     ts_l = INVALID
+    allocate(ts_v(max_outputs,p_nx_ref))
     ts_v = INVALID
+    allocate(ts_etat(max_outputs,p_nx_ref))
     ts_etat = INVALID
+    allocate(ts_tau(max_outputs,p_nx_ref))
     ts_tau = INVALID
+    allocate(ts_alp_k(max_outputs,p_nx_ref))
     ts_alp_k = INVALID
+    allocate(ts_alp(max_outputs,p_nx_ref))
     ts_alp = INVALID
+    allocate(ts_Uz(max_outputs,p_nx_ref))
     ts_Uz = INVALID
+    allocate(ts_Ur(max_outputs,p_nx_ref))
     ts_Ur = INVALID
+    allocate(ts_n(max_outputs,p_nx_ref))
     ts_n = INVALID
+    allocate(ts_Beq(max_outputs,p_nx_ref))
     ts_Beq = INVALID
+    allocate(ts_Bzmod(max_outputs,p_nx_ref))
+    ts_Bzmod = INVALID
+    allocate(ts_rkpc(max_outputs,p_nx_ref))
     ts_rkpc = INVALID
 
   end subroutine allocate_ts_arrays

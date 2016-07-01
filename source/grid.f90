@@ -84,6 +84,7 @@ module grid
         deallocate(v)
       endif
     endif
+
     ! Allocates v with the correct shape
     allocate(v(nv_actual))
     return
@@ -145,9 +146,28 @@ module grid
       ! call move_alloc(r_kpc, tmp) ! BUG in gfortran?
       allocate(tmp(size(r_kpc)))
       tmp = r_kpc
+
+
+
+
+
+!       print *, 'tmp', shape(tmp),nxghost+1
+!       deallocate(r_kpc)
+!       print *, 'is allocated rkpc? ', allocated(r_kpc)
+!       nx = 150
+!       allocate(r_kpc(nx))
+!       r_kpc(0) = 17
+!       print *, 'works ok', nx
+!       stop
+!       print *, 'r_kpc', shape(r_kpc),nxghost+1
+!
+
+
+
+
       call check_allocate(r_kpc, nx)
       ! Rescales it avoiding the ghost zone
-      r_kpc(nxghost+1:) = rescale_array(tmp(nxghost+1:), nx-nxghost)
+      call rescale_array(tmp(nxghost+1:), r_kpc(nxghost+1:))
       deallocate(tmp)
       ! Updates the resolution
       dr_kpc = r_kpc(nxghost+2)-r_kpc(nxghost+1)

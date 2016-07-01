@@ -33,14 +33,14 @@ quantities_dict = {'Bp'   : r'B_\phi',
 def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
                   ax=P.figure().add_subplot(111),ts=None):
     """Plots the time variation of a given quantity for a given galaxy """
-    if not ts:
+    if ts is None:
         ts = data_dict['t'][:]
     data = data_dict[quantity]
 
     for t in ts:
-        it = N.argmin(abs(ts-t))
-
-
+        it = N.argmin(abs(data_dict['t'][:]-t))
+        print it, data_dict['t'][it]
+        #exit()
         # Sets the line colour, using the colormap
         # (the factor 0.8 avoids extremely light colours)
         color = cmap((t-ts.min()*0.8)/(ts.max()-ts.min()))
@@ -48,7 +48,7 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
 
         r = data_dict['r'][igal,:,it]
         ok = data_dict['Omega'][igal,:,it] > 0
-        ok *= r>0
+        #ok *= r>0
         data = data_dict[quantity][igal,:,it]
         ax.plot(r[ok], data[ok], marker='.',color=color, rasterized=True)
 
@@ -173,7 +173,7 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
       if subplot_idx > nrows*ncols:
           break
       ax = fig.add_subplot(nrows, ncols, subplot_idx)
-      plot_quantity(igal, quantity, data_dict, ax=ax)
+      plot_quantity(igal, quantity, data_dict, ax=ax, cmap=P.cm.coolwarm)
       fig.tight_layout()
       fig.subplots_adjust(top=0.95, bottom=0.1)
       fig.suptitle('Galaxy {0}{1}'.format(igal, info))
@@ -181,7 +181,7 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
       norm = P.mpl.colors.Normalize(vmin=data_dict['t'][:].min(),
                                     vmax=data_dict['t'][:].max())
       ax = fig.add_axes([.065, .04, .9, .01])
-      x = P.mpl.colorbar.ColorbarBase(ax, cmap=P.cm.YlGnBu, norm=norm,
+      x = P.mpl.colorbar.ColorbarBase(ax, cmap=P.cm.coolwarm, norm=norm,
                                       orientation='horizontal')
 
       x.set_label(r'$t\,\,[{{\rm Gyr }}]$')

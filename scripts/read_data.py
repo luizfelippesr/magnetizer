@@ -75,7 +75,9 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
     # Gets the redshifts and times
     zout_array = f["Output_Times/zout"][:]
     tout_array = f["Output_Times/tout"][:]
-    z_indices = N.arange(len(zout_array[zout_array<max_z]))
+
+    z_indices = N.arange(len(zout_array[zout_array<=max_z]))
+
 
     # Initializes dictionary and copy galform run parameters
     data_dict = {'Galform Parameters': dict()}
@@ -107,11 +109,11 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             #halo_jm = f[output_id+"/Trees/jm"]
             #halo_jtree = f[output_id+"/Trees/jtree"]
 
-            if ((N.sum(halo_ngals) != len(data_dict[t]['mstars_disk']) or 
+            if ((N.sum(halo_ngals) != len(data_dict[t]['mstars_disk']) or
                  len(halo_weight) != len(halo_ngals))):
                 print "ERROR: not enough galaxies in the file"
                 exit()
-            
+
             # count galaxies, assiging weight from their halo weight.
             # initial weights are -1
             galaxy_weight = N.zeros( len(f[output_id+"/mstars_disk"][:]) )-1.
@@ -189,7 +191,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             data_dict[t]['ID']= data_dict[t]['GalaxyID']
             previous_ID = data_dict[t]['ID']
             previous_t = t
-        else: 
+        else:
             # Selects only the most massive ascendents of the gals in
             # the previous t
             filt = N.zeros(data_dict[t]['GalaxyID'].shape, dtype=bool)
@@ -262,6 +264,7 @@ def plot_mass_evolution(model_dir, gtype='all'):
 
     for ID in sorted(IDs):
         gals_dict[ID] = []
+        print ID
         for t in ts:
             select = data_dict[t]['ID'] == ID
             mass  = (data_dict[t]['mcold'][select] +

@@ -49,6 +49,11 @@ if __name__ == "__main__"  :
     else:
         t = Input['t']
 
+    ts =t[:]
+    #ts = t[(t[:]>=6.)*(t[:]<6.5)]
+    #print ts
+    #print t[:]
+    #exit()
     for j, quantity in enumerate(quantities):
         for i, igal in enumerate(igals):
             if j+i==0:
@@ -58,12 +63,12 @@ if __name__ == "__main__"  :
             ax = fig.add_subplot(111)
             P.title('Galaxy {0}'.format(igal+1))
             pf.plot_quantity(igal, quantity, data_dict, cmap=P.cm.viridis,
-                          ax=ax)
+                          ax=ax, ts=ts)
 
             if use_redshift:
                 vmax=t[:].min(); vmin=t[:].max()
             else:
-                vmin=t[:].min(); vmax=t[:].max()
+                vmin=ts[:].min(); vmax=ts[:].max()
             norm = P.mpl.colors.Normalize(vmin=vmin, vmax=vmax)
             ax = fig.add_axes([.065, .04, .9, .01])
             x = P.mpl.colorbar.ColorbarBase(ax, cmap=P.cm.viridis, norm=norm,

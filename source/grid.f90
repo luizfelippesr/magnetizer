@@ -153,7 +153,7 @@ module grid
       ! Updates the resolution
       dr_kpc = r_kpc(nxghost+2)-r_kpc(nxghost+1)
       ! Reconstrucs the ghost zone
-      do i=nxghost,0,-1
+      do i=nxghost,1,-1
         r_kpc(i) = r_kpc(i+1)-dr_kpc
       enddo
 

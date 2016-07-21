@@ -72,7 +72,6 @@ contains
 
     if (present(invalid_run)) then
       call message('INVALID RUN', info=2)
-      stop
       if (invalid_run) return
     endif
 
@@ -118,7 +117,7 @@ contains
     else
       ! In the oneSnaphotDebugMode, all timesteps are included in the output
       ! but only one galform output is used.
-      max_outputs = nsteps_0+1
+      max_outputs = nsteps+1
     endif
 
     allocate(ts_t_Gyr(max_outputs))

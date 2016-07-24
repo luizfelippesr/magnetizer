@@ -96,6 +96,7 @@ contains
     ! TURBULENT VELOCITY PROFILE
     v_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     v = v_kms / h0_km * h0 * t0_s / t0
+    dvdr = 0.0
 
     ! Traps case of negligible disks (produced by a recent major merger)
     if (r_disk < r_disk_min .or. Mgas_disk< Mgas_disk_min) then

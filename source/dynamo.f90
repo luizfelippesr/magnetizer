@@ -51,6 +51,11 @@ module dynamo
       call set_calc_params
       ! Constructs galaxy model for the initial snapshot
       able_to_construct_profiles = construct_profiles()
+      if (.not.able_to_construct_profiles) then
+        call message('Could not construct profiles for this galaxy.', &
+                     gal_id=gal_id, info=1)
+        return
+      endif
       ! Adds a seed field to the f-array (uses the profile info)
       call init_seed(f)
       ! Calculates |Bz| (uses profile info)
@@ -68,7 +73,6 @@ module dynamo
         if (r_disk < p_rdisk_min .or.  Mgas_disk < Mgas_disk_min) then
             elliptical = .true.
             ! Resets the f array and adds a seed field
-            f = 0.0
             call init_seed(f)
         else
             ! If galaxy was an elliptical during previous snapshot,
@@ -153,7 +157,7 @@ module dynamo
             ! Impose boundary conditions
             call impose_bc(f)
             ! If the magnetic field blows up, flags and exits the loop
-            if (maxval(f)>1.d7) then
+            if (maxval(f(:,1:2))>1.d7) then
               ok = .false.
               ! Stores the bogus profiles
               ! NB the magnetic field info is out of date
@@ -200,7 +204,10 @@ module dynamo
           ! values, except for ts_t (so that one knows when did things break)
           if (.not.p_oneSnaphotDebugMode) &
             call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
-                             alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run=.true.)
+                             alp,Uz,Ur,n,Beq,rmax,delta_r)
+
+          call message('Invalid run! Aborting...', &
+                       gal_id=gal_id, info=2)
           last_output = .true.
           ! Resets the f array and adds a seed field 
           f = 0.0

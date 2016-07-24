@@ -48,7 +48,7 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
         ok = data_dict['Omega'][igal,:,it] > 0
         #ok *= r>0
         data = data_dict[quantity][igal,:,it]
-        ax.plot(r[ok], data[ok], marker='.',color=color, rasterized=True)
+        ax.plot(r[ok], data[ok],color=color, rasterized=True)
 
         ax.set_xlabel(r'$r\,[\rm kpc]$')
 

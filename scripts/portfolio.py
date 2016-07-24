@@ -39,8 +39,6 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
 
     for t in ts:
         it = N.argmin(abs(data_dict['t'][:]-t))
-        print it, data_dict['t'][it]
-        #exit()
         # Sets the line colour, using the colormap
         # (the factor 0.8 avoids extremely light colours)
         color = cmap((t-ts.min()*0.8)/(ts.max()-ts.min()))
@@ -152,15 +150,15 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
 def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None, mgas=None):
   if igal==None:
       return
-  if mstars != None:
+  if mstars is not None:
       #info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
         #N.log10(mstars[igal]))
       info = r' $-$  $M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}} = {0:.3g}$'.format(mstars[igal])
   else:
       info =''
-  if radius != None:
+  if radius is not None:
       info += r' $-$  $r_{{\rm disk}} = {0}$'.format(radius[igal])
-  if mgas != None:
+  if mgas is not None:
       info += r' $-$  $M_{{\rm gas,disk}} = {0:.3g}$'.format(mgas[igal])
 
   print 'galaxy', igal
@@ -173,7 +171,7 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
       if subplot_idx > nrows*ncols:
           break
       ax = fig.add_subplot(nrows, ncols, subplot_idx)
-      plot_quantity(igal, quantity, data_dict, ax=ax, cmap=P.cm.coolwarm)
+      plot_quantity(igal, quantity, data_dict, ax=ax, cmap=P.cm.viridis)
       fig.tight_layout()
       fig.subplots_adjust(top=0.95, bottom=0.1)
       fig.suptitle('Galaxy {0}{1}'.format(igal, info))
@@ -181,7 +179,7 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
       norm = P.mpl.colors.Normalize(vmin=data_dict['t'][:].min(),
                                     vmax=data_dict['t'][:].max())
       ax = fig.add_axes([.065, .04, .9, .01])
-      x = P.mpl.colorbar.ColorbarBase(ax, cmap=P.cm.coolwarm, norm=norm,
+      x = P.mpl.colorbar.ColorbarBase(ax, cmap=P.cm.viridis, norm=norm,
                                       orientation='horizontal')
 
       x.set_label(r'$t\,\,[{{\rm Gyr }}]$')

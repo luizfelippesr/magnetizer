@@ -67,7 +67,7 @@ module grid
     double precision, dimension(:), allocatable, intent(inout) :: v
     integer, intent(in), optional :: nv
     integer :: nv_actual
-
+    double precision, parameter :: ABSURD = -123d123
     if (present(nv)) then
       nv_actual = nv
     else
@@ -87,6 +87,9 @@ module grid
 
     ! Allocates v with the correct shape
     allocate(v(nv_actual))
+    ! Uncomment this to initialize to an absurd value
+    ! (good for tracking unitialized variables)
+    !v = ABSURD
     return
   end subroutine check_allocate
 
@@ -100,8 +103,9 @@ module grid
     if (allocated(f)) then
       shape_f = shape(f)
       if (shape_f(1)==nx) then
-        ! If the v was allocated and has the correct shape
+        ! If the f-array was allocated and has the correct shape
         ! then there is nothing to do..
+        f = 0.0
         return
       else
         ! If the shape is wrong, deallocates
@@ -110,7 +114,7 @@ module grid
     endif
     ! Allocates f with the correct shape
     allocate(f(nx,nvar))
-    f = 0
+    f = 0.0
     return
   end subroutine check_allocate_f_array
 

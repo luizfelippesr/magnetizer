@@ -139,10 +139,10 @@ contains
     double precision, intent(in) :: r_halo, v_halo, nfw_cs1
     double precision, dimension(:), intent(in)  :: rx
     double precision, dimension(size(rx)), intent(out) :: Omega, Shear
-    double precision, dimension(size(rx)) :: v2, v, dvdr, dv2dy
+    double precision, dimension(size(rx)) :: v, dvdr, dv2dy
     double precision, dimension(size(rx)) :: y, B
     double precision :: A, c
-    double precision, parameter :: V2_TOL = -1e-4
+    double precision, parameter :: B_TOL = -1e-7
 
     y = abs(rx) / r_halo
     c = 1d0/nfw_cs1
@@ -150,15 +150,12 @@ contains
     A = v_halo**2 / (log(1d0+c)-c/(1d0+c))
     B = (log(1d0+c*y) - c*y/(1d0+c*y))/y
 
-    v2 = A*B
-
-    ! Checks whether negative V^2 are found (within a tolerance V2_TOL).
-    if (any(v2<V2_TOL)) then
+    if (any(B<B_TOL)) then
       stop 'halo_rotation_curve: error, halo properties lead to negative '&
             // 'rotation curves!'
     endif
 
-    v = sqrt(abs(v2))
+    v = sqrt(abs(A*B))
 
     dv2dy = A*(-B +  (1d0-c)/(1d0+c*y) +c**2*y/(1d0+c*y)**2 )/y
     dvdr = dv2dy/2d0/v/r_halo

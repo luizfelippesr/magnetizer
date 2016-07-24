@@ -103,11 +103,19 @@ contains
     ! and dirty way of avoiding the unphysical solutions without having to
     ! substitute back in the equation.)
     do i=1,size(r)
-      h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess, roots)
+
+      if (Sigma_d_nonSI(i) < 0.01) then
+        rho_d(i) = 1d-28
+        h_d(i) = Sigma_d(i)/rho_d(i)/2d0 / density_SI_to_cgs
+        print *, 'r', r(i), h_d(i), i, size(r)
+      else
+        h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess, roots)
+      endif
+
       if (h_d(i)>1d-10) then
         rho_d(i) = Sigma_d(i)/h_d(i)/2d0 * density_SI_to_cgs
       else
-        rho_d(i) = 0d0
+        rho_d(i) = 1d-100
       end if
       h_d(i) = h_d(i)/kpc_SI
       ! Outputs all roots if required

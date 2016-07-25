@@ -106,8 +106,8 @@ module dynamo
         ! Sets the timestep
         timestep_ok = set_timestep(h, v, etat)
         if (.not. timestep_ok) then
-          print *, minval(h), maxval(v), maxval(etat)
-          stop
+          call message('Timestep became very small! Using maximum number of' &
+                      //' timesteps instead.', gal_id=gal_id, info=1)
         endif
 
         ! Backs up state at the beginning of the snapshot
@@ -184,14 +184,16 @@ module dynamo
           
           ! Otherwise, the calculation needs to be remade with a smaller
           ! timestep
-          call message('NANs or unrealistically large magnetic fields detected, changing time step', &
-                       gal_id=gal_id, info=2)
+          call message('NANs or unrealistically large magnetic fields '&
+                       //'detected, changing time step', gal_id=gal_id, info=2)
           
           ! Doubles the number of timesteps
           timestep_ok = set_timestep(reduce_timestep=.true.)
           if (.not. timestep_ok) then
-            print *, minval(h), maxval(v), maxval(etat)
-            stop
+            call message('Timestep became too small! Aborting...', &
+                         gal_id=gal_id, info=1)
+            ok = .false.
+            exit
           endif
 
           ! Resets the f array to the initial state in the beginning of the

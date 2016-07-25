@@ -44,7 +44,7 @@ module input_params
 
   contains
 
-  subroutine set_timestep(h,v,etat,reduce_timestep)
+  function set_timestep(h,v,etat,reduce_timestep) result(success)
     ! Sets the timestep
     ! if reduce_timestep=False, nsteps=nsteps_0
     ! otherwise nsteps*=2
@@ -53,7 +53,10 @@ module input_params
     use messages
     logical, intent(in), optional :: reduce_timestep
     double precision, dimension(:), optional :: h,v,etat
-    logical :: reduce_ts
+    logical :: reduce_ts, success
+
+    success = .true.
+
     if (present(reduce_timestep)) then
       reduce_ts = reduce_timestep
     else
@@ -65,30 +68,36 @@ module input_params
     if (p_variable_timesteps) then
       if (present(h) .and. present(v) .and. present(etat)) then
         dt = minval([ p_courant_v * dx/lambda/maxval(v), &
-                      p_courant_eta * 0.01*minval(h)**2/maxval(etat) ])
+                      p_courant_eta * minval(h)**2/maxval(etat) ])
         nsteps = int(tsnap/dt)
-        call message('set_timestep: dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
-                    gal_id=current_gal_id)
-        return
       else
         call message('set_timestep: missing arguments. Falling back to fixed number of timesteps scheme.', &
                      info=1, gal_id=current_gal_id)
       endif
-    endif
-
-    if (.not.reduce_ts) then
-      ! Initializes the number of steps to the global input value
-      nsteps = nsteps_0
     else
-      nsteps = 2*nsteps
+      if (.not.reduce_ts) then
+        ! Initializes the number of steps to the global input value
+        nsteps = nsteps_0
+      else
+        nsteps = 2*nsteps
+      endif
+      dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
     endif
 
-    dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
+    call message('set_timestep: dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
+                  gal_id=current_gal_id)
+    call message('set_timestep: nsteps = ',val_int=nsteps, info=2, &
+                  gal_id=current_gal_id)
 
-    call message('set_timestep:  dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
-            gal_id=current_gal_id)
+    if (nsteps > p_nsteps_max) then
+      call message('set_timestep: Maximum number of timesteps ', &
+                   val_int=p_nsteps_max, msg_end=' reached.', &
+                   info=2, gal_id=current_gal_id)
+      nsteps = p_nsteps_max
+      success = .false.
+    endif
 
-  end subroutine set_timestep
+  end function set_timestep
 
   subroutine read_input_parameters(gal_id)
     ! Reads the input parameters file to RAM

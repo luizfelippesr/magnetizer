@@ -24,7 +24,7 @@ module dynamo
       integer, intent(in) :: gal_id
       integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
-      logical :: ok, able_to_construct_profiles, elliptical
+      logical :: ok, able_to_construct_profiles, elliptical, timestep_ok
       integer :: fail_count, rank_actual
       integer, parameter :: MAX_FAILS=4
       double precision, dimension(nx) :: Btmp
@@ -104,7 +104,11 @@ module dynamo
         endif
 
         ! Sets the timestep
-        call set_timestep(h, v, etat)
+        timestep_ok = set_timestep(h, v, etat)
+        if (.not. timestep_ok) then
+          print *, minval(h), maxval(v), maxval(etat)
+          stop
+        endif
 
         ! Backs up state at the beginning of the snapshot
         call check_allocate_f_array(f_snapshot_beginning, nvar)
@@ -184,7 +188,12 @@ module dynamo
                        gal_id=gal_id, info=2)
           
           ! Doubles the number of timesteps
-          call set_timestep(reduce_timestep=.true.)
+          timestep_ok = set_timestep(reduce_timestep=.true.)
+          if (.not. timestep_ok) then
+            print *, minval(h), maxval(v), maxval(etat)
+            stop
+          endif
+
           ! Resets the f array to the initial state in the beginning of the
           ! snapshot
           f = f_snapshot_beginning

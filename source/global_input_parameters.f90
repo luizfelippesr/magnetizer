@@ -33,6 +33,7 @@ module global_input_parameters
   double precision :: p_courant_v = 0.02
   double precision :: p_courant_eta = 0.01
   logical :: p_variable_timesteps = .false.
+  integer :: p_nsteps_max = 20000
 
   ! ALPHA QUENCHING
   ! Works with alg_quench=F; Set to T for dynamical quenching (d_alpha_m/dt eqn incl in sim)
@@ -244,7 +245,8 @@ module global_input_parameters
     p_nx_MAX, &
     p_rmax_over_rdisk,&
     p_scale_back_f_array, &
-    p_seed_choice
+    p_seed_choice,  &
+    p_nsteps_max
 
 
   contains

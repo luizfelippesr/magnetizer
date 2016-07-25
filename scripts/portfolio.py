@@ -16,6 +16,7 @@ formatted_units_dict = {'microgauss':r'\mu{{\rm G}}',
               'km/s':r'{{\rm km}}\,{{\rm s}}^{{-1}}',
               'km/s/kpc':r'{{\rm km}}\,{{\rm s}}^{{-1}}\,{{\rm kpc}}^{{-1}}',
               'kpc km/s':r'{{\rm kpc}}\,{{\rm km}}\,{{\rm s}}^{{-1}}'}
+
 quantities_dict = {'Bp'   : r'B_\phi',
                    'Beq'  : r'B_{{\rm eq}}',
                    'Br'   : r'B_r',
@@ -29,6 +30,7 @@ quantities_dict = {'Bp'   : r'B_\phi',
                    'alp_m': r'\alpha_m',
                    'etat' : r'\eta_t'
                    }
+
 
 def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
                   ax=P.figure().add_subplot(111),ts=None):
@@ -52,6 +54,8 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
 
         ax.set_xlabel(r'$r\,[\rm kpc]$')
 
+        ax.set_xlim([0.0, r[ok].max()/2.0])
+
         # Formating gymnastics...
         if quantity in quantities_dict:
             q = quantities_dict[quantity]
@@ -73,9 +77,6 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
           ax.set_ylim([-6,6])
         if quantity in ('Beq','n','h'):
           ax.set_yscale('log')
-
-
-
 
 
 def generate_portfolio(input_filename, selected_quantities, pdf_filename,
@@ -142,9 +143,8 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
         pdf.savefig(fig)
     print 'Plots done. Saving file'
     pdf.close()
+
     return
-
-
 
 
 def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None, mgas=None):

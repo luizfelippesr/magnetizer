@@ -135,6 +135,7 @@ contains
     !                    {ln(1+c) - 1/(1+c)} / y
     ! Ref: NFW profile
     use deriv
+    use messages
     implicit none
     double precision, intent(in) :: r_halo, v_halo, nfw_cs1
     double precision, dimension(:), intent(in)  :: rx
@@ -142,7 +143,7 @@ contains
     double precision, dimension(size(rx)) :: v, dvdr, dv2dy
     double precision, dimension(size(rx)) :: y, B
     double precision :: A, c
-    double precision, parameter :: B_TOL = -1e-7
+    double precision, parameter :: B_TOL = -1e-6
 
     y = abs(rx) / r_halo
     c = 1d0/nfw_cs1
@@ -151,8 +152,11 @@ contains
     B = (log(1d0+c*y) - c*y/(1d0+c*y))/y
 
     if (any(B<B_TOL)) then
-      stop 'halo_rotation_curve: error, halo properties lead to negative '&
-            // 'rotation curves!'
+      ! This tolerance was introduced to deal with (otherwise harmless)
+      ! numerical errors in the centre of the halo.
+      call message('halo_rotation_curve: error, halo properties lead to' &
+              //' negative rotation velocities!', info=1)
+      stop
     endif
 
     v = sqrt(abs(A*B))

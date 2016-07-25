@@ -141,25 +141,27 @@ contains
     double precision, dimension(:), intent(in)  :: rx
     double precision, dimension(size(rx)), intent(out) :: Omega, Shear
     double precision, dimension(size(rx)) :: v, dvdr, dv2dy
-    double precision, dimension(size(rx)) :: y, B
+    double precision, dimension(size(rx)) :: y, B, v2
     double precision :: A, c
-    double precision, parameter :: B_TOL = -1e-6
+    double precision, parameter :: v2_tol = -1d0 ! (km/s)^2
 
     y = abs(rx) / r_halo
     c = 1d0/nfw_cs1
 
     A = v_halo**2 / (log(1d0+c)-c/(1d0+c))
     B = (log(1d0+c*y) - c*y/(1d0+c*y))/y
+    v2 = A*B
 
-    if (any(B<B_TOL)) then
+    if (any(v2<v2_tol)) then
       ! This tolerance was introduced to deal with (otherwise harmless)
       ! numerical errors in the centre of the halo.
       call message('halo_rotation_curve: error, halo properties lead to' &
-              //' negative rotation velocities!', info=1)
+                   //' invalid rotation velocities! v2min=', minval(v2), &
+                   info=0)
       stop
     endif
 
-    v = sqrt(abs(A*B))
+    v = sqrt(abs(v2))
 
     dv2dy = A*(-B +  (1d0-c)/(1d0+c*y) +c**2*y/(1d0+c*y)**2 )/y
     dvdr = dv2dy/2d0/v/r_halo

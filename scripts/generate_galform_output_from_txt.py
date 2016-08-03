@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as N
 import h5py
 from hdf5_util import add_dataset
@@ -22,8 +23,7 @@ def read_parameters(filename):
             d[name][c] = data[i,j]
     return d
 
-def make_galaxies_file(data_dict, t0, tf, nt,
-                       output_filename='test/ivol0/galaxies.hdf5'):
+def make_galaxies_file(data_dict, t0, tf, nt, output_filename):
     """ Prepares a galaxies.hdf5 file from a dictionary of galaxy
         data. Will assume a constant SFR and compute the evolution
         of Mgas and Mstars accordingly.
@@ -96,5 +96,31 @@ def make_galaxies_file(data_dict, t0, tf, nt,
             add_dataset(output, 'is_central', N.array([1.,]))
     f.close()
 
-a = read_parameters('example_galaxies.txt')
-make_galaxies_file(a, 10.0, 13.5, 10)
+
+if __name__ == "__main__"  :
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Prepares an fake Galform '
+                            'output from a text table of galaxy properties')
+
+    parser.add_argument("PROPERTIES_TABLE", help="File path to the properties"
+                        " table.")
+
+    parser.add_argument("FAKE_SAM_OUTPUT",help="File path of the fake Galform "
+                        'HDF5 output file.')
+
+    parser.add_argument('-ft', '--final_time', default=13.5,
+                        help='Final comoving time for the fake cosmological'
+                        ' run in Gyr. Default: 13.5.')
+    parser.add_argument('-it', '--initial_time', default=10.0,
+                        help='Initial comoving time for the fake cosmological'
+                        ' run in Gyr. Default: 10.0.')
+    parser.add_argument('-n', '--number_of_snapshots', default=10.0,
+                        help='Number of snapshots in the fake cosmological'
+                        ' run. Default: 10.')
+
+    args = parser.parse_args()
+
+    param_dict = read_parameters(args.PROPERTIES_TABLE)
+    make_galaxies_file(param_dict, args.initial_time, args.final_time,
+                       args.number_of_snapshots, args.FAKE_SAM_OUTPUT )

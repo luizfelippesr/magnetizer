@@ -4,50 +4,25 @@ import numpy as N
 import h5py
 import os
 from numpy.random import random, shuffle
-#from empirical_disks import empirical_disk
+#from empirical_disks import empirical_disk # Not yet implemented
 from data_dict_util import filter_dictionary_inplace, filter_dict
 
-def get_parameter_values(model_dir):
-    """read the used_paramaters file in the directory and list the
-    parameter values.  Note that values are returned as strings"""
-
-    if os.path.isfile( model_dir+"/used-parameters.bz2" ):
-        os.system("bunzip2 -f "+model_dir+"/used-parameters.bz2")
-    #(params, values) = N.genfromtxt( model_dir + "/used-parameters", \
-    #                          unpack=True, usecols=(0,1), delimiter="=",\
-    #                          dtype=None, autostrip=True)
-
-    # it is more useful to create a dictionary with the parameter as the key
-    d = dict( N.genfromtxt( model_dir + "/used-parameters", \
-                              unpack=False, usecols=(0,1), delimiter="=",\
-                              dtype=None, autostrip=True))
-    for p in d.keys():            # where possible convert strings to values.
-        try:
-            d[p] = N.float64( d[p] )
-        except:
-            pass
-    return d
-
-
-def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
-                   max_z = 1000.0,
-                   minimum_final_stellar_mass=1e6,
+def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
+                   max_z = 1000.0, minimum_final_stellar_mass=1e6,
                    maximum_final_stellar_mass=1e14, minimum_final_gas_mass=1e5,
-                   number_of_galaxies=100, empirical_disks=True, ivol_dir='',
-                   minimum_final_disk_size=0.0,datasets=None):
-    """Reads data from the galaxies.hdf5 file inside model_dir/ivol_dir (for
-       Monte-Carlo runs, ivol_dir can be left blanck). The option
-       number_of_galaxies sets the _approximate__ number of galaxies in the
-       output (which are drawn, randomly, from the sample, taking into account
-       halo press-schechter weights. Other options allow to select by minimum
-       mass of the final galaxy.
+                   number_of_galaxies=100, empirical_disks=True,
+                   minimum_final_disk_size=0.0, datasets=None):
+    """Reads data from the galaxies.hdf5 file inside sam_output_filepath.
+       The option number_of_galaxies sets the _approximate_ number of galaxies
+       in the output (which are drawn, randomly, from the sample, taking into
+       account halo press-schechter weights. Other options allow to select
+       by minimum mass of the final galaxy.
 
        Returns a dictionary of dictionaries containing times as keys in the
        first level, dataset names in the second level and the arrays
        associated with each dataset in the last level.
        Redshift and time information can be obtained from the special keys: zout
        and tout.  """
-
 
     if datasets == None:
         # Which data sets will be read from the output
@@ -65,9 +40,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
 
     # Opens the hdf5 file
-    if os.path.isfile( model_dir+'/'+ivol_dir+"/galaxies.hdf5.bz2" ):
-        os.system("bunzip2 -f "+model_dir+'/'+ivol_dir+"/galaxies.hdf5.bz2")
-    f = h5py.File(model_dir+'/'+ivol_dir+"/galaxies.hdf5")
+    f = h5py.File(sam_output_filepath)
 
     # Reads the little-h
     h0 = f['Parameters']['h0'][()]
@@ -75,9 +48,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
     # Gets the redshifts and times
     zout_array = f["Output_Times/zout"][:]
     tout_array = f["Output_Times/tout"][:]
-
     z_indices = N.arange(len(zout_array[zout_array<=max_z]))
-
 
     # Initializes dictionary and copy galform run parameters
     data_dict = {'Galform Parameters': dict()}
@@ -137,13 +108,6 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
 
         data_dict[t]['weight'] = galaxy_weight
 
-        if 'names' in f[output_id]:
-            # If there is a list of galaxy names (as in the fake output) use it
-            data_dict[t]['names'] = f[output_id+'/names']
-        else:
-            # Otherwise, just copy the galaxy ID
-            data_dict[t]['names'] = data_dict[t]['GalaxyID']
-
         print 'Galaxies read:', len(galaxy_weight)
         if i==0:
             # Pre-loads parts of the HDF5 file to RAM (allowing a ~20% speedup)
@@ -172,7 +136,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             filter_dictionary_inplace(ok,data_dict[t])
 
             print('Number of galaxies after initial filtering: {0}'.format(
-                                                   len(data_dict[t]['weight'])))
+                                                  len(data_dict[t]['weight'])))
 
             # If a maximum number of galaxies was specified
             if number_of_galaxies:
@@ -195,7 +159,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             # Selects only the most massive ascendents of the gals in
             # the previous t
             filt = N.zeros(data_dict[t]['GalaxyID'].shape, dtype=bool)
-            data_dict[t]['ID'] = N.zeros(data_dict[t]['GalaxyID'].shape) * N.NaN
+            data_dict[t]['ID'] = N.empty(data_dict[t]['GalaxyID'].shape)*N.NaN
 
             for target_gid, ID in zip(GalaxyID_target,previous_ID):
                 # Finds the index of a target galaxy
@@ -219,6 +183,10 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
             previous_ID = data_dict[t]['ID']
             previous_t = t
 
+    if 'names' in f[output_id]:
+        # If there is a list of galaxy names (as in the fake output) use it
+        data_dict['names'] = f[output_id+'/names']
+
     if empirical_disks: # TODO not working yet
         pass
 
@@ -229,7 +197,7 @@ def read_time_data(model_dir, maximum_final_B_over_T=0.5, return_data_dict=True,
     return data_dict
 
 
-def plot_mass_evolution(model_dir, gtype='all'):
+def plot_mass_evolution(sam_output_filepath, gtype='all'):
     """ Tests the module ploting the time evolution of galaxy mass.
         gtype can be either: all, central/cen or sat/satellite."""
     import pylab as P
@@ -237,13 +205,12 @@ def plot_mass_evolution(model_dir, gtype='all'):
     # Will color them by mass
     cmap = P.cm.get_cmap('YlGnBu',200)
 
-    data_dict = read_time_data(model_dir,
-                                maximum_final_B_over_T=1.0,
-                                minimum_final_stellar_mass=1e10,
-                                minimum_final_gas_mass=1e7,
-                                number_of_galaxies=100,
-                                empirical_disks=False,
-                                ivol_dir='ivol0')
+    data_dict = read_time_data(sam_output_filepath,
+                               maximum_final_B_over_T=1.0,
+                               minimum_final_stellar_mass=1e10,
+                               minimum_final_gas_mass=1e7,
+                               number_of_galaxies=100,
+                               empirical_disks=False)
 
     ts = sorted(data_dict['tout'])[::-1]
     IDs = data_dict[ts[0]]['ID']
@@ -264,13 +231,13 @@ def plot_mass_evolution(model_dir, gtype='all'):
 
     for ID in sorted(IDs):
         gals_dict[ID] = []
-        print ID
         for t in ts:
             select = data_dict[t]['ID'] == ID
-            mass  = (data_dict[t]['mcold'][select] +
+            mass  = (
+                    #data_dict[t]['mcold'][select] +
                     data_dict[t]['mstars_disk'][select] +
                     #data_dict[t]['mhot'][select] +
-                    data_dict[t]['mstars_bulge'][select]+
+                      #data_dict[t]['mstars_bulge'][select]+
                     data_dict[t]['mcold_burst'][select])
 
             if len(mass)==1:
@@ -292,5 +259,5 @@ def plot_mass_evolution(model_dir, gtype='all'):
 
 
 if __name__ == "__main__"  :
-    model_dir = 'test_SAM_output'
+    model_dir = 'scripts/test_SAM_output/galaxies.hdf5'
     plot_mass_evolution(model_dir, gtype='cen')

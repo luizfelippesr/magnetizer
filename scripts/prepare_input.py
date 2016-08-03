@@ -12,8 +12,8 @@ KM2M=1.0e3 # km to m
 MPC2M=3.0856775807e22 # The number of metres in a Mpc
 G=G_SI*MSOLAR/MPC2M/(KM2M**2) # The gravitational constant
                               # in units of (km/s)^2 Mpc/Msun.
-
 description_dictionary = {
+        'ID': 'Galaxy ID or name.',
         'z':'Redshift',
         't':'Time since the Big Bang.',
         'SFR' : 'Star formation rate',
@@ -63,10 +63,8 @@ def prepares_hdf5_input(data_dict, output_file):
     h0 = data_dict['h0']
 
     IDs = data_dict[ts[0]]['ID']
-    names = data_dict[ts[0]]['names'].astype(str)
 
-    datasets =(
-               'r_disk',
+    datasets =('r_disk',
                'v_disk',
                'r_bulge',
                'v_bulge',
@@ -78,16 +76,19 @@ def prepares_hdf5_input(data_dict, output_file):
                'Mstars_bulge',
                'SFR')
 
+    if 'names' in data_dict:
+        add_dataset(input_grp, 'ID', data_dict['names'])
+    else:
+        add_dataset(input_grp, 'ID', IDs)
     for i in N.argsort(ts):
         add_dataset(input_grp, 't', [ts[i],])
         add_dataset(input_grp, 'z', [zs[i],])
-    input_grp['t'].attrs['Description'] = description_dictionary['t']
-    input_grp['z'].attrs['Description'] = description_dictionary['z']
+
+    for k in ('t','z','ID'):
+        input_grp[k].attrs['Description'] = description_dictionary[k]
     input_grp['t'].attrs['Units'] = units_dictionary['t']
 
-
     for i, ID in enumerate(IDs):
-
         # Constructs a temporary dictionary to store the time series
         # extracted from galform
         tmp = dict()
@@ -156,36 +157,44 @@ if __name__ == "__main__"  :
     import argparse
 
     parser = argparse.ArgumentParser(
-             description='Prepares and input file for the magnetizer.')
-    parser.add_argument("OUTPUT_FILE", help="Name of the output file." )
-    parser.add_argument("MODEL_DIR", help="Directory of the galform run." )
-    parser.add_argument("IVOL", help="Subvolume to be used (can be a "
-                        "comma separated lists, without spaces")
+             description='Prepares an input file for the Magnetizer.')
+
+    parser.add_argument("SAM_OUTPUT",help="HDF5 output file of a Galform run.")
+
+    parser.add_argument("MAGNETIZER_INPUT", help="Name of the Magnetizer input"
+                        " file to be prepared.")
+
     parser.add_argument('-n', '--number_of_galaxies', default=1e10,
-                        help='Approximate number of galaxies to extract.')
+                        help='Approximate *maximum* number of galaxies to '
+                        'extract from the SAM_OUTPUT file. Default: 1e10.')
 
     parser.add_argument('-BoT', "--maximum_B_over_T", default=0.5,
-                        help='Maximum bulge to total mass ratio.')
+                        help='Maximum bulge to total mass ratio.'
+                        ' Default: 0.5.')
 
     parser.add_argument('-ms', "--minimum_stellar_mass", default=1e7,
-                        help="Minimum disk stellar mass at z=0 (in Msun).")
+                        help="Minimum disk stellar mass at z=0 (in Msun)."
+                        " Default: 1e7.")
 
     parser.add_argument('-mg', "--minimum_gas_mass", default=1e6,
-                        help="Minimum disk gas mass at z=0 (in Msun).")
+                        help="Minimum disk gas mass at z=0 (in Msun)."
+                        " Default: 1e6.")
 
-    parser.add_argument('-Ms', "--maximum_stellar_mass", default=1e15,
-                        help="Maximum disk stellar mass at z=0 (in Msun).")
+    parser.add_argument('-Ms', "--maximum_stellar_mass", default=1e14,
+                        help="Maximum disk stellar mass at z=0 (in Msun)."
+                        " Default: 1e14.")
 
     parser.add_argument('-r', "--minimum_disk_size", default=0.5,
-                        help="Minimum disk half mass radius at z=0 (in kpc).")
+                        help="Minimum disk half mass radius at z=0 (in kpc)."
+                        " Default: 0.5.")
 
-    parser.add_argument('-z', "--max_redshift", default=5,
-                        help="Maximum redshift to use.")
+    parser.add_argument('-z', "--max_redshift", default=6,
+                        help="Maximum redshift to use. Default: 6.")
 
     args = parser.parse_args()
-
+    print args.SAM_OUTPUT
     start = time.time()
-    data_dict = read_time_data( args.MODEL_DIR,
+    data_dict = read_time_data( args.SAM_OUTPUT,
                                 max_z = float(args.max_redshift),
                                 maximum_final_B_over_T=float(args.maximum_B_over_T),
                                 minimum_final_stellar_mass=float(args.minimum_stellar_mass),
@@ -193,10 +202,9 @@ if __name__ == "__main__"  :
                                 minimum_final_gas_mass=float(args.minimum_gas_mass),
                                 number_of_galaxies=int(args.number_of_galaxies),
                                 minimum_final_disk_size=1e-3*float(args.minimum_disk_size),
-                                empirical_disks=False,
-                                ivol_dir='ivol{0}'.format(args.IVOL))
+                                empirical_disks=False)
     middle = time.time()
-    prepares_hdf5_input(data_dict, args.OUTPUT_FILE)
+    prepares_hdf5_input(data_dict, args.MAGNETIZER_INPUT)
     end = time.time()
 
     print 'read_time_data', middle-start,'s'

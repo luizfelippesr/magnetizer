@@ -7,10 +7,15 @@ FC_nonMPI=h5fc
 srcdir=source
 builddir=build
 
-FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -fcheck=all -g -Wall -Wuninitialized
-
 _OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
+
+# Special configurations
+ifeq ($(HOSTNAME),topsy.ncl.ac.uk)
+	FCFLAGS_special= -fintrinsic-modules-path /home/nlfsr/include/fgsl  -I${HOME}/include/fgsl -lfgsl -L/home/nlfsr/lib
+endif
+
+FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -g -Wall -Wuninitialized
 
 # Builds parallel version
 mpi: $(OBJ) ${builddir}/mpicalldynamo.o

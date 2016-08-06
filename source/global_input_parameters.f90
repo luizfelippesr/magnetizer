@@ -245,7 +245,8 @@ module global_input_parameters
     character(len=*), intent(in) :: global_pars_filename
     integer :: u
 
-    open(newunit=u,file=global_pars_filename)
+!     open(newunit=u,file=global_pars_filename) ! Fortran 2008.. requires new gfortran
+    u = 17; open(unit=u,file=global_pars_filename) ! Old Fortran
     ! Reads all the namelists
     ! Note: Rewinding makes the order of the namelists in the file unimportant
     read(u,nml=run_parameters); rewind(u)

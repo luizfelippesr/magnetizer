@@ -2,17 +2,17 @@
 ! the description of the various parameters.
 &run_parameters
   model_name = "Example run"
-\
+/
 &io_parameters
   p_io_separate_output = .true.
   input_file_name = "example/example_SAM_input.hdf5"
   output_file_name = "example/example_magnetized_SAM_output.hdf5"
-\
+/
 &grid_parameters
-\
+/
 &dynamo_parameters
-\
+/
 &ISM_and_disk_parameters
-\
+/
 &outflow_parameters
-\
+/

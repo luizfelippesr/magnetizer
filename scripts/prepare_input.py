@@ -192,7 +192,7 @@ if __name__ == "__main__"  :
                         help="Maximum redshift to use. Default: 6.")
 
     args = parser.parse_args()
-    print args.SAM_OUTPUT
+
     start = time.time()
     data_dict = read_time_data( args.SAM_OUTPUT,
                                 max_z = float(args.max_redshift),

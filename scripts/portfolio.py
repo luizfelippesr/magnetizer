@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Contains a script and functions to produce a "portfolio" of a model
     output, i.e. a file containing a series of plots showing radial profiles
     of several quantites for a sample of galaxies. """
@@ -43,17 +44,19 @@ def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
         it = N.argmin(abs(data_dict['t'][:]-t))
         # Sets the line colour, using the colormap
         # (the factor 0.8 avoids extremely light colours)
-        color = cmap((t-ts.min()*0.8)/(ts.max()-ts.min()))
+        color = cmap((t-ts.min())/(ts.max()-ts.min()))
 
 
         r = data_dict['r'][igal,:,it]
         ok = data_dict['Omega'][igal,:,it] > 0
-        #ok *= r>0
+
         data = data_dict[quantity][igal,:,it]
         ax.plot(r[ok], data[ok],color=color, rasterized=True)
 
         ax.set_xlabel(r'$r\,[\rm kpc]$')
 
+        if len(r[ok])==0:
+            continue
         ax.set_xlim([0.0, r[ok].max()/2.0])
 
         # Formating gymnastics...
@@ -135,6 +138,7 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     # The following was meant to be parallelized with parmap
     # however, multiprocessing breaks h5py!
     print 'Producing all figures'
+    print
     figures = [single_galaxy_portfolio(igal, data_dict, mstars=mstars, radius=radius, mgas=mgas) for igal in selected_igals]
     pdf = PdfPages(pdf_filename)
     for fig in figures:
@@ -161,7 +165,8 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
   if mgas is not None:
       info += r' $-$  $M_{{\rm gas,disk}} = {0:.3g}$'.format(mgas[igal])
 
-  print 'galaxy', igal
+  print 'galaxy', igal, '\tmgas = 10^{0:.3}'.format(N.log10(mgas[igal])),
+  print '\tmstars = 10^{0:.3}'.format(N.log10(mstars[igal]))
   fig = P.figure(figsize=(8.268,11.69))
   subplot_idx = 0
   for quantity in data_dict:
@@ -191,13 +196,56 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
 
 
 if __name__ == "__main__"  :
+    import argparse
+
+    parser = argparse.ArgumentParser(
+             description='Prepares portfolio of galaxies in a Magnetizer run, '
+             'i.e. samples from stellar mass bins and plots a summary of '
+             'evolution of radial profiles for a set of properties.')
+
+    parser.add_argument("MAGNETIZER_OUTPUT",
+                        help="HDF5 output of the Magnetizer run (must contain"
+                        " an Input group, or a separate input file must be "
+                        "specified).")
+
+    parser.add_argument("PDF_OUTPUT",
+                        help="Output filename for the PDF containing the "
+                        "portfolio.")
+
+    parser.add_argument('-mi',"--magnetizer_input", help="Name of the Magnetizer "
+                        "input file (only needed if input and output hdf5 "
+                        "are separate)", default=None)
+
+    parser.add_argument('-n', '--number_of_galaxies_per_bin', default=10,
+                        help='Number of galaxies to be sampled per mass bin.'
+                        'Default: 10')
+
+
+    parser.add_argument('-b', '--mass_bins', default='8,8.75,9.5,10.25,12',
+                        help='Bin edges in logarithm of galaxy stellar mass.'
+                        ' Default: 8,8.75,9.5,10.25,12')
+
+    args = parser.parse_args()
+
+    bins_list = N.array(args.mass_bins.split(',')).astype(float)
+    mass_bins = [[10.0**m1,10.0**m2]
+                  for m1,m2 in zip(bins_list[:-1],bins_list[1:])]
+
+
+    pdf_filename = args.PDF_OUTPUT
+
+    if args.magnetizer_input is None:
+        input_filename = args.MAGNETIZER_OUTPUT
+        output_filename = None
+    else:
+        input_filename = args.magnetizer_input
+        output_filename = args.MAGNETIZER_OUTPUT
 
     P.rc( ('axes'),labelsize=8)
     P.rc( ('xtick','ytick'),labelsize=7)
     #P.rc("font",size=5)
     P.rc(("legend"),fontsize=6)
-    selected_quantities = [
-                            'Beq',
+    selected_quantities = ['Beq',
                             'Bp',
                             'Br',
                             'Bzmod',
@@ -212,8 +260,15 @@ if __name__ == "__main__"  :
                             'h',
                             'l',
                             'n',
-                            'tau'
-                          ]
-    generate_portfolio('example/example_SAM_input.hdf5',
-                        selected_quantities, 'example/example_portfolio.pdf',
-  output_filename='example/example_magnetized_SAM_output.hdf5')
+                            'tau']
+
+
+    generate_portfolio(input_filename,
+                       selected_quantities,
+                       pdf_filename,
+                       output_filename=output_filename,
+                       galaxies_per_bin=args.number_of_galaxies_per_bin,
+                       mass_bins=mass_bins,
+                        selected_galaxies=None
+                        )
+

@@ -72,7 +72,7 @@ module input_params
         nsteps = int(tsnap/dt)
       else
         call message('set_timestep: missing arguments. Falling back to fixed number of timesteps scheme.', &
-                     info=1, gal_id=current_gal_id)
+                     info=3, gal_id=current_gal_id)
       endif
     else
       if (.not.reduce_ts) then

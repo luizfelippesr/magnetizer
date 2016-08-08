@@ -39,9 +39,9 @@ module global_input_parameters
   character (len=50) :: model_name = 'Magnetized SAM'
   integer :: info = 1
   integer :: nsteps_0 = 1000
-  double precision :: p_courant_v = 0.07
-  double precision :: p_courant_eta = 0.07
-  logical :: p_variable_timesteps = .false.
+  double precision :: p_courant_v = 0.09
+  double precision :: p_courant_eta = 0.09
+  logical :: p_variable_timesteps = .true.
   integer :: p_nsteps_max = 20000
   ! Debug mode: all timesteps are included in the output, but
   ! only 1 snapshot is used.
@@ -67,7 +67,7 @@ module global_input_parameters
   logical :: p_rescale_field_for_expanding_disks=.false.
   logical :: p_scale_back_f_array = .true.
   ! Reference grid size (used both initially and for storage)
-  integer :: p_nx_ref=51
+  integer :: p_nx_ref=101
   ! Maximum possible grid size, in the case of varying number of grid points
   ! (this is mostly for debugging)
   integer :: p_nx_MAX=10000
@@ -76,7 +76,7 @@ module global_input_parameters
   logical :: p_use_fixed_physical_grid=.false.
   ! The maximum radius to use for computations divided by the half mass radius
   ! i.e. rmax = p_rmax_over_rdisk * rdisk
-  double precision :: p_rmax_over_rdisk = 5d0
+  double precision :: p_rmax_over_rdisk = 2.25d0
 
   namelist /grid_parameters/ &
     p_rescale_field_for_shrinking_disks, p_rescale_field_for_expanding_disks, &

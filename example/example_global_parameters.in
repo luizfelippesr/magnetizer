@@ -2,6 +2,7 @@
 ! the description of the various parameters.
 &run_parameters
   model_name = "Example run"
+  info = 2
 /
 &io_parameters
   p_io_separate_output = .true.

@@ -160,4 +160,6 @@ program magnetizer
 
   call message('Total wall time in seconds =',tfinish-tstart, &
        master_only=.true., info=0)
+  call message('Average CPU time per galaxy =',(tfinish-tstart)*nproc/ngals, &
+       master_only=.true., info=0)
 end program magnetizer

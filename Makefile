@@ -12,7 +12,7 @@ OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 # Special configurations
 ifeq ($(HOSTNAME),topsy.ncl.ac.uk)
-	FCFLAGS_special= -fintrinsic-modules-path /home/nlfsr/include/fgsl  -I/home/nlfsr/include/fgsl -lfgsl -L/home/nlfsr/lib
+	FCFLAGS_special= -fintrinsic-modules-path /state/partition1/apps/fgsl/fgsl-1.0.0/include/fgsl -I/state/partition1/apps/fgsl/fgsl-1.0.0/include/fgsl
 endif
 
 FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -g -Wall -Wuninitialized

@@ -77,11 +77,15 @@ module global_input_parameters
   ! The maximum radius to use for computations divided by the half mass radius
   ! i.e. rmax = p_rmax_over_rdisk * rdisk
   double precision :: p_rmax_over_rdisk = 2.25d0
+  ! Which method to use for the interpolation, valid options are:
+  ! 'simple' (linear, without using fgsl), 'linear' (fgsl),
+  ! 'cubic_spline' (fgsl) and 'akima' (fgsl)
+  character(len=100) :: p_interp_method = 'simple'
 
   namelist /grid_parameters/ &
     p_rescale_field_for_shrinking_disks, p_rescale_field_for_expanding_disks, &
     p_scale_back_f_array, p_nx_ref, p_nx_MAX, p_use_fixed_physical_grid, &
-    p_rmax_over_rdisk
+    p_rmax_over_rdisk, p_interp_method
 
   ! -------------------------------------------------------
   ! Dynamo equations parameters and switches

@@ -39,8 +39,8 @@ module global_input_parameters
   character (len=50) :: model_name = 'Magnetized SAM'
   integer :: info = 1
   integer :: nsteps_0 = 1000
-  double precision :: p_courant_v = 0.09
-  double precision :: p_courant_eta = 0.09
+  double precision :: p_courant_v = 0.09 !0.4 for Damp=T and nxphys=151
+  double precision :: p_courant_eta = 0.09 !0.3 for Damp=T and nxphys=151
   logical :: p_variable_timesteps = .true.
   integer :: p_nsteps_max = 20000
   ! Debug mode: all timesteps are included in the output, but
@@ -67,7 +67,7 @@ module global_input_parameters
   logical :: p_rescale_field_for_expanding_disks=.false.
   logical :: p_scale_back_f_array = .true.
   ! Reference grid size (used both initially and for storage)
-  integer :: p_nx_ref=101
+  integer :: p_nx_ref=101  !151
   ! Maximum possible grid size, in the case of varying number of grid points
   ! (this is mostly for debugging)
   integer :: p_nx_MAX=10000

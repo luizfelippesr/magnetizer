@@ -1,19 +1,19 @@
 ! Please, check the comments at source/global_input_parameters.f90 for
 ! the description of the various parameters.
-&run_parameters
+&run_parameters  !Sets run mode, details of timestepping
   model_name = "Example run"
   info = 2
 /
-&io_parameters
-  p_io_separate_output = .true.
+&io_parameters	!Sets io paths, details of HDF5 configuration
+  p_io_separate_output = .true.	 !set to F if you want output saved inside the input file
   input_file_name = "example/example_SAM_input.hdf5"
   output_file_name = "example/example_magnetized_SAM_output.hdf5"
 /
-&grid_parameters
+&grid_parameters  !Sets up grid
 /
-&dynamo_parameters
+&dynamo_parameters  !Parameters controlling dynamo, seed magnetic field
 /
-&ISM_and_disk_parameters
+&ISM_and_disk_parameters  !Parameters controlling underlying disk
 /
-&outflow_parameters
+&outflow_parameters  !Parameters controlling outflows
 /

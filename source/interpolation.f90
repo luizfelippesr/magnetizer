@@ -2,13 +2,45 @@
 ! using interpolation routines from the FGSL
 module interpolation
   implicit none
-!   private
-!   public :: interpolate,
 
   contains
 
   subroutine interpolate(x, y, xi, yi, method)
-    ! Interpolates using FGSL
+    ! A very simple linear interpolator
+    ! NB: this routine is NOT well behaved for extrapolation
+    ! Input: x, y -> 1d-arrays containing the known values of the function
+    !        xi -> 1d-array with the point one want to interpolate into
+    ! Output: yi -> 1d-array containing the interpolated values
+    double precision, dimension(:), intent(in) :: x, y
+    double precision, dimension(:), intent(in) :: xi
+    double precision, dimension(:), intent(inout) :: yi
+    character(len=*), intent(in), optional :: method
+    integer :: i, j
+
+    ! If an specific interpolation method is selected
+    if (present(method)) then
+      if (trim(method) /= 'simple') then
+        call interpolate_fgsl(x, y, xi, yi, method)
+        return
+      endif
+    endif
+
+    j = 1
+    do i=1,size(xi)
+      do while (xi(i) > x(j+1))
+        j = j + 1
+        if ( j>= size(x)) then
+          j = size(x)-1
+          exit
+        endif
+      end do
+      yi(i) = y(j) + (y(j+1)-y(j)) * (xi(i) - x(j))/(x(j+1) - x(j))
+    end do
+  end subroutine interpolate
+
+
+  subroutine interpolate_fgsl(x, y, xi, yi, method)
+    ! Interpolates using FGSL -- this allows more sophisticated interpolations
     ! Input: x, y -> 1d-arrays containing the known values of the function
     !        xi -> 1d-array with the point one want to interpolate into
     !        optional, method -> either 'linear', 'polynomial', 'cubic_spline'
@@ -53,11 +85,12 @@ module interpolation
     ! Frees FGSL stuff
     call fgsl_spline_free (spline)
     call fgsl_interp_accel_free (acc)
-  end subroutine interpolate
+  end subroutine interpolate_fgsl
 
 
   subroutine rescale_array(y, y_new, method)
     ! Interpolates the n-array y into an n_new array, with the same endpoints
+    use global_input_parameters, only: p_interp_method
     double precision, dimension(:), intent(in) :: y
     double precision, dimension(:), intent(inout) :: y_new
     double precision, dimension(size(y)) :: x
@@ -75,7 +108,7 @@ module interpolation
     endif
 
     if (.not.present(method)) then
-      method_actual = 'linear'
+      method_actual = p_interp_method
     else
       method_actual = method
     endif

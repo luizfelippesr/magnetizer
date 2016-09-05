@@ -1,51 +1,41 @@
 program testInterpolation
+  ! Small program for testing the interpolation routines
   use interpolation
   implicit none
-  double precision, dimension(:,:), allocatable :: f
-  double precision, dimension(30) :: y
-  double precision, dimension(20) :: y_new
+  double precision, dimension(30) :: x_ref,y_ref
+  double precision, dimension(20) :: x_20,y_20
+  double precision, dimension(40) :: x_40, y_40
   integer :: i
-  double precision, dimension(100) :: xi1, yi1
-  double precision :: x1(4) = [0.0D0, 0.1D0, 0.27D0, 0.3D0], &
-       y1(4) = [0.15D0, 0.7D0, -0.1D0, 0.15D0]
+  character(len=100), parameter :: method ='akima'
+  integer, parameter :: u= 17
 
-  ! Test the interpolate subroutine (using the FGSL example)
-  do i=1, 100
-     xi1(i) = (1.D0 - dble(i-1)/100.D0) * x1(1) + dble(i-1)/100.D0 * x1(4)
+  ! Produces a uniform grid from 0 to 100 (for each variable)
+  x_ref = [ (100*dble(i-1)/dble(size(x_ref)-1), i=1,size(x_ref),1) ]
+  x_20 = [ (100*dble(i-1)/dble(size(x_20)-1), i=1,size(x_20),1) ]
+  x_40 = [ (100*dble(i-1)/dble(size(x_40)-1), i=1,size(x_40),1) ]
+
+  ! Computes the reference values (something complicated...)
+  y_ref = x_ref**2*sin(x_ref/10)/100+cos(x_ref/4.)*3
+
+  call interpolate(x_ref, y_ref, x_40, y_40, method=method)
+  call interpolate(x_ref, y_ref, x_20, y_20, method=method)
+
+  open(unit=u, file='/tmp/interp_test_ref.dat')
+  do i=1,size(x_ref)
+      write(u, '(2(F9.2))') x_ref(i), y_ref(i)
   end do
-  call interpolate(x1, y1, xi1, yi1, method='cubic_spline')
-  do i=1,100
-    print *, xi1(i), yi1(i)
-  enddo
-  print *, '#----------'
+  close(u)
 
-  ! Test rescaling an array to another grid
-  y = [ 0.00060015, -0.00465305, -0.01957277, -0.04545156, -0.07912795, &
-        -0.11393337, -0.14165434, -0.15459364, -0.14721517, -0.11715889,&
-        -0.06559698,  0.00299473, 0.0815216, 0.16125866,  0.23298575,   &
-        0.28812186,  0.31973156,  0.32330388,  0.29723662,  0.24299389, &
-        0.16493829,  0.06987072, -0.03366414, -0.13622948, -0.22841741, &
-        -0.3017493,  -0.3494712,  -0.36717296, -0.35317848, -0.30867717]
-  call rescale_array(y,y_new)
+  open(unit=u, file='/tmp/interp_test_40.dat')
+  do i=1,size(x_40)
+      write(u, '(2(F9.2))') x_40(i), y_40(i)
+  end do
+  close(u)
 
-
-  do i=1,size(y_new)
-    print *, y_new(i)
-  enddo
-
-  print *, '#----------'
-  allocate(f(30,4))
-  do i=1,3
-    f(:,i) = y
-  enddo
-  print *, y
-
-  print *, '#----------'
-  print *, shape(f)
-  call rescale_f_array(f,10,2)
-  print *, shape(f)
-  do i=1,10
-    print *, f(i,2)
-  enddo
+  open(unit=u, file='/tmp/interp_test_20.dat')
+  do i=1,size(x_20)
+      write(u, '(2(F9.2))') x_20(i), y_20(i)
+  end do
+  close(u)
 
 end program testInterpolation

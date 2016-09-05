@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib.backends.backend_pdf import PdfPages
 import h5py
 import sys
 import numpy as N
@@ -11,8 +14,6 @@ import argparse
 #print igals
 
 
-
-
 if __name__ == "__main__"  :
     parser = argparse.ArgumentParser(
              description='This script plots the inputs of specific galaxies.')
@@ -20,17 +21,23 @@ if __name__ == "__main__"  :
     parser.add_argument('IGALS', help='Galaxy number(s) (i.e. igals). '
                         'If using list of igals, it must be comma separated'
                         ' (with no spaces).')
+    parser.add_argument("PLOT_OUTPUT_FILENAME",
+                        help="Name of the pdf file containg the plots." )
     parser.add_argument('-q', "--quantities",
                    help='List of quantities to be plotted (comma separated).',
                    default=None )
-    parser.add_argument('-z', "--use_redshift", help="Keeps galaxies.hdf5 files.", action="store_true")
+    parser.add_argument('-z', "--use_redshift",
+                        help="Keeps galaxies.hdf5 files.", action="store_true")
 
     args = parser.parse_args()
 
     input_filename = args.INPUT_FILENAME
     igals = N.array(args.IGALS.split(',')).astype(int)
+    plot_filename = args.PLOT_OUTPUT_FILENAME
     quantities = args.quantities
     use_redshift = args.use_redshift
+
+    pdf = PdfPages(plot_filename)
 
     f = h5py.File(input_filename,'r')
     Input = f['Input']
@@ -55,7 +62,7 @@ if __name__ == "__main__"  :
             print Input.keys()
             continue
 
-        P.figure()
+        fig = P.figure()
         for igal in igals:
             data = N.array(Input[q][igal,:])
 
@@ -66,5 +73,5 @@ if __name__ == "__main__"  :
         else:
             P.xlabel(r'$t\,[{\rm Gyr}]$')
         P.ylabel(q)
-
-    P.show()
+        pdf.savefig(fig)
+    pdf.close()

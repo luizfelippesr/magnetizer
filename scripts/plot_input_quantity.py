@@ -61,6 +61,8 @@ if __name__ == "__main__"  :
             print q, 'not available'
             print Input.keys()
             continue
+        if q == 'ID':
+            continue
 
         fig = P.figure()
         for igal in igals:

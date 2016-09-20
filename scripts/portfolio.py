@@ -2,6 +2,8 @@
 """ Contains a script and functions to produce a "portfolio" of a model
     output, i.e. a file containing a series of plots showing radial profiles
     of several quantites for a sample of galaxies. """
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib.backends.backend_pdf import PdfPages
 import pylab as P
 import numpy as N

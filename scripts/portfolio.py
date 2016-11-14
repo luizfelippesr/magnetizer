@@ -269,7 +269,7 @@ if __name__ == "__main__"  :
                        selected_quantities,
                        pdf_filename,
                        output_filename=output_filename,
-                       galaxies_per_bin=args.number_of_galaxies_per_bin,
+                       galaxies_per_bin=int(args.number_of_galaxies_per_bin),
                        mass_bins=mass_bins,
                         selected_galaxies=None
                         )

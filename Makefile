@@ -26,7 +26,7 @@ serial: $(OBJ) ${builddir}/calldynamo.o
 	$(FC_nonMPI) $^ $(FCFLAGS) -o magnetize_galform_serial.exe
 
 # Test programs
-testProfiles: pressureEquilibrium.o tests.printProfiles.o global_input_parameters.o root_finder.o
+testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
 	$(FC) $(FCFLAGS) ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe
 testInterpolation: ${builddir}/interpolation.o ${builddir}/tests.interpolation.o
 	$(FC) $(FCFLAGS) ${builddir}/interpolation.o ${builddir}/tests.interpolation.o -o testInterpolation.exe

@@ -11,8 +11,8 @@ _OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameter
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 # Special configurations
-ifeq ($(HOSTNAME),topsy.ncl.ac.uk)
-	FCFLAGS_special= -fintrinsic-modules-path /state/partition1/apps/fgsl/fgsl-1.0.0/include/fgsl -I/state/partition1/apps/fgsl/fgsl-1.0.0/include/fgsl
+ifeq ($(HOSTNAME),topsy-login-1-0.local)
+	FCFLAGS_special= -fintrinsic-modules-path /share/apps/fgsl/fgsl-1.0.0/include/fgsl -I/share/apps/fgsl/fgsl-1.0.0/include/fgsl
 endif
 
 FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -g -Wall -Wuninitialized
@@ -40,6 +40,7 @@ all: testRoots testProfiles mpi
 
 # Builds all objects/modules following
 ${builddir}/%.o : ${srcdir}/%.f90
+	echo ${HOSTNAME}
 	$(FC)  $(FCFLAGS) -c $^ -o $@
 
 # Explicit dependencies between files

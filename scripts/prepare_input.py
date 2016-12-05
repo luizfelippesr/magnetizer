@@ -27,7 +27,7 @@ description_dictionary = {
         'r_halo': 'Virial radius of the dark matter halo',
         'v_halo': 'Circular velocity at the virial radius of the dark matter halo',
         'nfw_cs1': 'Inverse of the NFW concentration parameter',
-        'r_max': 'Maximum radius considered'
+        'weight': 'The density of this type of galaxy in the simulation.'
         }
 
 units_dictionary = {
@@ -42,7 +42,7 @@ units_dictionary = {
         'v_bulge': 'km/s',
         'r_halo' : 'kpc',
         'v_halo' : 'km/s',
-        'r_max' : 'kpc'
+        'weight': 'Mpc^-3'
         }
 
 def prepares_hdf5_input(data_dict, output_file):
@@ -74,7 +74,9 @@ def prepares_hdf5_input(data_dict, output_file):
                'Mgas_disk',
                'Mstars_disk',
                'Mstars_bulge',
-               'SFR')
+               'SFR',
+               'weight'
+               )
 
     if 'names' in data_dict:
         add_dataset(input_grp, 'ID', data_dict['names'])
@@ -112,6 +114,12 @@ def prepares_hdf5_input(data_dict, output_file):
 
             tmp['SFR'][j] = data_dict[t]['mstardot'][select][0]
             tmp['SFR'][j] *= 1e-9 /h0 # Msun/Gyr/h -> Msun/yr
+
+
+            tmp['weight'][j] = data_dict[t]['galaxy_weight'][select][0]
+            tmp['weight'][j] /= h0 # Msun/Gyr/h -> Msun/yr
+
+
 
             r_disk = data_dict[t]['rdisk'][select][0]
             r_disk *= Mpc_to_kpc/h0

@@ -36,6 +36,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                     'FirstProgenitorID',
                     'EndMainBranchID','DescendantID',
                     'GalaxyID', 'LastProgenitorID',
+                    'galaxy_weight'
                    )
 
 

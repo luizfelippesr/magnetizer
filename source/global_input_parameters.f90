@@ -153,7 +153,7 @@ module global_input_parameters
   ! Ratio between turbulent pressure and turbulent magnetic field pressure
   ! NB if simplified_pressure is on, this correspond to the ratio between
   ! turbulent pressure and _total_ magnetic field pressure
-  double precision :: p_ISM_xi = 1d0
+  double precision :: p_ISM_xi =  0.25!1d0 
   ! Adiabatic index of the ISM
   double precision :: p_ISM_gamma = 5d0/3d0
   ! Turbulent length (in kpc)

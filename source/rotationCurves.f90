@@ -55,7 +55,6 @@ contains
     do i=1,size(r)
       A(i) = (  I0(y(i)) * K0(y(i))            &
               - I1(y(i)) * K1(y(i)) )          &
-              ! Check this!
             / ( I0(y50) * K0(y50)  &
               - I1(y50) * K1(y50))
       A(i) = sqrt(A(i))

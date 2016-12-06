@@ -58,8 +58,8 @@ contains
     rs_nonSI = constDiskScaleToHalfMassRatio * rdisk ! kpc
     rs_g_nonSI = p_gasScaleRadiusToStellarScaleRadius_ratio * rs_nonSI ! kpc
     rs = rs_nonSI * kpc_SI ! m
-    A = (p_ISM_xi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma)
-
+    A = (p_ISM_kappa/3d0*(1d0+2d0*p_ISM_xi) + 1d0/p_ISM_gamma)
+    
     ! Nicknames
     bm = p_molecularHeightToRadiusScale
     bs = p_stellarHeightToRadiusScale

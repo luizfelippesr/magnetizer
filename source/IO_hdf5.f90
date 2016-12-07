@@ -95,14 +95,19 @@ contains
 
     write(namelist_str, nml=run_parameters)
     call add_text_attribute(file_id_out,'run_parameters',trim(namelist_str))
+    
     write(namelist_str, nml=io_parameters)
     call add_text_attribute(file_id_out,'io_parameters',trim(namelist_str))
+    
     write(namelist_str, nml=grid_parameters)
     call add_text_attribute(file_id_out,'grid_parameters',trim(namelist_str))
+    
     write(namelist_str, nml=dynamo_parameters)
     call add_text_attribute(file_id_out,'dynamo_parameters',trim(namelist_str))
-    write(namelist_str, nml=grid_parameters)
+    
+    write(namelist_str, nml=ISM_and_disk_parameters)
     call add_text_attribute(file_id_out,'ISM_and_disk_parameters',trim(namelist_str))
+    
     write(namelist_str, nml=outflow_parameters)
     call add_text_attribute(file_id_out,'outflow_parameters',trim(namelist_str))
 

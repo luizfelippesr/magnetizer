@@ -30,12 +30,18 @@ def copy_input_to_output(input_file, output_file, final_file=None):
 
 
 if __name__ == "__main__"  :
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
 
-    if len(sys.argv) > 3:
-        final_file = sys.argv[3]
-    else:
-        final_file = None
+    import argparse
+    parser = argparse.ArgumentParser(description='Copies the input group from '
+                                     'one Magnetizer hdf5 file into another.')
+    parser.add_argument("INPUT_FILE", help="Magnetizer input HDF5 file.")
+    parser.add_argument("OUTPUT_FILE",help="Magnetizer output HDF5 file.")
+    parser.add_argument('-o', '--alternate_output', default=None,
+                        help='If present, the previously specified input and '
+                        'output will both be written into this third file.')
+    args = parser.parse_args()
+  
+    copy_input_to_output(args.INPUT_FILE, 
+                         args.OUTPUT_FILE, 
+                         final_file=args.alternate_output)
 
-    copy_input_to_output(input_file, output_file, final_file=final_file)

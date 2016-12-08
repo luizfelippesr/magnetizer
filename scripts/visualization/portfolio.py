@@ -5,13 +5,11 @@
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib.backends.backend_pdf import PdfPages
-import pylab as P
-import numpy as N
+import matplotlib.pyplot as plt
+import numpy as np
 import h5py, random
 
-
 units_dict = {}
-
 
 formatted_units_dict = {'microgauss':r'\mu{{\rm G}}',
               'cm^-3':r'{{\rm cm}}^{{-3}}',
@@ -35,19 +33,18 @@ quantities_dict = {'Bp'   : r'B_\phi',
                    }
 
 
-def plot_quantity(igal, quantity, data_dict, cmap=P.cm.YlGnBu,
-                  ax=P.figure().add_subplot(111),ts=None):
+def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
+                  ax=plt.figure().add_subplot(111),ts=None):
     """Plots the time variation of a given quantity for a given galaxy """
     if ts is None:
         ts = data_dict['t'][:]
     data = data_dict[quantity]
 
     for t in ts:
-        it = N.argmin(abs(data_dict['t'][:]-t))
+        it = np.argmin(abs(data_dict['t'][:]-t))
         # Sets the line colour, using the colormap
         # (the factor 0.8 avoids extremely light colours)
         color = cmap((t-ts.min())/(ts.max()-ts.min()))
-
 
         r = data_dict['r'][igal,:,it]
         ok = data_dict['Omega'][igal,:,it] > 0
@@ -121,7 +118,7 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     mgas = finput['Mgas_disk'][:,-1]
 
     selected_igals = []
-    igals = N.arange(mstars.size)
+    igals = np.arange(mstars.size)
 
     # Creates a list of galaxy indices satisfying the selection criteria
     if selected_galaxies==None:
@@ -132,10 +129,10 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
             if tmp.size > galaxies_per_bin:
                 random.shuffle(tmp)
                 tmp = tmp[:galaxies_per_bin]
-            selected_igals = N.append(selected_igals,tmp)
+            selected_igals = np.append(selected_igals,tmp)
         selected_igals = selected_igals.astype(int)
     else:
-        selected_igals = N.array(selected_galaxies)
+        selected_igals = np.array(selected_galaxies)
 
     # The following was meant to be parallelized with parmap
     # however, multiprocessing breaks h5py!
@@ -158,7 +155,7 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
       return
   if mstars is not None:
       #info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
-        #N.log10(mstars[igal]))
+        #np.log10(mstars[igal]))
       info = r' $-$  $M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}} = {0:.3g}$'.format(mstars[igal])
   else:
       info =''
@@ -167,9 +164,9 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
   if mgas is not None:
       info += r' $-$  $M_{{\rm gas,disk}} = {0:.3g}$'.format(mgas[igal])
 
-  print 'galaxy', igal, '\tmgas = 10^{0:.3}'.format(N.log10(mgas[igal])),
-  print '\tmstars = 10^{0:.3}'.format(N.log10(mstars[igal]))
-  fig = P.figure(figsize=(8.268,11.69))
+  print 'galaxy', igal, '\tmgas = 10^{0:.3}'.format(np.log10(mgas[igal])),
+  print '\tmstars = 10^{0:.3}'.format(np.log10(mstars[igal]))
+  fig = plt.figure(figsize=(8.268,11.69))
   subplot_idx = 0
   for quantity in data_dict:
       if len(data_dict[quantity].shape)<3 or quantity=='r':
@@ -178,15 +175,15 @@ def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radi
       if subplot_idx > nrows*ncols:
           break
       ax = fig.add_subplot(nrows, ncols, subplot_idx)
-      plot_quantity(igal, quantity, data_dict, ax=ax, cmap=P.cm.viridis)
+      plot_quantity(igal, quantity, data_dict, ax=ax, cmap=plt.cm.viridis)
       fig.tight_layout()
       fig.subplots_adjust(top=0.95, bottom=0.1)
       fig.suptitle('Galaxy {0}{1}'.format(igal, info))
 
-      norm = P.mpl.colors.Normalize(vmin=data_dict['t'][:].min(),
+      norm = matplotlib.colors.Normalize(vmin=data_dict['t'][:].min(),
                                     vmax=data_dict['t'][:].max())
       ax = fig.add_axes([.065, .04, .9, .01])
-      x = P.mpl.colorbar.ColorbarBase(ax, cmap=P.cm.viridis, norm=norm,
+      x = matplotlib.colorbar.ColorbarBase(ax, cmap=plt.cm.viridis, norm=norm,
                                       orientation='horizontal')
 
       x.set_label(r'$t\,\,[{{\rm Gyr }}]$')
@@ -229,7 +226,7 @@ if __name__ == "__main__"  :
 
     args = parser.parse_args()
 
-    bins_list = N.array(args.mass_bins.split(',')).astype(float)
+    bins_list = np.array(args.mass_bins.split(',')).astype(float)
     mass_bins = [[10.0**m1,10.0**m2]
                   for m1,m2 in zip(bins_list[:-1],bins_list[1:])]
 
@@ -243,10 +240,10 @@ if __name__ == "__main__"  :
         input_filename = args.magnetizer_input
         output_filename = args.MAGNETIZER_OUTPUT
 
-    P.rc( ('axes'),labelsize=8)
-    P.rc( ('xtick','ytick'),labelsize=7)
-    #P.rc("font",size=5)
-    P.rc(("legend"),fontsize=6)
+    plt.rc( ('axes'),labelsize=8)
+    plt.rc( ('xtick','ytick'),labelsize=7)
+    #plt.rc("font",size=5)
+    plt.rc(("legend"),fontsize=6)
     selected_quantities = ['Beq',
                             'Bp',
                             'Br',
@@ -264,7 +261,6 @@ if __name__ == "__main__"  :
                             'n',
                             'tau']
 
-
     generate_portfolio(input_filename,
                        selected_quantities,
                        pdf_filename,
@@ -273,4 +269,3 @@ if __name__ == "__main__"  :
                        mass_bins=mass_bins,
                         selected_galaxies=None
                         )
-

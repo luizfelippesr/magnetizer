@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import scipy.stats as stat
 from quantities_dict import quantities_dict
+from extra_quantities import compute_extra_quantity
 from cycler import cycler
 
 plt.rc( ('axes'),labelsize=8.5)
@@ -66,12 +67,12 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
     # Selects the dataset for the chosen quantity
     if quantity in h5_input['Input']:
         data = h5_input['Input'][quantity]
-        output_quantity = False
-    elif quantity in h5_output['Output']:
-        data = h5_output['Output'][quantity]
-        ngals, ngrid, nzs = data.shape
-        output_quantity = True
-
+    else:
+        ngals, ngrid, nzs = h5_output['Output']['n'].shape
+        if quantity in h5_output['Output']:
+            data = h5_output['Output'][quantity]
+        else:
+            data = None # I.e. to be computed later!
         if pos_type == 'relative':
             rmax_rdisc = 2.25 # TODO read this form the parameters!!!!!
             i_target = int(ngrid/rmax_rdisc*position)
@@ -90,8 +91,16 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
             continue
 
         # Loads the values at the specified mass bin, radius and redshift
-        values = data[ok,i_target,iz]
-        values = values[values>-100]
+        if data is not None:
+            values = data[ok,i_target,iz]
+            filter_invalid = values > -1000 
+        else:
+            values = compute_extra_quantity(quantity,h5_output['Output'],
+                                            ok,i_target,iz)
+            filter_invalid = h5_output['Output']['n'][ok,i_target,iz] > 0
+
+        # Removes invalid data
+        values = values[filter_invalid]
 
         # Sets maximum and minimum values
         if vmax is None:
@@ -114,7 +123,10 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
         # Uses gaussian kernel density estimator to evaluate the PDF
         kernel = stat.gaussian_kde(values)
-        x = np.linspace(values_min,values_max,200)
+        if pdf_type == 'normal':
+            x = np.linspace(values_min,values_max, 200)
+        else:
+            x = np.linspace(np.log10(values_min),np.log10(values_max), 200)
         y = kernel.evaluate(x)
 
         if pdf_type == 'log':  x = 10**x
@@ -147,11 +159,11 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
 if __name__ == "__main__"  :
 
-    h = h5py.File('/home/nlfsr/magnetizer_runs/GON9_5000_noB.hdf5','r')
-    #h = h5py.File('/home/nlfsr/magnetizer_runs/GON9_5000.hdf5','r')
-    #h = h5py.File('/home/nlfsr/magnetizer_runs/GON9_5000_noB_altxi.hdf5','r')
+    h = h5py.File('/data/nlfsr/magnetizer-runs/GON9_5000_oldxi.hdf5','r')
+    #h = h5py.File('/data/nlfsr/magnetizer_runs/GON9_5000.hdf5','r')
+    #h = h5py.File('/data/nlfsr/magnetizer_runs/GON9_5000_noB_altxi.hdf5','r')
 
     hi = h5py.File('GON9_5000.hdf5','r')
-    prepare_PDF('h', h5_output=h, h5_input=hi, pdf_type='normal',
-                position=0.5, vmax=4000)
+    prepare_PDF('h/r', h5_output=h, h5_input=hi, pdf_type='normal',
+                position=0.5, vmax=2)
     plt.show()

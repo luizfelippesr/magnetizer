@@ -7,8 +7,9 @@ from numpy import pi, arctan, sqrt
 import numpy as np
     
     
-def compute_extra_quantity(qname, f, select_gal=np.s_[:], select_r=np.s_[:],
-                           select_z=np.s_[:]):
+def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
+                           select_r=slice(None,None,None),
+                           select_z=slice(None,None,None)):
     """ 
     Computes extra Magnetizer quantites.
     

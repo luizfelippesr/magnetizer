@@ -202,15 +202,15 @@ if __name__ == "__main__"  :
     args = parser.parse_args()
 
     start = time.time()
-    data_dict = read_time_data( args.SAM_OUTPUT,
-                                max_z = float(args.max_redshift),
-                                maximum_final_B_over_T=float(args.maximum_B_over_T),
-                                minimum_final_stellar_mass=float(args.minimum_stellar_mass),
-                                maximum_final_stellar_mass=float(args.maximum_stellar_mass),
-                                minimum_final_gas_mass=float(args.minimum_gas_mass),
-                                number_of_galaxies=int(args.number_of_galaxies),
-                                minimum_final_disk_size=1e-3*float(args.minimum_disk_size),
-                                empirical_disks=False)
+    data_dict = read_time_data(args.SAM_OUTPUT,
+                               max_z = float(args.max_redshift),
+                               maximum_final_B_over_T=float(args.maximum_B_over_T),
+                               minimum_final_stellar_mass=float(args.minimum_stellar_mass),
+                               maximum_final_stellar_mass=float(args.maximum_stellar_mass),
+                               minimum_final_gas_mass=float(args.minimum_gas_mass),
+                               number_of_galaxies=int(args.number_of_galaxies),
+                               minimum_final_disk_size=1e-3*float(args.minimum_disk_size),
+                               empirical_disks=False)
     middle = time.time()
     prepares_hdf5_input(data_dict, args.MAGNETIZER_INPUT)
     end = time.time()

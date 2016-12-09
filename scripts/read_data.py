@@ -12,17 +12,19 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                    maximum_final_stellar_mass=1e14, minimum_final_gas_mass=1e5,
                    number_of_galaxies=100, empirical_disks=True,
                    minimum_final_disk_size=0.0, datasets=None):
-    """Reads data from the galaxies.hdf5 file inside sam_output_filepath.
-       The option number_of_galaxies sets the _approximate_ number of galaxies
-       in the output (which are drawn, randomly, from the sample, taking into
-       account halo press-schechter weights. Other options allow to select
-       by minimum mass of the final galaxy.
+    """
+    Reads data from the galaxies.hdf5 file inside sam_output_filepath.
+    The option number_of_galaxies sets the _approximate_ number of galaxies
+    in the output (which are drawn, randomly, from the sample, taking into
+    account halo press-schechter weights. Other options allow to select
+    by minimum mass of the final galaxy.
 
-       Returns a dictionary of dictionaries containing times as keys in the
-       first level, dataset names in the second level and the arrays
-       associated with each dataset in the last level.
-       Redshift and time information can be obtained from the special keys: zout
-       and tout.  """
+    Returns a dictionary of dictionaries containing times as keys in the
+    first level, dataset names in the second level and the arrays
+    associated with each dataset in the last level.
+    Redshift and time information can be obtained from the special keys: zout
+    and tout.
+    """
 
     if datasets == None:
         # Which data sets will be read from the output
@@ -38,7 +40,6 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                     'GalaxyID', 'LastProgenitorID',
                     'galaxy_weight'
                    )
-
 
     # Opens the hdf5 file
     f = h5py.File(sam_output_filepath)
@@ -189,7 +190,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
         data_dict['names'] = f[output_id+'/names']
 
     if empirical_disks: # TODO not working yet
-        pass
+        raise NotImplementedError
 
     data_dict['tout'] = tout_array[zout_array<max_z]
     data_dict['zout'] = zout_array[zout_array<max_z]

@@ -43,6 +43,15 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
     elif qname == 'R_u':
         return f['Uz'][ig,ir,iz] * (h/1e3) / f['etat'][ig,ir,iz]
 
+    elif qname == '|Bp|':
+        return np.abs(f['Bp'][ig,ir,iz])
+
+    elif qname == '|Br|':
+        return np.abs(f['Bp'][ig,ir,iz])
+
+    elif qname == '|Bz|':
+        return f['Bzmod'][ig,ir,iz]
+
     elif qname == 'p':
         return arctan(f['Br'][ig,ir,iz]/f['Bp'][ig,ir,iz])*180/pi
 

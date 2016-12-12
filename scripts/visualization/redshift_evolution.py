@@ -93,15 +93,6 @@ for i, (M_min, M_max) in enumerate(zip(M_bins[:-1],M_bins[1:])):
     eightyfive = np.log10(results[:,2])
     median = np.log10(results[:,1])
 
-    fifteen = np.log10(results[:,0])
-    eightyfive = np.log10(results[:,2])
-    median = np.log10(results[:,1])
-
-    print median.shape
-    print median.shape
-    print eightyfive.shape
-    #plt.axis([0,2.5,-1,3.5])
-
     plt.plot(zs, median, marker='.', color='#d95f0e')
     plt.plot(zs, fifteen, color='#d95f0e', linestyle=':')
     plt.plot(zs, eightyfive, color='#d95f0e', linestyle=':')

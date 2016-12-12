@@ -6,6 +6,7 @@ import scipy.stats as stat
 from quantities_dict import quantities_dict
 from extra_quantities import compute_extra_quantity
 from cycler import cycler
+from parameters import Parameters
 
 plt.rc( ('axes'),labelsize=8.5)
 plt.rc( ('xtick','ytick'),labelsize=8)
@@ -24,7 +25,7 @@ plt.rcParams['lines.linewidth'] = 1.75
 
 
 def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
-                vmin=None, vmax=None, position=0, pdf_type='normal',
+                vmin=None, vmax=None, position=1.0, pdf_type='normal',
                 pos_type='relative', fig=plt.figure(),
                 mass_bins=np.array([1e7,1e8,1e9,1e10,1e11,1e12]),
 
@@ -47,7 +48,7 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
            pdf_type -> 'log' computes P(log(quantity)) while
                        'normal' computes P(quantity). Default: 'normal'
            position -> 'position', in number of half-mass radii, for the
-                       calculation of the PDF (for the radial dependent quantities).
+                       calculation of the PDF (for the radial dependent quantities). Default: 1.0
            fig -> matplotlib figure which will contain the plot. TODO
 
     Returns: the matplotlib figure object.
@@ -55,6 +56,7 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
     if h5_input is None:
       h5_input = h5_output
 
+    params = Parameters(h5_output)
     # Selects mass-related dataset
     Mb = h5_input['Input']['Mstars_bulge']
     Mg = h5_input['Input']['Mstars_disk']
@@ -74,7 +76,7 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
         else:
             data = None # I.e. to be computed later!
         if pos_type == 'relative':
-            rmax_rdisc = 2.25 # TODO read this form the parameters!!!!!
+            rmax_rdisc = params.grid['P_RMAX_OVER_RDISK']
             i_target = int(ngrid/rmax_rdisc*position)
         elif pos_type =='absolute':
             raise NotImplementedError
@@ -123,6 +125,7 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
         # Uses gaussian kernel density estimator to evaluate the PDF
         kernel = stat.gaussian_kde(values)
+
         if pdf_type == 'normal':
             x = np.linspace(values_min,values_max, 200)
         else:

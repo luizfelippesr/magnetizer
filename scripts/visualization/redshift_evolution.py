@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
+from parameters import Parameters
 
 plt.rc( ('axes'),labelsize=8.5)
 plt.rc( ('xtick','ytick'),labelsize=8)
@@ -29,10 +30,12 @@ def weighted_percentile(data, weights, percentiles=[15,50,85]):
       return np.interp(percentiles, P, sorted_data)
 
 # Opens Magnetizer output file
-f = h5py.File('/data/nlfsr/magnetizer-runs/GON9_5000.hdf5','r')
+f = h5py.File('/home/nlfsr/magnetizer_runs/GON9_5000.hdf5','r')
+params = Parameters(f)
 
-# TODO This should be set using the data in the HDF5 file
-rmax_rdisc = 2.25
+
+rmax_rdisc = params.grid['P_RMAX_OVER_RDISK']
+
 
 Bphi = f['Output']['Bp']
 
@@ -85,6 +88,10 @@ for i, (M_min, M_max) in enumerate(zip(M_bins[:-1],M_bins[1:])):
 
     plt.xlabel('z')
     plt.ylabel(r'$\log(|\overline{B}|/\mu{\rm G})$')
+
+    fifteen = np.log10(results[:,0])
+    eightyfive = np.log10(results[:,2])
+    median = np.log10(results[:,1])
 
     fifteen = np.log10(results[:,0])
     eightyfive = np.log10(results[:,2])

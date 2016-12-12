@@ -27,7 +27,8 @@ description_dictionary = {
         'r_halo': 'Virial radius of the dark matter halo',
         'v_halo': 'Circular velocity at the virial radius of the dark matter halo',
         'nfw_cs1': 'Inverse of the NFW concentration parameter',
-        'weight': 'The density of this type of galaxy in the simulation.'
+        'weight': 'The density of this type of galaxy in the simulation.',
+        'central': 'Whether the galaxy is a central (1) or a satellite (0).'
         }
 
 units_dictionary = {
@@ -76,7 +77,7 @@ def prepares_hdf5_input(data_dict, output_file):
                'Mstars_bulge',
                'SFR',
                'weight',
-               'iscentral'
+               'central'
                )
 
     if 'names' in data_dict:
@@ -120,6 +121,7 @@ def prepares_hdf5_input(data_dict, output_file):
             tmp['weight'][j] = data_dict[t]['galaxy_weight'][select][0]
             tmp['weight'][j] /= h0 # Msun/Gyr/h -> Msun/yr
 
+            tmp['central'][j] = data_dict[t]['is_central'][select][0]
 
 
             r_disk = data_dict[t]['rdisk'][select][0]

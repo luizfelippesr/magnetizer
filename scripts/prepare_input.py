@@ -75,7 +75,8 @@ def prepares_hdf5_input(data_dict, output_file):
                'Mstars_disk',
                'Mstars_bulge',
                'SFR',
-               'weight'
+               'weight',
+               'iscentral'
                )
 
     if 'names' in data_dict:

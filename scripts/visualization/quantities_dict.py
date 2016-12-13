@@ -19,5 +19,6 @@ quantities_dict = {
   'Omega' : ( r'\Omega', r'{\rm km}\,{\rm s}^{-1}{\rm kpc}^{-1}'),
   'Shear' : ( r'S', r'{\rm km}\,{\rm s}^{-1}{\rm kpc}^{-1}'),
   'Uz' : ( r'U_z', r'{\rm km}\,{\rm s}^{-1}'),
+  'p' : ( r'p', r'{\rm deg}'),
   }
 

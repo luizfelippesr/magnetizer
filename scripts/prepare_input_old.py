@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ Contains routines which prepare galaxy input files for the magnetic field
     evolution code. """
-from read_data import read_time_data
+from read_data_old import read_time_data
 import numpy as N
 
 # Some constants

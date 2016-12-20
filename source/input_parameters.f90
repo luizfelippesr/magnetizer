@@ -138,13 +138,18 @@ module input_params
     ! Sets n1, maximum number of snapshots
     n1 = number_of_redshifts
     ! Sets the initial valid snapshot (uses the disk size as a marker)
+    init_it = -1
     do i=1,n1
-      if (galaxy_data(i,1)>=p_rdisk_min) then
+      if ((galaxy_data(i,1)>=p_rdisk_min/1000) .and. (init_it<0)) then
         init_it = i
+      endif
+      if ((galaxy_data(i,1)<0) .and. (init_it>0)) then
+        number_of_redshifts = i-1
         exit
       endif
     enddo
     iread = init_it-1
+
   endsubroutine read_input_parameters
 
 

@@ -91,7 +91,7 @@ def prepares_hdf5_input(data_dict, output_file):
             dset = dset/h0
         elif name == 'SFR':
             dset = dset*1e-9/h0 # Msun/Gyr/h -> Msun/yr
-        elif name in ('rdisk', 'r_bulge', 'r_halo'):
+        elif name in ('r_disk', 'r_bulge', 'r_halo'):
             dset = dset*Mpc_to_kpc/h0
         # Adds it to the
         add_dataset(input_grp, name, dset)
@@ -134,7 +134,15 @@ if __name__ == "__main__"  :
 
     parser.add_argument('-n', '--number_of_galaxies', default=1e10,
                         help='Approximate *maximum* number of galaxies to '
-                        'extract from the SAM_OUTPUT file. Default: 1e10.')
+                        'extract from the SAM_OUTPUT file at z=0. '
+                        'The evolution of these galaxies will then be followed.'
+                        'Default: 1e10.')
+
+    parser.add_argument('-nz', '--number_of_extra_galaxies_per_z',
+                        default=None,
+                        help='Approximate *maximum* number of galaxies to '
+                        'extract from the SAM_OUTPUT file for each redshift'
+                        '(except z=0). Default: same as number_of_galaxies.')
 
     parser.add_argument('-BoT', "--maximum_B_over_T", default=0.75,
                         help='Maximum bulge to total mass ratio.'
@@ -161,13 +169,21 @@ if __name__ == "__main__"  :
 
     parser.add_argument('-naz', "--do_not_sample_all_z", action="store_true",
                         help="If present, galaxies will be sampled only at "
-                        "z=0 (and their ancestors will be followed to high z)."
-                        "If absent, extra galaxies will me sampled for each redshift.")
+                        "z=0 and their ancestors will be followed to high z "
+                        "(this is equivalent to -nz 0). "
+                        "If absent, extra galaxies will me sampled for each redshift following -nz.")
 
 
     args = parser.parse_args()
 
     start = time.time()
+
+    nz = args.number_of_extra_galaxies_per_z
+    if nz is None:
+        nz = int(args.number_of_galaxies)
+    else:
+        nz = int(nz)
+
     data_dict = read_time_data(args.SAM_OUTPUT,
                                max_z = float(args.max_redshift),
                                maximum_final_B_over_T=float(args.maximum_B_over_T),
@@ -177,7 +193,9 @@ if __name__ == "__main__"  :
                                number_of_galaxies=int(args.number_of_galaxies),
                                minimum_final_disk_size=1e-3*float(args.minimum_disk_size),
                                empirical_disks=False,
-                               sample_all_z=not args.do_not_sample_all_z)
+                               sample_all_z=not args.do_not_sample_all_z,
+                               number_of_galaxies_high_z=nz
+                               )
     end = time.time()
     prepares_hdf5_input(data_dict, args.MAGNETIZER_INPUT)
     print 'preparation time', end-start,'s'

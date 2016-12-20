@@ -2,7 +2,7 @@
 """ Contains routines which prepare galaxy input files for the magnetic field
     evolution code. """
 from read_data import read_time_data
-import numpy as np
+import numpy as N
 
 # Some constants
 Mpc_to_kpc = 1000
@@ -19,7 +19,6 @@ description_dictionary = {
         'SFR' : 'Star formation rate',
         'Mstars_disk':'Stelar mass of the galaxy disc',
         'Mstars_bulge':'Stelar mass of the galaxy bulge',
-        'Mhalo': 'Halo mass',
         'Mgas_disk': 'Total gas mass of the galaxy disc',
         'r_disk': 'Half mass radius of the galaxy disc',
         'v_disk': 'Circular velocity at the half-mass radius of the galaxy disc',
@@ -32,28 +31,12 @@ description_dictionary = {
         'central': 'Whether the galaxy is a central (1) or a satellite (0).'
         }
 
-dataset_names = {'rdisk' : 'r_disk',
-                 'vdisk' : 'v_disk',
-                 'rbulge' : 'r_bulge',
-                 'vbulge' : 'v_bulge' ,
-                 'halo_r_virial' : 'r_halo',
-                 'vhalo' : 'v_halo',
-                 'strc' : 'nfw_cs1',
-                 'mcold' : 'Mgas_disk',
-                 'mchalo' : 'Mhalo',
-                 'mstars_disk' : 'Mstars_disk',
-                 'mstars_bulge' : 'Mstars_bulge',
-                 'mstardot_average' : 'SFR',
-                 'galaxy_weight' : 'weight',
-                 'is_central' : 'central'}
-
 units_dictionary = {
         't' :'Gyr',
         'SFR': 'Msun/yr',
         'Mstars_disk': 'Msun',
         'Mstars_bulge': 'Msun',
         'Mgas_disk': 'Msun',
-        'Mhalo': 'Msun',
         'r_disk' : 'kpc',
         'v_disk' : 'km/s',
         'r_bulge': 'kpc',
@@ -67,56 +50,116 @@ def prepares_hdf5_input(data_dict, output_file):
     from hdf5_util import add_dataset
     import h5py
 
+    number_of_r50 = 2.5
+
     h5file = h5py.File(output_file)
     input_grp = h5file.create_group('Input')
-    galform_grp = h5file.create_group('Galform Parameters')
-    for param in data_dict['Galform_Parameters']:
-        galform_grp[param] = data_dict['Galform_Parameters'][param]
 
+    galform_grp = h5file.create_group('Galform Parameters')
+    for param in data_dict['Galform Parameters']:
+        galform_grp[param] = data_dict['Galform Parameters'][param]
+
+    ts = data_dict['tout']
+    zs = data_dict['zout']
     h0 = data_dict['h0']
 
-    IDs = data_dict['IDs']
+    IDs = data_dict[ts[0]]['ID']
 
-    for dataset in dataset_names:
-        name = dataset_names[dataset]
-        dset = []
-        for ID in IDs:
-            if dataset not in data_dict[ID]: continue
+    datasets =('r_disk',
+               'v_disk',
+               'r_bulge',
+               'v_bulge',
+               'r_halo',
+               'v_halo',
+               'nfw_cs1',
+               'Mgas_disk',
+               'Mstars_disk',
+               'Mstars_bulge',
+               'SFR',
+               'weight',
+               'central'
+               )
 
-            dset.append(data_dict[ID][dataset])
-        if len(dset)==0: continue
-        dset = np.vstack(dset)
-        # Loads what is necessary (and removes the little-h dependence)
-        if name in ('Mstars_disk','Mgas_disk','Mstars_bulge', 'weight','Mhalo'):
-            dset = dset/h0
-        elif name == 'SFR':
-            dset = dset*1e-9/h0 # Msun/Gyr/h -> Msun/yr
-        elif name in ('rdisk', 'r_bulge', 'r_halo'):
-            dset = dset*Mpc_to_kpc/h0
-        # Adds it to the
-        add_dataset(input_grp, name, dset)
+    if 'names' in data_dict:
+        add_dataset(input_grp, 'ID', data_dict['names'])
+    else:
+        add_dataset(input_grp, 'ID', IDs)
+    for i in N.argsort(ts):
+        add_dataset(input_grp, 't', [ts[i],])
+        add_dataset(input_grp, 'z', [zs[i],])
 
-        input_grp[name].attrs['Description'] = description_dictionary[name]
-        if name in units_dictionary:
-            input_grp[name].attrs['Units'] = units_dictionary[name]
+    for k in ('t','z','ID'):
+        input_grp[k].attrs['Description'] = description_dictionary[k]
+    input_grp['t'].attrs['Units'] = units_dictionary['t']
 
-    if 'r_halo' not in input_grp:
-        r_halo = G*input_grp['Mhalo'][...]/(input_grp['v_halo'][...]**2)
-        r_halo *= Mpc_to_kpc
-        add_dataset(input_grp, 'r_halo', r_halo)
-        input_grp['r_halo'].attrs['Description'] = description_dictionary['r_halo']
-        if name in units_dictionary:
-            input_grp['r_halo'].attrs['Units'] = units_dictionary['r_halo']
+    for i, ID in enumerate(IDs):
+        # Constructs a temporary dictionary to store the time series
+        # extracted from galform
+        tmp = dict()
+        r_disk_max = 0
+        # Initializes all arrays with the "INVALID" mark: -999999
+        for d in datasets:
+            tmp[d] = N.ones_like(ts)*(-999999)
 
-    for name in ('t', 'z'):
-        add_dataset(input_grp, name, data_dict[name])
-        input_grp[name].attrs['Description'] = description_dictionary[name]
-        if name in units_dictionary:
-            input_grp[name].attrs['Units'] = units_dictionary[name]
+        for j, t in enumerate(sorted(ts)):
+            select = data_dict[t]['ID'] == ID
+            # Skips missing times..
+            if not select.any():
+                continue
 
-    ngals, nzs = input_grp['r_disk'].shape
-    h5file.attrs['Number of galaxies'] = ngals
-    h5file.attrs['Number of snapshots'] = nzs
+            # Loads what is necessary (and removes the little-h dependence)
+            tmp['Mstars_disk'][j] = data_dict[t]['mstars_disk'][select][0]/h0
+
+            tmp['Mgas_disk'][j] = data_dict[t]['mcold'][select][0]/h0
+            tmp['Mstars_bulge'][j] = data_dict[t]['mstars_bulge'][select][0]/h0
+            # NB mstars_bulge and mcold_burst not used
+
+            tmp['SFR'][j] = data_dict[t]['mstardot'][select][0]
+            tmp['SFR'][j] *= 1e-9 /h0 # Msun/Gyr/h -> Msun/yr
+
+
+            tmp['weight'][j] = data_dict[t]['galaxy_weight'][select][0]
+            tmp['weight'][j] /= h0 # Msun/Gyr/h -> Msun/yr
+
+            tmp['central'][j] = data_dict[t]['is_central'][select][0]
+
+
+            r_disk = data_dict[t]['rdisk'][select][0]
+            r_disk *= Mpc_to_kpc/h0
+
+            tmp['r_disk'][j] = r_disk
+
+            tmp['v_disk'][j] = data_dict[t]['vdisk'][select][0]
+
+            tmp['r_bulge'][j] = data_dict[t]['rbulge'][select][0]
+            tmp['r_bulge'][j] *= Mpc_to_kpc/h0
+
+            tmp['v_bulge'][j] = data_dict[t]['vbulge'][select][0]
+
+            tmp['v_halo'][j] = data_dict[t]['vhalo'][select][0]
+            if 'halo_r_virial' in data_dict[t]:
+                r_halo  = data_dict[t]['halo_r_virial'][select][0]
+            else:
+                mhalo = data_dict[t]['mhalo'][select][0]
+                r_halo = G*mhalo/(tmp['v_halo'][j]**2)
+            r_halo *= Mpc_to_kpc/h0
+            tmp['r_halo'][j] = r_halo
+
+            tmp['nfw_cs1'][j] = data_dict[t]['strc'][select][0]
+
+        for dataset_name in tmp:
+            add_dataset(input_grp, dataset_name, [tmp[dataset_name],])
+
+
+        for dataset_name in tmp:
+            input_grp[dataset_name].attrs['Description'] = \
+                                          description_dictionary[dataset_name]
+            if dataset_name in units_dictionary:
+                input_grp[dataset_name].attrs['Units'] = \
+                                                units_dictionary[dataset_name]
+        ngals, nzs = input_grp['r_disk'].shape
+        h5file.attrs['Number of galaxies'] = ngals
+        h5file.attrs['Number of snapshots'] = nzs
 
 
 
@@ -136,7 +179,7 @@ if __name__ == "__main__"  :
                         help='Approximate *maximum* number of galaxies to '
                         'extract from the SAM_OUTPUT file. Default: 1e10.')
 
-    parser.add_argument('-BoT', "--maximum_B_over_T", default=0.75,
+    parser.add_argument('-BoT', "--maximum_B_over_T", default=0.5,
                         help='Maximum bulge to total mass ratio.'
                         ' Default: 0.5.')
 
@@ -156,14 +199,8 @@ if __name__ == "__main__"  :
                         help="Minimum disk half mass radius at z=0 (in kpc)."
                         " Default: 0.5.")
 
-    parser.add_argument('-z', "--max_redshift", default=4,
+    parser.add_argument('-z', "--max_redshift", default=6,
                         help="Maximum redshift to use. Default: 6.")
-
-    parser.add_argument('-naz', "--do_not_sample_all_z", action="store_true",
-                        help="If present, galaxies will be sampled only at "
-                        "z=0 (and their ancestors will be followed to high z)."
-                        "If absent, extra galaxies will me sampled for each redshift.")
-
 
     args = parser.parse_args()
 
@@ -176,8 +213,10 @@ if __name__ == "__main__"  :
                                minimum_final_gas_mass=float(args.minimum_gas_mass),
                                number_of_galaxies=int(args.number_of_galaxies),
                                minimum_final_disk_size=1e-3*float(args.minimum_disk_size),
-                               empirical_disks=False,
-                               sample_all_z=not args.do_not_sample_all_z)
-    end = time.time()
+                               empirical_disks=False)
+    middle = time.time()
     prepares_hdf5_input(data_dict, args.MAGNETIZER_INPUT)
-    print 'preparation time', end-start,'s'
+    end = time.time()
+
+    print 'read_time_data', middle-start,'s'
+    print 'prepares_hdf5_input', end-middle,'s'

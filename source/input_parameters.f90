@@ -140,7 +140,7 @@ module input_params
     ! Sets the initial valid snapshot (uses the disk size as a marker)
     init_it = -1
     do i=1,n1
-      if ((galaxy_data(i,1)>=p_rdisk_min/1000) .and. (init_it<0)) then
+      if ((galaxy_data(i,1)>=p_rdisk_min) .and. (init_it<0)) then
         init_it = i
       endif
       if ((galaxy_data(i,1)<0) .and. (init_it>0)) then

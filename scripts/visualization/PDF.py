@@ -6,7 +6,9 @@ import scipy.stats as stat
 from quantities_dict import quantities_dict
 from extra_quantities import compute_extra_quantity
 from cycler import cycler
+
 from parameters import Parameters
+
 
 plt.rc( ('axes'),labelsize=8.5)
 plt.rc( ('xtick','ytick'),labelsize=8)
@@ -26,10 +28,9 @@ plt.rcParams['lines.linewidth'] = 1.75
 
 def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
                 vmin=None, vmax=None, position=1.0, pdf_type='normal',
-                pos_type='relative', fig=plt.figure(),
+                pos_type='relative', fig=None,
                 mass_bins=np.array([1e7,1e8,1e9,1e10,1e11,1e12]),
-
-                ):
+                select_only='all', **args):
     """
     Plots the Probability Distribution Function (PDF) of a given quantity for
     different galaxy mass bins at a given redshift.
@@ -53,6 +54,10 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
     Returns: the matplotlib figure object.
     """
+
+    if fig is None:
+        fig = plt.figure()
+
     if h5_input is None:
       h5_input = h5_output
 
@@ -62,10 +67,14 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
     Mg = h5_input['Input']['Mstars_disk']
     Md = h5_input['Input']['Mgas_disk']
 
+    if 'central' in h5_input['Input']:
+        central = h5_input['Input']['central']
+
     # Gets index of the selected redshift
     zs = h5_input['Input']['z'][:]
-    iz = np.argmin(zs - redshift)
+    iz = np.argmin(abs(zs - redshift))
 
+    print redshift, iz, zs[iz]
     # Selects the dataset for the chosen quantity
     if quantity in h5_input['Input']:
         data = h5_input['Input'][quantity]
@@ -87,6 +96,11 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
         # Creates filter for the current bin
         ok = Md[:,iz]>mmin
         ok *= Md[:,iz]<mmax
+
+        if select_only=='satellite' or select_only=='satellites':
+            ok *= ~ central[:,iz].astype(bool)
+        elif select_only=='central' or select_only=='centrals':
+            ok *= central[:,iz].astype(bool)
 
         # Skips if there aren't enough galaxies in the bin
         if not len(ok[ok])>1:
@@ -135,7 +149,8 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
         if pdf_type == 'log':  x = 10**x
 
         plt.plot(x,y,
-                 label=r'$10^{{ {0:.2f} }}<M/M_\odot<10^{{ {1:.2f} }}$, $N={2}$'.format(np.log10(mmin),np.log10(mmax), len(values)))
+                 label=r'$10^{{ {0:.2f} }}<M/M_\odot<10^{{ {1:.2f} }}$, $N={2}$'.format(np.log10(mmin),np.log10(mmax), len(values)),
+                 **args)
         plt.title(r'$z={0:.2f}$'.format(abs(zs[iz]))
                   )
 
@@ -158,6 +173,8 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
         plt.xlabel(r'${0}$'.format(name))
 
     plt.legend(frameon=False)
+
+    return fig
 
 
 if __name__ == "__main__"  :

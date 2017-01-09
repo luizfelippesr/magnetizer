@@ -24,7 +24,7 @@ module dynamo
       integer, intent(in) :: gal_id
       integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
-      logical :: ok, able_to_construct_profiles, elliptical, timestep_ok
+      logical :: ok, able_to_construct_profiles, elliptical, timestep_ok, error
       integer :: fail_count, rank_actual
       integer, parameter :: MAX_FAILS=4
       double precision, dimension(nx) :: Btmp
@@ -42,8 +42,12 @@ module dynamo
       ! Sets the number of variables
       call init_var
       ! Reads in the model parameters (for the first snapshot)
-      call set_input_params(gal_id)
-      ! Prepares the grid where the computation will be made
+      call set_input_params(gal_id, error)
+      if (error) then
+        call message('Error while reading data for galaxy.', &
+                     gal_id=gal_id, info=1)
+        return
+      endif
       call construct_grid(r_disk, r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
       call check_allocate_f_array(f, nvar)
@@ -62,7 +66,7 @@ module dynamo
       call estimate_Bzmod(f)
 
       ! Loops through the SAM's snapshots
-      do it=init_it,n1
+      do it=init_it,max_it
         this_t = t_Gyr
 
         call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
@@ -232,7 +236,12 @@ module dynamo
 
 
         ! Reads in the model parameters for the next snapshot
-        call set_input_params(gal_id)
+        call set_input_params(gal_id, error)
+        if (error) then
+          call message('Error while reading data for galaxy.', &
+                       gal_id=gal_id, info=1)
+          return
+        endif
       end do  ! snapshots loop
       
       !Writes final simulation output

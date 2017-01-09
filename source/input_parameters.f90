@@ -15,6 +15,7 @@ module input_params
   ! Time-stepping parameters
   integer, protected :: n1 = -1 !Total number of snapshots (set to -1 to flag it is uninitialized)
   integer, protected :: init_it = -1 ! Index of the initial snapshot (set to -1 to flag it is uninitialized)
+  integer, protected :: max_it = -1 ! Index of the final snapshot (set to -1 to flag it is uninitialized)
   double precision, protected :: tsnap !Time between successive snapshots
   integer, protected :: nsteps=20  !Number of timesteps in between snapshots
   double precision, protected :: dt ! Timestep
@@ -137,14 +138,16 @@ module input_params
 
     ! Sets n1, maximum number of snapshots
     n1 = number_of_redshifts
-    ! Sets the initial valid snapshot (uses the disk size as a marker)
+
+    ! Sets the initial and final valid snapshots (uses the disk size as a marker)
     init_it = -1
+    max_it = number_of_redshifts
     do i=1,n1
       if ((galaxy_data(i,1)>=p_rdisk_min) .and. (init_it<0)) then
         init_it = i
       endif
       if ((galaxy_data(i,1)<0) .and. (init_it>0)) then
-        number_of_redshifts = i-1
+        max_it = i-1
         exit
       endif
     enddo
@@ -160,12 +163,15 @@ module input_params
   end subroutine reset_input_params
 
 
-  subroutine set_input_params(gal_id)
+  subroutine set_input_params(gal_id, error)
     ! Reads dimensional input parameters that must be specified and may vary
     ! from galaxy to galaxy and from timestep to timestep
     integer, intent(in) :: gal_id
+    logical, intent(out) :: error
     double precision :: next_time_input
     double precision :: current_time_input
+
+    error = .false.
 
     ! Reads the whole file on first access
     if (gal_id /= current_gal_id ) then
@@ -174,9 +180,16 @@ module input_params
 
     iread=iread+1
 
+    ! Traps the case where there is no valid galaxy data or
+    ! there is a problem reading the parameters
+    if (iread<0) then
+      error = .true.
+      return
+    endif
+
     current_time_input = output_times(iread)
 
-    if ( iread < number_of_redshifts ) then
+    if ( iread < max_it ) then
       next_time_input = output_times(iread+1)
       time_between_inputs = next_time_input-current_time_input
       t = 0 ! At each snapshot, reset the time variable

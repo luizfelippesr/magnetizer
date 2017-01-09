@@ -201,6 +201,12 @@ contains
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
 
+    if (error/=0) then
+      call message('Error in IO_write_dataset_scalar. Exiting..', &
+                   gal_id=gal_id, info=0)
+      stop
+    endif
+
     return
 
   end subroutine IO_write_dataset_scalar
@@ -339,7 +345,6 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
       call h5screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error) 
       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
     end if
-    
     ! Selects hyperslab in the file.
     offset = [0,0,gal_id-1] ! Means: in third dimension, start from gal_id-1
     call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
@@ -348,7 +353,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error, &
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
-    return    
+
+    if (error/=0) then
+      call message('Error in IO_write_dataset_vector. Exiting..', &
+                   gal_id=gal_id, info=0)
+      stop
+    endif
+
+    return
     
   end subroutine IO_write_dataset_vector
     

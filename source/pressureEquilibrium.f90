@@ -261,8 +261,8 @@ contains
     double precision, dimension(:), intent(in) :: B, rho
     double precision, dimension(size(rho)) :: P
 
-    P = (B*1d-6)**2/4d0/pi + (p_ISM_xi + p_ISM_kappa/3d0 + 1d0/p_ISM_gamma) &
-                            * (p_ISM_sound_speed_km_s*1d5)**2 * rho
+    P = (B*1d-6)**2/4d0/pi + (p_ISM_kappa/3d0*(1.+2.*p_ISM_xi) + 1d0/p_ISM_gamma) &
+                             * (p_ISM_sound_speed_km_s*1d5)**2 * rho
     return
 
   end function computes_midplane_ISM_pressure_from_B_and_rho

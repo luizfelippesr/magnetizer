@@ -17,13 +17,13 @@ module interpolation
     character(len=*), intent(in), optional :: method
     integer :: i, j
 
-    ! If an specific interpolation method is selected
-    if (present(method)) then
-      if (trim(method) /= 'simple') then
-        call interpolate_fgsl(x, y, xi, yi, method)
-        return
-      endif
-    endif
+!     ! If an specific interpolation method is selected
+!     if (present(method)) then
+!       if (trim(method) /= 'simple') then
+!         call interpolate_fgsl(x, y, xi, yi, method)
+!         return
+!       endif
+!     endif
 
     j = 1
     do i=1,size(xi)
@@ -39,53 +39,53 @@ module interpolation
   end subroutine interpolate
 
 
-  subroutine interpolate_fgsl(x, y, xi, yi, method)
-    ! Interpolates using FGSL -- this allows more sophisticated interpolations
-    ! Input: x, y -> 1d-arrays containing the known values of the function
-    !        xi -> 1d-array with the point one want to interpolate into
-    !        optional, method -> either 'linear', 'polynomial', 'cubic_spline'
-    !                            or 'akima'
-    ! Output: yi -> 1d-array containing the interpolated values
-    use FGSL
-    real(fgsl_double), dimension(:), intent(in) :: x, y
-    real(fgsl_double), dimension(:), intent(in) :: xi
-    real(fgsl_double), dimension(:), intent(inout) :: yi
-    character(len=*), intent(in), optional :: method
-    integer(fgsl_size_t) :: n, i
-    integer(fgsl_int) :: status
-    type(fgsl_interp_accel) :: acc
-    type(fgsl_spline) :: spline
-    type(fgsl_interp_type) :: interp_type
-
-    if (.not.present(method)) then
-      interp_type = fgsl_interp_linear
-    else
-      select case (trim(method))
-        case('linear')
-          interp_type = fgsl_interp_linear
-        case('polynomial')
-          interp_type = fgsl_interp_polynomial
-        case('cubic_spline')
-          interp_type = fgsl_interp_cspline
-        case('akima')
-          interp_type = fgsl_interp_akima
-        case default
-          print *, 'interpolate: Unrecognized option ',method
-      end select
-    endif
-
-    ! Prepares the interpolation/spline routine
-    n = size(x)
-    spline =  fgsl_spline_alloc(interp_type, n)
-    status = fgsl_spline_init(spline, x, y, n)
-    ! Stores the interpolated values
-    do i=1, size(xi)
-      yi(i) = fgsl_spline_eval(spline, xi(i), acc)
-    enddo
-    ! Frees FGSL stuff
-    call fgsl_spline_free (spline)
-    call fgsl_interp_accel_free (acc)
-  end subroutine interpolate_fgsl
+!   subroutine interpolate_fgsl(x, y, xi, yi, method)
+!     ! Interpolates using FGSL -- this allows more sophisticated interpolations
+!     ! Input: x, y -> 1d-arrays containing the known values of the function
+!     !        xi -> 1d-array with the point one want to interpolate into
+!     !        optional, method -> either 'linear', 'polynomial', 'cubic_spline'
+!     !                            or 'akima'
+!     ! Output: yi -> 1d-array containing the interpolated values
+!     use FGSL
+!     real(fgsl_double), dimension(:), intent(in) :: x, y
+!     real(fgsl_double), dimension(:), intent(in) :: xi
+!     real(fgsl_double), dimension(:), intent(inout) :: yi
+!     character(len=*), intent(in), optional :: method
+!     integer(fgsl_size_t) :: n, i
+!     integer(fgsl_int) :: status
+!     type(fgsl_interp_accel) :: acc
+!     type(fgsl_spline) :: spline
+!     type(fgsl_interp_type) :: interp_type
+!
+!     if (.not.present(method)) then
+!       interp_type = fgsl_interp_linear
+!     else
+!       select case (trim(method))
+!         case('linear')
+!           interp_type = fgsl_interp_linear
+!         case('polynomial')
+!           interp_type = fgsl_interp_polynomial
+!         case('cubic_spline')
+!           interp_type = fgsl_interp_cspline
+!         case('akima')
+!           interp_type = fgsl_interp_akima
+!         case default
+!           print *, 'interpolate: Unrecognized option ',method
+!       end select
+!     endif
+!
+!     ! Prepares the interpolation/spline routine
+!     n = size(x)
+!     spline =  fgsl_spline_alloc(interp_type, n)
+!     status = fgsl_spline_init(spline, x, y, n)
+!     ! Stores the interpolated values
+!     do i=1, size(xi)
+!       yi(i) = fgsl_spline_eval(spline, xi(i), acc)
+!     enddo
+!     ! Frees FGSL stuff
+!     call fgsl_spline_free (spline)
+!     call fgsl_interp_accel_free (acc)
+!   end subroutine interpolate_fgsl
 
 
   subroutine rescale_array(y, y_new, method)

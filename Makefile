@@ -15,7 +15,7 @@ ifeq ($(HOSTNAME),topsy-login-1-0.local)
 	FCFLAGS_special= -fintrinsic-modules-path /share/apps/fgsl/fgsl-1.0.0/include/fgsl -I/share/apps/fgsl/fgsl-1.0.0/include/fgsl
 endif
 
-FCFLAGS=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -g -Wall -Wuninitialized
+FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -I/usr/local/include/fgsl -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -g -Wall -Wuninitialized
 
 # Builds parallel version
 mpi: $(OBJ) ${builddir}/mpicalldynamo.o

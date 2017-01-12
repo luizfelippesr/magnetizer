@@ -81,6 +81,7 @@ module global_input_parameters
   ! 'simple' (linear, without using fgsl), 'linear' (fgsl),
   ! 'cubic_spline' (fgsl) and 'akima' (fgsl)
   character(len=100) :: p_interp_method = 'simple'
+  !!  Warning: the fgsl interpolators have been temporarily disabled
 
   namelist /grid_parameters/ &
     p_rescale_field_for_shrinking_disks, p_rescale_field_for_expanding_disks, &

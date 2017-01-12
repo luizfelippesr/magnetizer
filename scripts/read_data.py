@@ -19,7 +19,8 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                    maximum_final_stellar_mass=1e14, minimum_final_gas_mass=1e5,
                    number_of_galaxies=100, empirical_disks=True,
                    minimum_final_disk_size=0.0, datasets=None,
-                   sample_all_z=False, fill_value=-9999999.):
+                   sample_all_z=True, fill_value=-9999999.,
+                   number_of_galaxies_high_z=100):
     """
     Reads data from the galaxies.hdf5 file inside sam_output_filepath.
     The option number_of_galaxies sets the _approximate_ number of galaxies
@@ -150,6 +151,9 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                 del target_IDs[ID]
 
         if (zidx == 0) or sample_all_z:
+            if zidx != 0 :
+                number_of_galaxies = number_of_galaxies_high_z
+            print number_of_galaxies
             # Pre-loads parts of the HDF5 file to RAM
             # (this converts the 'HDF5 dataset' into a numpy array)
             mstars_disk = fout['mstars_disk'][:]
@@ -229,7 +233,8 @@ def plot_mass_evolution(sam_output_filepath, gtype='all'):
                                empirical_disks=False,
                                datasets = ('mstars_disk', 'mstars_bulge',
                                            'mcold', 'mhot',
-                                           'mcold_burst')
+                                           'mcold_burst'),
+                               number_of_galaxies_high_z = 5
                                )
     max_mass = None
     for ID in data_dict:
@@ -254,6 +259,6 @@ def plot_mass_evolution(sam_output_filepath, gtype='all'):
 
 if __name__ == "__main__"  :
     model_dir = 'scripts/test_SAM_output/galaxies.hdf5'
-    model_dir = '/data/nlfsr/galform_models/GON-partial-ivolume2/galaxies.hdf5'
+    model_dir = '/data/nlfsr/galform_models/GON/GON-partial-ivolume2/galaxies.hdf5'
 
     plot_mass_evolution(model_dir, gtype='central')

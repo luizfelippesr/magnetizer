@@ -61,5 +61,8 @@ $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
 # Tides up
 clean:
 	rm -fv ${builddir}/*.mod ${builddir}/*.o
+
+cleanall: clean
 	rm -fv scripts/*.pyc
+	rm -fv scripts/*/*.pyc
 	rm -fv *.exe

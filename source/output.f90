@@ -7,7 +7,8 @@ contains
   subroutine write_output(gal_id, status, runtime)
     ! Writes the output
     use global_input_parameters
-    use galaxy_model
+    use input_params
+    use profiles
     use bzcalc
     use ts_arrays
     use units

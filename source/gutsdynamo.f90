@@ -103,15 +103,6 @@ module initial_conditions  !Set initial conditions
     end subroutine init_seed
 end module initial_conditions
 !*****************************************************
-module galaxy_model
-  use input_params
-  use calc_params
-  use profiles
-!
-  implicit none
-!
-end module galaxy_model
-!*****************************************************
 module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
   use math_constants
   use calc_params
@@ -141,7 +132,9 @@ module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
 end module bzcalc
 !*****************************************************
 module equ  !Contains the partial differential equations to be solved
-  use galaxy_model
+  use input_params
+  use calc_params
+  use profiles
   use deriv
   use boundary_conditions
   use bzcalc

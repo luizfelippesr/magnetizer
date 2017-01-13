@@ -68,7 +68,6 @@ module dynamo
       ! Loops through the SAM's snapshots
       do it=init_it,max_it
         this_t = t_Gyr
-
         call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=2)
 
         ! Traps the case of negligible disks
@@ -237,18 +236,19 @@ module dynamo
 
         ! Reads in the model parameters for the next snapshot
         call set_input_params(gal_id, error)
+
         if (error) then
           call message('Error while reading data for galaxy.', &
                        gal_id=gal_id, info=1)
           return
         endif
       end do  ! snapshots loop
-      
+
       !Writes final simulation output
       call cpu_time(cpu_time_finish)
       call write_output(gal_id, ok, cpu_time_finish - cpu_time_start)
 
-      call reset_input_params()  !Reset iread
+      call reset_input_params()  !Resets iread
       ! Resets the arrays which store the time series
       call reset_ts_arrays()
 

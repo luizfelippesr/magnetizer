@@ -68,12 +68,20 @@ module input_params
 
     if (p_variable_timesteps) then
       if (present(h) .and. present(v) .and. present(etat)) then
-        dt = minval([ p_courant_v * dx/lambda/maxval(v), &
-                      p_courant_eta * minval(h)**2/maxval(etat) ])
-        nsteps = int(tsnap/dt)
+        if (abs(maxval(v)) > 1d-20 .and. abs(maxval(etat)) > 1d-20) then
+          dt = minval([ p_courant_v * dx/lambda/maxval(v), &
+                        p_courant_eta * minval(h)**2/maxval(etat) ])
+          nsteps = int(tsnap/dt)
+        else
+          call message('set_timestep: max(v) or max(etat) is negligible', &
+                       info=1, gal_id=current_gal_id)
+          nsteps = p_nsteps_max
+          success = .false.
+        endif
       else
         call message('set_timestep: missing arguments. Falling back to fixed number of timesteps scheme.', &
                      info=3, gal_id=current_gal_id)
+        nsteps = nsteps_0
       endif
     else
       if (.not.reduce_ts) then
@@ -97,7 +105,6 @@ module input_params
       nsteps = p_nsteps_max
       success = .false.
     endif
-
   end function set_timestep
 
   subroutine read_input_parameters(gal_id)
@@ -165,7 +172,7 @@ module input_params
 
   subroutine set_input_params(gal_id, error)
     ! Reads dimensional input parameters that must be specified and may vary
-    ! from galaxy to galaxy and from timestep to timestep
+    ! from galaxy to galaxy and from snapshot to snapshot
     integer, intent(in) :: gal_id
     logical, intent(out) :: error
     double precision :: next_time_input
@@ -194,10 +201,12 @@ module input_params
       time_between_inputs = next_time_input-current_time_input
       t = 0 ! At each snapshot, reset the time variable
     else
+      ! Repeats time_between_inputs of the previous iteration
+      ! (by not overwriting it) and tags as last snapshot
       last_output = .true.
     endif
 
-    t_Gyr   = next_time_input
+    t_Gyr   = current_time_input
     r_disk  = galaxy_data(iread,1)
     v_disk  = galaxy_data(iread,2)
     r_bulge = galaxy_data(iread,3)

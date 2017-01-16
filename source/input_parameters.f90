@@ -189,7 +189,7 @@ module input_params
 
     ! Traps the case where there is no valid galaxy data or
     ! there is a problem reading the parameters
-    if (iread<0) then
+    if (iread<0 .or. max_it-init_it==0) then
       error = .true.
       return
     endif

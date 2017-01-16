@@ -8,7 +8,6 @@ module profiles
   double precision, dimension(:), allocatable :: etat, tau, Beq, alp_k
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
-
   private :: prepare_profiles_module_public_variables
 contains
   logical function construct_profiles(B)
@@ -115,14 +114,6 @@ contains
     if (.not.p_check_hydro_solution) then
       call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
                           abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
-      if (any(h_kpc<0)) then
-        call message('construct_profiles: Error. Negative scaleheight detected.')
-        construct_profiles = .false.
-      endif
-      if (any(h_kpc>1d3)) then
-        call message('construct_profiles: Error. Huge scaleheight detected.')
-        construct_profiles = .false.
-      endif
     else
       ! If required, checks the solution.
       ! (This is a slow step. Should be used for debugging only.)
@@ -136,10 +127,24 @@ contains
       Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 
       if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
-        call message('construct_profiles: Warning. Invalid solution for the hydrostatic equilibrium.')
+        call message('construct_profiles: error Warning. Invalid solution for the hydrostatic equilibrium.')
+        print *, 'asdasjdhasjdajshdjahsdjahsjdhajshdajshdjahsjdh'
+        print *, 'error', maxval(abs(Pgrav-Pgas)/Pgas), Pgrav(i_halfmass), Pgas(i_halfmass)
         construct_profiles = .false.
       end if
     end if
+
+    ! Traps possible aberrant values for the scale height
+    if (any(h_kpc<0)) then
+      call message('construct_profiles: Error. Negative scaleheight detected.')
+      construct_profiles = .false.
+    endif
+
+    ! Stricter(ish) trap: h/r<2 at a half mass radius
+    if (h_kpc(i_halfmass)>2.0*r_disk) then
+      call message('construct_profiles: Error. Huge scaleheight detected.')
+      construct_profiles = .false.
+    endif
 
     ! NUMBER DENSITY PROFILE
     ! At some point, we have to improve this accounting for the metallicity of

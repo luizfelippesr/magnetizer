@@ -128,8 +128,6 @@ contains
 
       if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
         call message('construct_profiles: error Warning. Invalid solution for the hydrostatic equilibrium.')
-        print *, 'asdasjdhasjdajshdjahsdjahsjdhajshdajshdjahsjdh'
-        print *, 'error', maxval(abs(Pgrav-Pgas)/Pgas), Pgrav(i_halfmass), Pgas(i_halfmass)
         construct_profiles = .false.
       end if
     end if

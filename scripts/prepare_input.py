@@ -180,9 +180,9 @@ if __name__ == "__main__"  :
 
     nz = args.number_of_extra_galaxies_per_z
     if nz is None:
-        nz = int(args.number_of_galaxies)
+        nz = int(float(args.number_of_galaxies))
     else:
-        nz = int(nz)
+        nz = int(float(nz))
 
     data_dict = read_time_data(args.SAM_OUTPUT,
                                max_z = float(args.max_redshift),
@@ -190,7 +190,7 @@ if __name__ == "__main__"  :
                                minimum_final_stellar_mass=float(args.minimum_stellar_mass),
                                maximum_final_stellar_mass=float(args.maximum_stellar_mass),
                                minimum_final_gas_mass=float(args.minimum_gas_mass),
-                               number_of_galaxies=int(args.number_of_galaxies),
+                               number_of_galaxies=int(float(args.number_of_galaxies)),
                                minimum_final_disk_size=1e-3*float(args.minimum_disk_size),
                                empirical_disks=False,
                                sample_all_z=not args.do_not_sample_all_z,

@@ -41,13 +41,15 @@ module dynamo
 
       ! Sets the number of variables
       call init_var
+
+      ! Resets the status code
+      call reset_status_code(test_run)
+
       ! Reads in the model parameters (for the first snapshot)
       call set_input_params(gal_id, error)
-      if (error) then
-        call message('Error while reading data for galaxy.', &
-                     gal_id=gal_id, info=1)
-        return
-      endif
+      if (error) return
+
+
       call construct_grid(r_disk, r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
       call check_allocate_f_array(f, nvar)
@@ -187,14 +189,16 @@ module dynamo
           
           ! Otherwise, the calculation needs to be remade with a smaller
           ! timestep
-          call message('NANs or unrealistically large magnetic fields '&
-                       //'detected, changing time step', gal_id=gal_id, info=2)
+          call error_message('dynamo_run', 'NANs or unrealistically large '&
+                             //'magnetic fields detected, changing time step',&
+                             gal_id=gal_id, info=2, code='m')
           
           ! Doubles the number of timesteps
           timestep_ok = set_timestep(reduce_timestep=.true.)
           if (.not. timestep_ok) then
-            call message('Timestep became too small! Aborting...', &
-                         gal_id=gal_id, info=1)
+            call error_message('dynamo_run', &
+                               'Timestep became too small! Aborting...', &
+                               gal_id=gal_id, info=1, code='t')
             ok = .false.
             exit
           endif
@@ -204,49 +208,45 @@ module dynamo
           f = f_snapshot_beginning
         end do ! try or fail loop
 
-        if (ok) then
-          ! Impose boundary conditions to the final result
-          call impose_bc(f)
-          ! Estimates the value of |B_z| using Div B = 0 condition
-          call estimate_Bzmod(f)
-
-          ! Stores simulation output in arrays containing the time series
-          call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
-                              alp,Uz,Ur,n,Beq,rmax,delta_r)
-        else
-          ! If the run was unsuccessful, leaves the ts arrays with INVALID 
+        if (.not.ok) then
+          ! If the run was unsuccessful, leaves the ts arrays with INVALID
           ! values, except for ts_t (so that one knows when did things break)
+          call error_message('dynamo_run','Invalid run! Aborting...', &
+                             gal_id=gal_id, info=2, code='i')
+
           if (.not.p_oneSnaphotDebugMode) &
             call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
                              alp,Uz,Ur,n,Beq,rmax,delta_r)
-
-          call message('Invalid run! Aborting...', &
-                       gal_id=gal_id, info=2)
           last_output = .true.
-          ! Resets the f array and adds a seed field 
+          ! Resets the f array and adds a seed field
           f = 0.0
           call init_seed(f)
-          ! Calculates |Bz|
-          call estimate_Bzmod(f)
         endif
+        ! Impose boundary conditions to the final result
+        call impose_bc(f)
+        ! Estimates the value of |B_z| using Div B = 0 condition
+        call estimate_Bzmod(f)
+
+        ! Stores simulation output in arrays containing the time series
+        call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,alp_k, &
+                            alp,Uz,Ur,n,Beq,rmax,delta_r)
 
         ! Breaks loop if there are no more snapshots in the input
         if (last_output .or. p_oneSnaphotDebugMode) exit
 
+        ! Resets the status code
+        call reset_status_code(test_run)
 
         ! Reads in the model parameters for the next snapshot
         call set_input_params(gal_id, error)
+        if (error) exit
 
-        if (error) then
-          call message('Error while reading data for galaxy.', &
-                       gal_id=gal_id, info=1)
-          return
-        endif
+
       end do  ! snapshots loop
 
       !Writes final simulation output
       call cpu_time(cpu_time_finish)
-      call write_output(gal_id, ok, cpu_time_finish - cpu_time_start)
+      call write_output(gal_id, cpu_time_finish - cpu_time_start)
 
       call reset_input_params()  !Resets iread
       ! Resets the arrays which store the time series

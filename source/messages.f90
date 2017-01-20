@@ -1,5 +1,8 @@
-! Contains a module that implements a messaging and logging
-! str function adapted from the fortran-utils module
+! Contains a module that implements (basic) error messaging and logging
+! functions. Also contains functions to convert between strings and
+! other types.
+!
+! Note: str function adapted from the fortran-utils module
 ! https://github.com/certik/fortran-utils/blob/master/src/utils.f90
 !
 module messages
@@ -8,13 +11,17 @@ module messages
 
   integer :: MPI_rank = -1
   integer :: verbosity_setting = 10
-  public message, str, str2int, str2dbl
+
+  ! This will store the error status
+  character, public, protected :: status_code = '0'
+
+  public message, error_message, str, str2int, str2dbl, reset_status_code
 
   interface str
       module procedure str_int, str_dp, str_dp_n
   end interface
 
-  contains
+contains
 
   subroutine message(msg, val, val_int, gal_id, msg_end, rank, master_only, &
                      info, set_info, ndec)
@@ -23,11 +30,13 @@ module messages
     !    rank: $msg
     !    rank: Galaxy $gal_id - $msg
     !    rank: Galaxy $gal_id - $msg $val
+    !    rank: Galaxy $gal_id - $msg $val_int
     !    rank: Galaxy $gal_id - $msg $val $msg_end
     !  Or, in the case of a serial run
     !    msg
     !    Galaxy $gal_id - $msg
     !    Galaxy $gal_id - $msg $val
+    !    Galaxy $gal_id - $msg $val_int
     !    Galaxy $gal_id - $msg $val $msg_end
     !  If the rank variable is present, updates the module variable
     character(len=*), intent(in) :: msg
@@ -82,6 +91,41 @@ module messages
     endif
   end subroutine message
 
+
+  subroutine error_message(location, msg, gal_id, info, code)
+    ! Prints an error message (using the message subroutine) and updates the
+    ! error status code.
+    character(len=*), intent(in) :: location, msg
+    character, optional, intent(in) :: code
+    integer, optional, intent(in) :: info, gal_id
+    integer :: info_actual, m
+
+    if (present(code)) status_code = code
+
+    if (present(info)) then
+      info_actual = info
+    else
+      info_actual = -1
+    endif
+
+    if (present(gal_id)) then
+      m=gal_id
+      call message('Error: '//location//' - '//msg, gal_id=m, &
+                   info=info_actual)
+    else
+      call message('Error: '//location//' - '//msg, info=info_actual)
+    endif
+  end subroutine error_message
+
+  subroutine reset_status_code(no_magnetic_fields_run)
+    logical, intent(in) :: no_magnetic_fields_run
+    if (no_magnetic_fields_run) then
+      status_code = 't'
+    else
+      status_code = 'M'
+    endif
+  end subroutine reset_status_code
+
   pure integer function str_int_len(i) result(sz)
     ! Returns the length of the string representation of 'i'
     integer, intent(in) :: i
@@ -97,6 +141,7 @@ module messages
     ! Converts integer "i" to string
     integer, intent(in) :: i
     character(len=str_int_len(i)) :: s
+
     write(s, '(i0)') i
   end function str_int
 
@@ -108,6 +153,7 @@ module messages
     character(MAX_STR) :: s
     ! If 's' is too short (MAX_STR too small), Fortan will abort with:
     ! "Fortran runtime error: End of record"
+
     write(s, fmt) r
     sz = len_trim(s)
   end function str_dp_len
@@ -117,19 +163,21 @@ module messages
     double precision, intent(in) :: r
     character(len=*), parameter :: fmt="(f0.6)"
     character(len=str_dp_len(r, fmt)) :: s
+
     write(s, fmt) r
   end function str_dp
 
   pure function str_dp_n(r, n) result(s)
-  ! Converts the real number "r" to string with 'n' decimal digits.
-  double precision, intent(in) :: r
-  integer, intent(in) :: n
-  character(len=str_dp_len(r, "(f0." // str_int(n) // ")")) :: s
-  write(s, "(f0." // str_int(n) // ")") r
+    ! Converts the real number "r" to string with 'n' decimal digits.
+    double precision, intent(in) :: r
+    integer, intent(in) :: n
+    character(len=str_dp_len(r, "(f0." // str_int(n) // ")")) :: s
+
+    write(s, "(f0." // str_int(n) // ")") r
   end function str_dp_n
 
   function str2int(str) result(i)
-    ! Arguments
+    ! Converts string to int
     character(len=*),intent(in) :: str
     integer :: i
     integer :: stat
@@ -142,7 +190,7 @@ module messages
   end function str2int
 
   function str2dbl(str) result(d)
-    ! Arguments
+    ! Converts string to double
     character(len=*),intent(in) :: str
     double precision :: d
     integer :: stat

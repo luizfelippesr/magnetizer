@@ -4,7 +4,7 @@ module output
   implicit none
   
 contains
-  subroutine write_output(gal_id, status, runtime)
+  subroutine write_output(gal_id, runtime)
     ! Writes the output
     use global_input_parameters
     use input_params
@@ -14,19 +14,29 @@ contains
     use units
     use messages
     integer, intent(in) :: gal_id
-    logical, intent(in) :: status
     double precision, intent(in) :: runtime
-
-    call write_log_output(gal_id, runtime, status, nsteps)
 
     ! Writes any meta information about the run
     call IO_start_galaxy(gal_id)
 
-!     call IO_write_dataset('t', gal_id,                           &
-!                           ts_t_Gyr,                              &
-!                           units='Gyr',                           &
-!                           description='Time since the Big Bang.')
+    ! Writes log data
+    call IO_write_dataset('runtime', gal_id,                        &
+                          [runtime],                                &
+                          units='s',                                &
+                          description='Running time of the galaxy', &
+                          is_log=.true.)
 
+    call IO_write_dataset('nsteps', gal_id,                         &
+                          [dble(nsteps)],                           &
+                          description='Number of timesteps',        &
+                          is_log=.true.)
+
+    call IO_write_dataset('status', gal_id,                         &
+                          ts_status_code,                           &
+                          description='Status codes.',              &
+                          is_log=.true.)
+
+    ! Outputs the data!
     call IO_write_dataset('Br', gal_id,                             &
                           ts_Br(:,:) * B0_mkG / B0,                 &
                           units='microgauss')
@@ -116,34 +126,11 @@ contains
     call IO_finish_galaxy(gal_id)
     
     ! Writes specific values to screen for a quick check
-    call message('ts_Br(1,1)'   ,ts_Br(1,1), info=3)
-    call message('ts_Br(1,37)'  ,ts_Br(1,37), info=3)
-    call message('ts_Br(n1,1)' ,ts_Br(n1,1), info=3)
-    call message('ts_Br(n1,37)',ts_Br(n1,37), info=3)
+    call message('ts_Br(1,1)'   ,ts_Br(1,1), info=4)
+    call message('ts_Br(1,37)'  ,ts_Br(1,37), info=4)
+    call message('ts_Br(n1,1)' ,ts_Br(n1,1), info=4)
+    call message('ts_Br(n1,37)',ts_Br(n1,37), info=4)
     
   end subroutine write_output
 
-  subroutine write_log_output(gal_id, runtime, status, nsteps)
-    ! Writes the Log group, containing relevant log information
-    integer, intent(in) :: gal_id, nsteps
-    logical, intent(in) :: status
-    double precision, intent(in) :: runtime
-    double precision :: s
-
-    call IO_write_dataset('runtime', gal_id,                        &
-                          [runtime],                                  &
-                          units='s',                                &
-                          description='Running time of the galaxy', &
-                          is_log=.true.)
-
-    s = -1d0; if (status) s = 1d0
-    call IO_write_dataset('status', gal_id,                         &
-                          [s],                                        &
-                          description='Status of the calculation',  &
-                          is_log=.true.)
-    call IO_write_dataset('nsteps', gal_id,                         &
-                          [dble(nsteps)],                             &
-                          description='Number of timesteps',        &
-                          is_log=.true.)
-  end subroutine write_log_output
 end module output

@@ -51,7 +51,7 @@ module input_params
     ! otherwise nsteps*=2
     use units
     use grid
-    use messages
+    use messages, only: message
     logical, intent(in), optional :: reduce_timestep
     double precision, dimension(:), optional :: h,v,etat
     logical :: reduce_ts, success
@@ -173,6 +173,7 @@ module input_params
   subroutine set_input_params(gal_id, error)
     ! Reads dimensional input parameters that must be specified and may vary
     ! from galaxy to galaxy and from snapshot to snapshot
+    use messages, only: error_message
     integer, intent(in) :: gal_id
     logical, intent(out) :: error
     double precision :: next_time_input
@@ -191,6 +192,9 @@ module input_params
     ! there is a problem reading the parameters
     if (iread<0 .or. max_it-init_it==0) then
       error = .true.
+      call error_message('set_input_params', &
+                         'Error while reading data for galaxy.', &
+                         gal_id=gal_id, info=1, code='p')
       return
     endif
 

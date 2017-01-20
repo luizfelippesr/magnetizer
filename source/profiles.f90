@@ -23,7 +23,7 @@ contains
     use outflow
     use pressureEquilibrium
     use input_constants
-    use messages
+    use messages, only: error_message
     double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: d2Urdr2, Ur_kms, Uz_kms
@@ -127,20 +127,24 @@ contains
       Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 
       if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
-        call message('construct_profiles: error Warning. Invalid solution for the hydrostatic equilibrium.')
+        call error_message('construct_profiles', &
+                           'Invalid solution for the hydrostatic equilibrium.',&
+                           code='P')
         construct_profiles = .false.
       end if
     end if
 
     ! Traps possible aberrant values for the scale height
     if (any(h_kpc<0)) then
-      call message('construct_profiles: Error. Negative scaleheight detected.')
+      call error_message('construct_profiles', 'Negative scaleheight detected.',&
+                         code='H')
       construct_profiles = .false.
     endif
 
     ! Stricter(ish) trap: h/r<2 at a half mass radius
     if (h_kpc(i_halfmass)>2.0*r_disk) then
-      call message('construct_profiles: Error. Huge scaleheight detected.')
+      call error_message('construct_profiles','Huge scaleheight detected.', &
+                         code='h')
       construct_profiles = .false.
     endif
 

@@ -4,7 +4,6 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   use var
   use grid
   use input_params
-  use messages
 
   implicit none
   private
@@ -13,6 +12,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
 
   double precision, parameter :: INVALID = -99999d0
   double precision, allocatable, dimension(:),public :: ts_t_Gyr
+  character, allocatable, dimension(:),public :: ts_status_code
   double precision, allocatable, dimension(:),public :: ts_Dt
   double precision, allocatable, dimension(:),public :: ts_rmax
   double precision, allocatable, dimension(:),public :: ts_delta_r
@@ -37,12 +37,13 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
 
 contains
   subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau, &
-                            alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r, invalid_run)
+                            alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
     ! N.B. If the grid was extended (i.e. if the galaxy grew in this snapshot)
     ! result will be interpolated into the standard (coarser) grid
     use interpolation
+    use messages, only: status_code
     implicit none
     integer, intent(in) :: it
     double precision, intent(in) :: this_t
@@ -63,17 +64,12 @@ contains
     double precision, dimension(:), intent(in) :: Ur
     double precision, dimension(:), intent(in) :: n
     double precision, dimension(:), intent(in) :: Beq
-    logical, optional, intent(in) :: invalid_run
 
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
 
     ts_t_Gyr(it) = this_t
-
-    if (present(invalid_run)) then
-      call message('INVALID RUN', info=2)
-      if (invalid_run) return
-    endif
+    ts_status_code(it) = status_code
 
     ts_Dt(it) = t*t0_Gyr
     ts_rmax(it) = rmax
@@ -122,6 +118,8 @@ contains
 
     allocate(ts_t_Gyr(max_outputs))
     ts_t_Gyr = INVALID
+    allocate(ts_status_code(max_outputs))
+    ts_status_code = '0'
     allocate(ts_Dt(max_outputs))
     ts_Dt = INVALID
     allocate(ts_rmax(max_outputs))
@@ -173,6 +171,7 @@ contains
     ! Resets the time series arrays
     if (allocated(ts_t_Gyr)) then
       deallocate(ts_t_Gyr)
+      deallocate(ts_status_code)
       deallocate(ts_Dt)
       deallocate(ts_rmax)
       deallocate(ts_delta_r)

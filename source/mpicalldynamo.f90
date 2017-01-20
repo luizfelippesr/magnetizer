@@ -35,9 +35,14 @@ program magnetizer
     call MPI_ABORT(MPI_COMM_WORLD, rc, ierr)
   endif
 
+
   if (rank== 0) then !Only the master (rank 0)
-    tstart= MPI_wtime()
+    tstart = MPI_wtime()
+  else
+    tstart = -1
+    tfinish = -1
   endif
+
 
   ! Tries to read the parameter filename from the command argument (or --help)
   call get_command_argument(1, command_argument)
@@ -159,7 +164,8 @@ program magnetizer
   endif
 
   call message('Total wall time in seconds =',tfinish-tstart, &
-       master_only=.true., info=0)
-  call message('Average CPU time per galaxy =',(tfinish-tstart)*nproc/ngals, &
-       master_only=.true., info=0)
+               master_only=.true., info=0)
+  call message('Average (total) time per galaxy =', &
+               (tfinish-tstart)*nproc/ngals, &
+               master_only=.true., info=0)
 end program magnetizer

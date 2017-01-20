@@ -7,6 +7,7 @@ module IO
   interface IO_write_dataset ! Overload the IO_write_dataset function
     module procedure IO_write_dataset_scalar
     module procedure IO_write_dataset_vector
+    module procedure IO_write_dataset_code
   end interface
   
   private
@@ -143,7 +144,6 @@ contains
 
     call message('IO initialised', gal_id=gal_id,info=2)
   end subroutine IO_start_galaxy
-
 
   subroutine IO_write_dataset_scalar(dataset_name, gal_id, data, &
                                      units, description, is_log)
@@ -364,7 +364,72 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     
   end subroutine IO_write_dataset_vector
     
-  
+  subroutine IO_write_dataset_code(dataset_name, gal_id, data, &
+                                     units, description, is_log)
+    ! Writes a dataset to disk - scalar version
+    character(len=*), intent(in) :: dataset_name
+    integer, intent(in) :: gal_id
+    character, dimension(:), intent(in) :: data
+    character(len=*), optional, intent(in) :: units
+    character(len=*), optional, intent(in) :: description
+    logical, intent(in), optional :: is_log
+    integer(hid_t) :: group_id
+    integer ::  idx, error
+    integer, parameter :: rank = 2
+    integer(hssize_t), dimension(2) :: offset
+    integer, dimension(1) :: data_shape
+
+    integer(hsize_t), dimension(2) :: dimsf_sca
+    integer(hsize_t), dimension(2) :: dimsf_sca_1gal
+
+    group_id = output_group_id
+    data_shape = shape(data)
+
+    ! Sets dataset dimensions.
+    dimsf_sca = [data_shape(1),gals_number]
+    ! Sets the dimensions associated with writing a single galaxy
+    dimsf_sca_1gal = [data_shape(1),1]
+
+    ! Tries to find a previously opened dataset (-1 signals new)
+    idx = find_dset(dataset_name)
+    ! If it wasn't previously opened, creates it (collectively)
+    if (idx < 0) then
+      ! Flag 'is_log' can be used to choose the group 'Log' instead of 'Output'
+      if (present(is_log)) then
+          if (is_log) group_id = log_group_id
+      endif
+      idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca, &
+                          group_id=group_id, datatype=H5T_NATIVE_CHARACTER)
+      ! Also writes the attributes (if needed)
+      if (present(units)) &
+        call add_text_attribute(dset_ids(idx), 'Units', units)
+      if (present(description)) &
+        call add_text_attribute(dset_ids(idx), 'Description', description)
+
+      call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
+      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+
+    end if
+
+    ! Selects hyperslab in the file.
+    offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
+    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+                               offset, dimsf_sca_1gal, error)
+    ! At last, writes the dataset
+    call h5dwrite_f(dset_ids(idx), H5T_NATIVE_CHARACTER, data, dimsf_sca, error,&
+                    file_space_id=dataspace_ids(idx), &
+                    mem_space_id=memspace_ids(idx))
+    if (error/=0) then
+      call message('Error in IO_write_dataset_code. Exiting..', &
+                   gal_id=gal_id, info=0)
+      stop
+    endif
+
+    return
+
+  end subroutine IO_write_dataset_code
+
+
   subroutine IO_finish_galaxy(gal_id)
     ! Finishes IO 
     ! At the moment, this is a dummy
@@ -502,8 +567,8 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
 
 
 
-  function create_dset(dataset_name, scalar, dimsf_vec, dimsf_sca, group_id) &
-                                                                    result(idx)
+  function create_dset(dataset_name, scalar, dimsf_vec, dimsf_sca, group_id, &
+                       datatype) result(idx)
     ! Creates a hdf5 dataspace, a namespace and dataset
     ! Returns the index
     ! NB This is a collective procedure
@@ -513,9 +578,11 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     integer(hsize_t), dimension(3), target :: chunkdim_vec
     integer(hsize_t), dimension(2), target :: chunkdim_sca
     character(len=*), intent(in) :: dataset_name
+    integer(hid_t), intent(in), optional :: datatype
     logical, intent(in), optional :: scalar
     integer(hid_t) :: plist_id, group_id_actual      ! property list identifier
     integer(hid_t) :: dataspace ! dataspace identifier (temporary)
+    integer(hid_t) :: datatype_actual
     logical :: scalar_actual
     integer :: idx
     integer :: rank, error
@@ -530,6 +597,12 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
       scalar_actual = scalar
     else
       scalar_actual = .false.
+    endif
+
+    if (present(datatype)) then
+      datatype_actual = datatype
+    else
+      datatype_actual = H5T_NATIVE_DOUBLE
     endif
 
     if (present(group_id)) then
@@ -577,7 +650,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
       endif
     endif
     ! Creates the dataset
-    call h5dcreate_f(group_id_actual, dataset_name, H5T_NATIVE_DOUBLE, &
+    call h5dcreate_f(group_id_actual, dataset_name, datatype_actual, &
                     dataspace, dset_ids(idx), error,  dcpl_id=plist_id)
     call check(error)
     ! Closes dataspace

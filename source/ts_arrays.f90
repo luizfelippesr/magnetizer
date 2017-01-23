@@ -93,13 +93,19 @@ contains
     call rescale_array(etat(nxghost+1:nx-nxghost), ts_etat(it,:))
     call rescale_array(tau(nxghost+1:nx-nxghost), ts_tau(it,:))
     call rescale_array(alp_k(nxghost+1:nx-nxghost), ts_alp_k(it,:))
-    call rescale_array(alp(nxghost+1:nx-nxghost), ts_alp(it,:))
     call rescale_array(Uz(nxghost+1:nx-nxghost), ts_Uz(it,:))
     call rescale_array(Ur(nxghost+1:nx-nxghost), ts_Ur(it,:))
     call rescale_array(n(nxghost+1:nx-nxghost), ts_n(it,:))
     call rescale_array(Beq(nxghost+1:nx-nxghost), ts_Beq(it,:))
-    call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
     call rescale_array(r_kpc(nxghost+1:nx-nxghost), ts_rkpc(it,:))
+    call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
+
+    ! alp is computed in the gutsdynamo module (annoyingly differently from
+    ! anything else). Therefore, one needs to be careful. This is a good
+    ! candidate for some code refactoring.
+    if (status_code == 'M' .or. status_code == 'm') &
+        call rescale_array(alp(nxghost+1:nx-nxghost), ts_alp(it,:))
+
   end subroutine make_ts_arrays
   
   subroutine allocate_ts_arrays()
@@ -119,7 +125,9 @@ contains
     allocate(ts_t_Gyr(max_outputs))
     ts_t_Gyr = INVALID
     allocate(ts_status_code(max_outputs))
-    ts_status_code = '0'
+    ts_status_code = '-'
+    ts_status_code(init_it:max_it) = '0'
+
     allocate(ts_Dt(max_outputs))
     ts_Dt = INVALID
     allocate(ts_rmax(max_outputs))

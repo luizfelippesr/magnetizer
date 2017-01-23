@@ -12,7 +12,6 @@ module dynamo
   private 
   
   integer :: it=0, jt=0
-  double precision :: cpu_time_start, cpu_time_finish
   double precision, allocatable, dimension(:,:) :: f
   double precision, allocatable, dimension(:,:) :: f_snapshot_beginning
 
@@ -21,6 +20,7 @@ module dynamo
   contains
     subroutine dynamo_run(gal_id, test_run, rank)
       use interpolation
+    double precision :: cpu_time_start
       integer, intent(in) :: gal_id
       integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
@@ -47,8 +47,10 @@ module dynamo
 
       ! Reads in the model parameters (for the first snapshot)
       call set_input_params(gal_id, error)
-      if (error) return
-
+      if (error) then
+        call write_and_finish(cpu_time_start, gal_id, this_t)
+        return
+      endif
 
       call construct_grid(r_disk, r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
@@ -60,6 +62,7 @@ module dynamo
       if (.not.able_to_construct_profiles) then
         call message('Could not construct profiles for this galaxy.', &
                      gal_id=gal_id, info=1)
+        call write_and_finish(cpu_time_start, gal_id, this_t)
         return
       endif
       ! Adds a seed field to the f-array (uses the profile info)
@@ -241,21 +244,29 @@ module dynamo
         call set_input_params(gal_id, error)
         if (error) exit
 
-
       end do  ! snapshots loop
 
       !Writes final simulation output
-      call cpu_time(cpu_time_finish)
-      call write_output(gal_id, cpu_time_finish - cpu_time_start)
+      call write_and_finish(cpu_time_start, gal_id, this_t)
+    end subroutine dynamo_run
 
+    subroutine write_and_finish(cpu_time_start, gal_id, this_t)
+      double precision, intent(in) :: cpu_time_start, this_t
+      integer, intent(in) :: gal_id
+      double precision :: cpu_time_finish
+
+      !Writes final simulation output
+      call cpu_time(cpu_time_finish)
+      call estimate_Bzmod(f)
+      call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
+                                  alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+      call write_output(gal_id, cpu_time_finish - cpu_time_start)
       call reset_input_params()  !Resets iread
       ! Resets the arrays which store the time series
       call reset_ts_arrays()
-
-
       call message('Finished after ', (cpu_time_finish - cpu_time_start),  &
                    gal_id= gal_id, msg_end='s  CPU time', info=1)
-    end subroutine dynamo_run
 
+    end subroutine write_and_finish
 end module dynamo
 !*****************************************************

@@ -26,7 +26,6 @@ module dynamo
       logical, intent(in) :: test_run
       logical :: ok, able_to_construct_profiles, elliptical, timestep_ok, error
       integer :: fail_count, rank_actual
-      integer, parameter :: MAX_FAILS=4
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
 
@@ -123,7 +122,7 @@ module dynamo
 
         ! Will try to solve the equations a few times, with different
         ! timestep choices, if there is no success, aborts.
-        do fail_count=0, MAX_FAILS
+        do fail_count=0, p_MAX_FAILS
           ok = .true.
           ! If a run without magnetic field evolution was requested or
           ! if it is an elliptical galaxy, exits before the magnetic field

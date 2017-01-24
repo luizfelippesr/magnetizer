@@ -43,6 +43,7 @@ module global_input_parameters
   double precision :: p_courant_eta = 0.09 !0.3 for Damp=T and nxphys=151
   logical :: p_variable_timesteps = .true.
   integer :: p_nsteps_max = 20000
+  integer :: p_MAX_FAILS = 6 ! Number of time-step reductions before giving up
   ! Debug mode: all timesteps are included in the output, but
   ! only 1 snapshot is used.
   logical :: p_oneSnaphotDebugMode = .false.
@@ -52,7 +53,7 @@ module global_input_parameters
   namelist /run_parameters/ &
     model_name, info, nsteps_0, p_courant_v, p_courant_eta, &
     p_variable_timesteps, p_nsteps_max, p_oneSnaphotDebugMode, &
-    p_no_magnetic_fields_test_run
+    p_no_magnetic_fields_test_run, p_MAX_FAILS
 
   ! -------------------------------------------------------
   ! Grid settings

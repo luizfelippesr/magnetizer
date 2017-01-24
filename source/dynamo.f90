@@ -51,7 +51,6 @@ module dynamo
         call write_and_finish(cpu_time_start, gal_id, this_t)
         return
       endif
-
       call construct_grid(r_disk, r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
       call check_allocate_f_array(f, nvar)
@@ -258,6 +257,9 @@ module dynamo
       !Writes final simulation output
       call cpu_time(cpu_time_finish)
       call estimate_Bzmod(f)
+
+      if (it == 0) it = init_it ! If a problem happened before entering the
+                                ! snapshots loop, initialize it properly.
       call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
                                   alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
       call write_output(gal_id, cpu_time_finish - cpu_time_start)

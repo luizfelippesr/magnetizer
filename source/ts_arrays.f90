@@ -125,8 +125,12 @@ contains
     allocate(ts_t_Gyr(max_outputs))
     ts_t_Gyr = INVALID
     allocate(ts_status_code(max_outputs))
+
+    ! Initializes the time series
     ts_status_code = '-'
-    ts_status_code(init_it:max_it) = '0'
+    ! Marks all the possible redshifts with 'not run' code
+    ! (but only if init_it had been previously initialized)
+    if (init_it>0) ts_status_code(init_it:max_it) = '0'
 
     allocate(ts_Dt(max_outputs))
     ts_Dt = INVALID

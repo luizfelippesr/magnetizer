@@ -20,7 +20,7 @@ module dynamo
   contains
     subroutine dynamo_run(gal_id, test_run, rank)
       use interpolation
-    double precision :: cpu_time_start
+      double precision :: cpu_time_start
       integer, intent(in) :: gal_id
       integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
@@ -29,7 +29,8 @@ module dynamo
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
 
-      elliptical = .false.
+      elliptical = .false. ;  ok = .true.
+
       if (present(rank)) then
           rank_actual = rank
       else

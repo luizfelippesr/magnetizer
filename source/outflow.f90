@@ -34,7 +34,7 @@ contains
     double precision :: constant, rs, beta
     character(len=*), optional, intent(in) :: outflow_type
     character(len=35) :: outflow_type_actual
-    logical :: no_average
+    logical :: no_average = .true.
 
     if (present(outflow_type)) then
       outflow_type_actual = outflow_type

@@ -66,7 +66,7 @@ contains
     integer, optional :: max_it
     real(fgsl_double), parameter :: ABS_TOL = 0_fgsl_double
     real(fgsl_double), parameter :: REL_TOL = 1.0e-7_fgsl_double
-    integer(fgsl_int) :: itmax = 10
+    integer(fgsl_int) :: itmax = 20
     real(fgsl_double) :: root, xlo, xhi
     character(kind=fgsl_char,len=fgsl_strmax) :: name
     integer :: i
@@ -90,7 +90,7 @@ contains
           i = i + 1
           status = fgsl_root_fsolver_iterate(root_fslv)
           if (status /= fgsl_success .or. i > itmax) then
-            write(6, *) 'Failed to converge or iterate'
+            write(6, *) 'FindRoot: Failed to converge or iterate'
             exit
           end if
           root = fgsl_root_fsolver_root(root_fslv)

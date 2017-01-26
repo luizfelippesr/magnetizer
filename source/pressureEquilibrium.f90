@@ -80,6 +80,7 @@ contains
     maximum_h = 2d0*rdisk
     parameters_array(1) = rdisk
 
+
     do i=1, size(r)
       ! A bit of FGSL interfacing gymnastics
       parameters_array(2) = Sigma_d(i)
@@ -92,7 +93,6 @@ contains
       ! Finds the root!
       h_d(i) = FindRoot(pressure_equation, params_ptr, &
                         [minimum_h, maximum_h])
-      stop
       ! Uses previous h value to set up search interval for the next one
       ! (making things much faster!)
       maximum_h = h_d(i)*1.25d0
@@ -104,7 +104,7 @@ contains
     if (present(Sigma_d_out)) Sigma_d_out=Sigma_d
 
     ! Computes density
-    rho_d = Sigma_d*Msun_SI/kpc_SI /h_d/2d0 * 1e-3
+    rho_d = Sigma_d*Msun_SI/kpc_SI/kpc_SI /h_d/2d0/kpc_SI  * 1e-3
 
   end subroutine solves_hytrostatic_equilibrium_numerical
 
@@ -136,13 +136,11 @@ contains
     ! Computes the midplane pressure, from gravity (without radial part)
     P1 = computes_midplane_ISM_pressure_using_scaleheight(  &
                                         r_disk, Sigma_d, Sigma_star, Rm, h_d)
-
     ! Computes the midplane pressure, from gravity (the radial part)
-!     P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h_d)
-    P2 = 0d0
+    P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h_d)
 
     ! Computes the midplane pressure, from the density
-    rho_cgs = Sigma_d*Msun_SI/kpc_SI /h_d/2d0 * 1e-3
+    rho_cgs = Sigma_d*Msun_SI/kpc_SI/kpc_SI /(2d0*h_d*kpc_SI) * 1e-3
     Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B, rho_cgs)
 
     pressure_equation = Pgas(1) - P1(1) - P2(1)

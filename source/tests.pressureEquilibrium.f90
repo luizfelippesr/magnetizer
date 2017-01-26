@@ -5,7 +5,7 @@ program testPressureEquilibrium
   use PressureEquilibrium
   use messages, only:str2dbl
   implicit none
-  double precision, dimension(:,:), allocatable :: all_roots
+!   double precision, dimension(:,:), allocatable :: all_roots
   double precision, dimension(:), allocatable :: Rm, Sigma_d, Sigma_star
   double precision, dimension(:), allocatable :: r, h, rho
   double precision :: rdisk, Mgas, Mstars, dx
@@ -56,7 +56,7 @@ program testPressureEquilibrium
   allocate(Sigma_star(p_nx_ref))
   allocate(Sigma_d(p_nx_ref))
   allocate(Rm(p_nx_ref))
-  allocate(all_roots(p_nx_ref,3))
+!   allocate(all_roots(p_nx_ref,3))
 
   ! Prepares r
   dx = p_rmax_over_rdisk*rdisk/(p_nx_ref-1)
@@ -65,8 +65,10 @@ program testPressureEquilibrium
   enddo
 
   ! Solves for it
-  call solves_hytrostatic_equilibrium(rdisk, Mgas, Mstars, r, 0d0*r, rho, h, &
-                                      Sigma_star, Sigma_d, Rm, all_roots)
+  call solves_hytrostatic_equilibrium_numerical(rdisk, Mgas, Mstars, r, 0d0*r, &
+                                                Sigma_d*0d0, Sigma_d*0d0, &
+                                                rho, h, &
+                                                Sigma_star, Sigma_d, Rm)
   ! Prints the solutions
   write (*,*) '#','       r ','|      rho ','|        h ', '|Sigma_star','| Sigma_gas', '|        Rm |'
   do i=1,p_nx_ref

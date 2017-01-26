@@ -4,10 +4,13 @@
 module pressureEquilibrium
   use math_constants
   use fgsl
+  use, intrinsic :: iso_c_binding
+
   implicit none
   private
 
   public solves_hytrostatic_equilibrium
+  public solves_hytrostatic_equilibrium_numerical
   public computes_midplane_ISM_pressure_using_scaleheight
   public computes_midplane_ISM_pressure_from_B_and_rho
 
@@ -18,6 +21,135 @@ module pressureEquilibrium
   double precision, parameter :: convertPressureSItoGaussian=10
 
 contains
+  subroutine solves_hytrostatic_equilibrium_numerical(rdisk, M_g, M_star, r, B, &
+                                                      Om, G, &
+                                                      rho_d, h_d, &
+                                                      Sigma_star_out, &
+                                                      Sigma_d_out, &
+                                                      Rm_out)
+    ! Computes the mid-plane density and scale height under the assumption of
+    ! hydrostatic equilibrium
+    ! Input:  rdisk -> half mass radius of the disk (kpc)
+    !         M_g -> total gas mass (Msun)
+    !         M_star -> total stellar mass (Msun)
+    !         r -> radii array (kpc)
+    !         B -> magnetic field array (microgauss)
+    ! Output: rho_d -> density profile of the gas at the midplane (g/cm^3)
+    !         h_d   -> scaleheight profile of the gas at the midplane (kpc)
+    ! Optional outputs (all as function of r)
+    !         Sigma_star_out -> The surface density profile of stars (n-array)
+    !         Sigma_d_out -> The surface density profile of diffuse gas (n-array)
+    !         Rm_out -> Molecular to atomic gas ratio profile (n-array)
+    !
+    use input_constants
+    use global_input_parameters
+    use root_finder, only: FindRoot
+    double precision, intent(in) :: rdisk, M_g, M_star
+    double precision, dimension(:), intent(in) :: r, B, Om, G
+    double precision, dimension(size(r)), intent(out) :: rho_d, h_d
+    double precision, dimension(size(r)), intent(out), optional ::    &
+                                          Rm_out, Sigma_d_out, Sigma_star_out
+    double precision, dimension(size(r)) :: Sigma_d, Sigma_star, Sigma_g
+    double precision, dimension(size(r)) :: Rm
+    double precision :: rs, rs_g
+    !
+    real(fgsl_double) :: minimum_h, maximum_h
+    real(fgsl_double), target, dimension(7) :: parameters_array
+    integer :: i
+    type(c_ptr) :: params_ptr
+
+    ! Prepares constants
+    rs = constDiskScaleToHalfMassRatio * rdisk ! kpc
+    rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs ! kpc
+
+    ! Computes (total) gas and stars surface densities
+    Sigma_g = exp_surface_density(rs_g, abs(r), M_g) ! Msun/kpc^2
+    Sigma_star = exp_surface_density(rs, abs(r), M_star) ! Msun/kpc^2
+
+    ! Computes R_mol
+    Rm = molecular_to_diffuse_ratio(rdisk, Sigma_g, Sigma_star)
+
+    ! Computes diffuse gas surface density
+    Sigma_d = Sigma_g / (Rm+1d0)
+
+    ! Prepares a pointer to parameters_array
+    params_ptr = c_loc(parameters_array)
+
+    ! Sets up guess and search interval for r=0
+    minimum_h = 1d-5*rdisk
+    maximum_h = 2d0*rdisk
+    parameters_array(1) = rdisk
+
+    do i=1, size(r)
+      ! A bit of FGSL interfacing gymnastics
+      parameters_array(2) = Sigma_d(i)
+      parameters_array(3) = Sigma_star(i)
+      parameters_array(4) = Rm(i)
+      parameters_array(5) = Om(i)
+      parameters_array(6) = G(i)
+      parameters_array(7) = B(i)
+
+      ! Finds the root!
+      h_d(i) = FindRoot(pressure_equation, params_ptr, &
+                        [minimum_h, maximum_h])
+      stop
+      ! Uses previous h value to set up search interval for the next one
+      ! (making things much faster!)
+      maximum_h = h_d(i)*1.25d0
+      minimum_h = h_d(i)*0.75d0
+    end do
+    ! Outputs optional quantities
+    if (present(Rm_out)) Rm_out=Rm
+    if (present(Sigma_star_out)) Sigma_star_out=Sigma_star
+    if (present(Sigma_d_out)) Sigma_d_out=Sigma_d
+
+    ! Computes density
+    rho_d = Sigma_d*Msun_SI/kpc_SI /h_d/2d0 * 1e-3
+
+  end subroutine solves_hytrostatic_equilibrium_numerical
+
+  function pressure_equation(h, params) bind(c)
+    ! Hydrostatic pressure equation for interfacing with the
+    ! root finder GSL routine
+    real(c_double), value :: h
+    type(c_ptr), value :: params
+    real(c_double) :: pressure_equation
+    real(fgsl_double), dimension(1) :: Sigma_d, Sigma_star, Rm
+    real(fgsl_double), dimension(1) :: B, Om, G, h_d, rho_cgs
+    real(fgsl_double) :: r_disk
+    real(fgsl_double), dimension(1) :: P1, P2, Pgas
+    real(fgsl_double), pointer, dimension(:) :: p
+
+    call c_f_pointer(params, p, [7])
+
+    ! Converts argument and array of parameters into small "0-arrays"
+    ! (this allows using the previous routines...)
+    r_disk     = p(1)
+    Sigma_d    = [p(2)]
+    Sigma_star = [p(3)]
+    Rm         = [p(4)]
+    Om         = [p(5)]
+    G          = [p(6)]
+    B          = [p(7)]
+    h_d        = [h]
+
+    ! Computes the midplane pressure, from gravity (without radial part)
+    P1 = computes_midplane_ISM_pressure_using_scaleheight(  &
+                                        r_disk, Sigma_d, Sigma_star, Rm, h_d)
+
+    ! Computes the midplane pressure, from gravity (the radial part)
+!     P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h_d)
+    P2 = 0d0
+
+    ! Computes the midplane pressure, from the density
+    rho_cgs = Sigma_d*Msun_SI/kpc_SI /h_d/2d0 * 1e-3
+    Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B, rho_cgs)
+
+    pressure_equation = Pgas(1) - P1(1) - P2(1)
+
+  end function pressure_equation
+
+
   subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B,  &
                                           rho_d, h_d, &
                                           Sigma_star_out, Sigma_d_out, Rm_out,&
@@ -250,6 +382,7 @@ contains
     return
   end function computes_midplane_ISM_pressure_using_scaleheight
 
+
   function computes_midplane_ISM_pressure_from_B_and_rho(B, rho) result(P)
     ! Computes the ISM pressure, knowing the magnetic field and density
     ! (This helper function can be used for checking up the solution of
@@ -266,5 +399,27 @@ contains
     return
 
   end function computes_midplane_ISM_pressure_from_B_and_rho
+
+
+  function computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, S, h_d) result(P)
+    double precision, dimension(:), intent(in) :: Sigma_d, Om, S, h_d
+    double precision, dimension(size(h_d)) :: P
+    double precision, dimension(size(h_d)) :: Sigma_d_SI, Om_SI, S_SI, h_d_SI
+    ! Computes the non-local contribution to the ISM pressure at
+    ! the midplane from the rotation curve
+    !
+    ! Input: Sigma_d -> Surface density profile of diffuse gas (Msun/kpc^2)
+    !        Om -> Angular velocity in km/s/kpc
+    !        S -> Shear rate velocity in km/s/kpc
+    !        h_d -> Scale-height profile of the diffuse gas (kpc)
+    ! Output: array containing the pressure in Gaussian units
+
+    Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
+    Om_SI = Om * 1e3/kpc_SI
+    S_SI  = S  * 1e3/kpc_SI
+    h_d_SI = h_d * kpc_SI
+
+    P = Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
+  end function
 
 end module pressureEquilibrium

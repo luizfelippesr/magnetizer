@@ -49,7 +49,7 @@ contains
     return
   end function CubicRootClose
 
-  function FindRoot(func, params, interval, max_it) result(root)
+  function FindRoot(func, params_ptr, interval, max_it) result(root)
     ! Wrapper to FGSL's root finder, based on the FSGL's example roots.f90
     ! Input: func -> a function with two arguments: a scalar and a pointer to a C-array
     !                of parameters.
@@ -61,7 +61,7 @@ contains
     use, intrinsic :: iso_c_binding
 
     real(fgsl_double), external :: func
-    real(fgsl_double), target, dimension(:), intent(in) :: params
+    type(c_ptr), intent(in) :: params_ptr
     real(fgsl_double), dimension(2), intent(in) :: interval
     integer, optional :: max_it
     real(fgsl_double), parameter :: ABS_TOL = 0_fgsl_double
@@ -71,19 +71,16 @@ contains
     character(kind=fgsl_char,len=fgsl_strmax) :: name
     integer :: i
     integer(fgsl_int) :: status
-    type(c_ptr) :: params_ptr
     type(fgsl_root_fsolver) :: root_fslv
     type(fgsl_function) :: fgsl_func
 
     if (present(max_it)) itmax = max_it
 
     root = -huge(root)
-
-    ! Prepares a pointer to it
-    params_ptr = c_loc(params)
     ! Allocates the solver and initializes the function
     root_fslv = fgsl_root_fsolver_alloc(fgsl_root_fsolver_brent)
     fgsl_func = fgsl_function_init(func, params_ptr)
+
     ! Iterates to find the root
     if (fgsl_well_defined(root_fslv)) then
       status = fgsl_root_fsolver_set(root_fslv, fgsl_func, interval(1), interval(2))

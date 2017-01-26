@@ -4,7 +4,7 @@ module root_finder
   use FGSL
   implicit none
   private
-  public :: CubicRootClose
+  public :: CubicRootClose, FindRoot
 
 contains
   double precision function CubicRootClose(a3, a2, a1, a0, refpoint,all_roots)
@@ -48,4 +48,65 @@ contains
     end do
     return
   end function CubicRootClose
+
+  function FindRoot(func, params, interval, guess, max_it) result(root)
+    ! Wrapper to FGSL's root finder, based on the FSGL's example roots.f90
+    ! Input: func -> a function with two arguments: a scalar and a pointer to a C-array
+    !                of parameters.
+    !        params -> an array of parameters (consistent with func)
+    !        interval -> a 2-array containing the allowed interval
+    !        guess -> an initial guess for the root
+    !        max_it, optional -> maximum number of iterations
+    ! Output: the root!
+    !
+    use, intrinsic :: iso_c_binding
+
+    real(fgsl_double), external :: func
+    real(fgsl_double), target, dimension(:), intent(in) :: params
+    real(fgsl_double), dimension(2), intent(in) :: interval
+    real(fgsl_double), intent(in) :: guess
+    integer, optional :: max_it
+    real(fgsl_double), parameter :: ABS_TOL = 0_fgsl_double
+    real(fgsl_double), parameter :: REL_TOL = 1.0e-7_fgsl_double
+    integer(fgsl_int) :: itmax = 10
+    real(fgsl_double), target :: fpar(3)
+    real(fgsl_double) :: root, xlo, xhi
+    character(kind=fgsl_char,len=fgsl_strmax) :: name
+    integer :: i
+    integer(fgsl_int) :: status
+    type(c_ptr) :: params_ptr
+    type(fgsl_root_fsolver) :: root_fslv
+    type(fgsl_function) :: fgsl_func
+
+    if (present(max_it)) itmax = max_it
+
+    ! Prepares a pointer to it
+    params_ptr = c_loc(params)
+    ! Allocates the solver and initializes the function
+    root_fslv = fgsl_root_fsolver_alloc(fgsl_root_fsolver_brent)
+    fgsl_func = fgsl_function_init(func, params_ptr)
+    ! Iterates to find the root
+    if (fgsl_well_defined(root_fslv)) then
+      status = fgsl_root_fsolver_set(root_fslv, fgsl_func, interval(1), interval(2))
+      name = fgsl_root_fsolver_name (root_fslv)
+      i = 0
+      do
+          i = i + 1
+          status = fgsl_root_fsolver_iterate(root_fslv)
+          if (status /= fgsl_success .or. i > itmax) then
+            write(6, *) 'Failed to converge or iterate'
+            exit
+          end if
+          root = fgsl_root_fsolver_root(root_fslv)
+          xlo = fgsl_root_fsolver_x_lower(root_fslv)
+          xhi = fgsl_root_fsolver_x_upper(root_fslv)
+          status = fgsl_root_test_interval(xlo, xhi, ABS_TOL, REL_TOL)
+          if (status == fgsl_success) exit
+      end do
+    end if
+
+    call fgsl_root_fsolver_free(root_fslv)
+    call fgsl_function_free(fgsl_func)
+  end function FindRoot
+
 end module root_finder

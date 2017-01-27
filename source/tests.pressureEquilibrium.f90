@@ -65,7 +65,7 @@ program testPressureEquilibrium
   enddo
 
   ! Solves for it
-  call solves_hytrostatic_equilibrium_numerical(rdisk, Mgas, Mstars, r, 0d0*r, &
+  call solve_hydrostatic_equilibrium_numerical(rdisk, Mgas, Mstars, r, 0d0*r, &
                                                 Sigma_d*0d0, Sigma_d*0d0, &
                                                 rho, h, &
                                                 Sigma_star, Sigma_d, Rm)

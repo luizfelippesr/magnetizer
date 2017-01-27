@@ -9,8 +9,8 @@ module pressureEquilibrium
   implicit none
   private
 
-  public solves_hytrostatic_equilibrium
-  public solves_hytrostatic_equilibrium_numerical
+  public solve_hydrostatic_equilibrium_cubic
+  public solve_hydrostatic_equilibrium_numerical
   public computes_midplane_ISM_pressure_using_scaleheight
   public computes_midplane_ISM_pressure_from_B_and_rho
 
@@ -21,7 +21,7 @@ module pressureEquilibrium
   double precision, parameter :: convertPressureSItoGaussian=10
 
 contains
-  subroutine solves_hytrostatic_equilibrium_numerical(rdisk, M_g, M_star, r, B, &
+  subroutine solve_hydrostatic_equilibrium_numerical(rdisk, M_g, M_star, r, B, &
                                                       Om, G, &
                                                       rho_d, h_d, &
                                                       Sigma_star_out, &
@@ -106,7 +106,7 @@ contains
     ! Computes density
     rho_d = Sigma_d*Msun_SI/kpc_SI/kpc_SI /h_d/2d0/kpc_SI  * 1e-3
 
-  end subroutine solves_hytrostatic_equilibrium_numerical
+  end subroutine solve_hydrostatic_equilibrium_numerical
 
   function pressure_equation(h, params) bind(c)
     ! Hydrostatic pressure equation for interfacing with the
@@ -148,7 +148,7 @@ contains
   end function pressure_equation
 
 
-  subroutine solves_hytrostatic_equilibrium(rdisk, M_g, M_star, r, B,  &
+  subroutine solve_hydrostatic_equilibrium_cubic(rdisk, M_g, M_star, r, B,  &
                                           rho_d, h_d, &
                                           Sigma_star_out, Sigma_d_out, Rm_out,&
                                           all_roots)
@@ -200,7 +200,7 @@ contains
 
     ! Computes initial surface density profiles
     if (rs_g_nonSI==0 .or. rs_nonSI==0) then
-      stop 'solves_hytrostatic_equilibrium: Fatal error. Disk of negligible size'
+      stop 'solve_hydrostatic_equilibrium: Fatal error. Disk of negligible size'
     endif
     
     Sigma_g_nonSI = exp_surface_density(rs_g_nonSI, abs(r), M_g)
@@ -257,7 +257,7 @@ contains
     if (present(Sigma_d_out)) Sigma_d_out=Sigma_d_nonSI
 
     return
-  end subroutine
+  end subroutine solve_hydrostatic_equilibrium_cubic
 
   function exp_surface_density(rs, r, M) result(Sigma)
     ! Construncts exponential surface density profile

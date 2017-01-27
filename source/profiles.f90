@@ -111,28 +111,37 @@ contains
 
 
     ! Solves for density and height
-    if (.not.p_check_hydro_solution) then
-      call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-                          abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
+    if (.not.p_use_legacy_cubic_solver) then
+      ! Computes h and rho solving for hydrostatic equilibrium
+      call solve_hydrostatic_equilibrium_numerical(r_disk, &
+                                                   Mgas_disk, Mstars_disk, &
+                                                   abs(r_kpc), B_actual, &
+                                                   Om*0d0, G*0d0, &
+                                                   rho_cgs, h_kpc, Rm)
     else
-      ! If required, checks the solution.
-      ! (This is a slow step. Should be used for debugging only.)
-      call solves_hytrostatic_equilibrium(r_disk, Mgas_disk, Mstars_disk, &
-                                      abs(r_kpc), B_actual, rho_cgs, h_kpc, &
-                                           Sigma_star, Sigma_d, Rm, all_roots)
-      ! Computes the midplane pressure, from gravity
-      Pgrav = computes_midplane_ISM_pressure_using_scaleheight(  &
-                                        r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
-      ! Computes the midplane pressure, from the density
-      Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
+      if (.not.p_check_hydro_solution) then
+        call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &
+                            abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
+      else
+        ! If required, checks the solution.
+        ! (This is a slow step. Should be used for debugging only.)
+        call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &
+                                        abs(r_kpc), B_actual, rho_cgs, h_kpc, &
+                                            Sigma_star, Sigma_d, Rm, all_roots)
+        ! Computes the midplane pressure, from gravity
+        Pgrav = computes_midplane_ISM_pressure_using_scaleheight(  &
+                                          r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
+        ! Computes the midplane pressure, from the density
+        Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
 
-      if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
-        call error_message('construct_profiles', &
-                           'Invalid solution for the hydrostatic equilibrium.',&
-                           code='P')
-        construct_profiles = .false.
+        if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
+          call error_message('construct_profiles', &
+                            'Invalid solution for the hydrostatic equilibrium.',&
+                            code='P')
+          construct_profiles = .false.
+        end if
       end if
-    end if
+    endif
 
     ! Traps possible aberrant values for the scale height
     if (any(h_kpc<0)) then

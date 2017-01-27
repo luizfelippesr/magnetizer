@@ -24,9 +24,9 @@ contains
   subroutine solve_hydrostatic_equilibrium_numerical(rdisk, M_g, M_star, r, B, &
                                                       Om, G, &
                                                       rho_d, h_d, &
+                                                      Rm_out, &
                                                       Sigma_star_out, &
-                                                      Sigma_d_out, &
-                                                      Rm_out)
+                                                      Sigma_d_out)
     ! Computes the mid-plane density and scale height under the assumption of
     ! hydrostatic equilibrium
     ! Input:  rdisk -> half mass radius of the disk (kpc)
@@ -75,11 +75,10 @@ contains
     ! Prepares a pointer to parameters_array
     params_ptr = c_loc(parameters_array)
 
-    ! Sets up guess and search interval for r=0
+    ! Sets up a guessed initial search interval for r=0
     minimum_h = 1d-5*rdisk
-    maximum_h = 2d0*rdisk
+    maximum_h = 6d0*rdisk
     parameters_array(1) = rdisk
-
 
     do i=1, size(r)
       ! A bit of FGSL interfacing gymnastics

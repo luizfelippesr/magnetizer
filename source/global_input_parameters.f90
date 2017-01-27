@@ -195,6 +195,11 @@ module global_input_parameters
   ! (alternatively, P_B uses the actual B from the dynamo calculation).
   logical :: p_simplified_pressure = .true.
 
+  ! If true: ignores the radial correction to the gravitational potential (P2 in
+  ! the paper) and solves the related cubic equation for the scaleheight.
+  ! Otherwise, GSL's Brent's method root finder will be used.
+  logical :: p_use_legacy_cubic_solver = .false.
+
   double precision :: p_rreg_to_rdisk = 0.15
 
   ! Defines what it means to have a negligible disk
@@ -210,7 +215,8 @@ module global_input_parameters
     p_Rmol_alpha, p_Rmol_P0, p_check_hydro_solution, &
     p_allow_positive_shears, p_use_fixed_turbulent_to_scaleheight_ratio, &
     p_turbulent_to_scaleheight_ratio, p_simplified_pressure, &
-    p_rreg_to_rdisk, p_rdisk_min, Mgas_disk_min, rmin_over_rmax
+    p_rreg_to_rdisk, p_rdisk_min, Mgas_disk_min, rmin_over_rmax, &
+    p_use_legacy_cubic_solver
 
 
   ! -------------------------------------------------------

@@ -24,17 +24,19 @@ contains
     use pressureEquilibrium
     use input_constants
     use messages, only: error_message
+    use deriv, only: xder
+    use grid, only: x
     double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: d2Urdr2, Ur_kms, Uz_kms
     double precision, dimension(nx) :: Om_kmskpc, G_kmskpc
     double precision, dimension(nx) :: etat_cm2s, etat_kmskpc
-    double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms
+    double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms, h_kpc_test
     double precision, dimension(nx) :: Om_d, Om_b, Om_h, Beq_mkG
     double precision, dimension(nx) :: G_d, G_b, G_h
     double precision, dimension(nx) :: B_actual, tau_Gyr, tau_s
     double precision, dimension(nx) :: rho_cgs
-    double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgrav, Pgas, Rm
+    double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgas, Rm, Pgrav, Pradial
     double precision, dimension(nx,3) :: all_roots
     double precision, parameter :: P_TOL=1e-10
     double precision :: rreg
@@ -67,6 +69,7 @@ contains
     ! Regularises
     rreg = r_kpc(minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1))
     call regularize(abs(r_kpc), rreg, Om_kmskpc, G_kmskpc)
+    G_kmskpc = xder(Om_kmskpc)*x
 
     ! If required, avoid bumps in the shear
     if (.not.p_allow_positive_shears) then
@@ -116,8 +119,10 @@ contains
       call solve_hydrostatic_equilibrium_numerical(r_disk, &
                                                    Mgas_disk, Mstars_disk, &
                                                    abs(r_kpc), B_actual, &
-                                                   Om*0d0, G*0d0, &
-                                                   rho_cgs, h_kpc, Rm)
+                                                   Om_kmskpc, G_kmskpc, &
+                                                   rho_cgs, h_kpc, Rm, &
+                                                   Sigma_d_out=Sigma_d)
+
     else
       if (.not.p_check_hydro_solution) then
         call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &
@@ -151,7 +156,7 @@ contains
     endif
 
     ! Stricter(ish) trap: h/r<2 at a half mass radius
-    if (h_kpc(i_halfmass)>2.0*r_disk) then
+    if (h_kpc(i_halfmass)>1.5*r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
       construct_profiles = .false.
@@ -256,7 +261,7 @@ contains
 !     double precision, dimension(size(rx)) :: exp_things
     double precision, dimension(size(rx)) :: rxi_over_r_2
     double precision :: Omega_xi
-    double precision, parameter :: small_factor=1e-10
+    double precision, parameter :: small_factor=1e-15
     double precision, parameter :: s=1d0
     ! Finds the index of r=r_xi and sets Omega_xi
     Omega_xi = 1.5d0*Omega( minloc(abs(rx-r_xi),1) )
@@ -271,16 +276,13 @@ contains
       Shear = 0.0
       rxi_over_r_2 = 0.0
     endwhere
+
     ! Explicitly avoids underflows too
-    where (rxi_over_r_2 < 1e8)
+    where (rxi_over_r_2 < 1e12)
       exp_minus_rxi_over_r = exp( -rxi_over_r_2 )
     elsewhere
       exp_minus_rxi_over_r =0
     endwhere
-
-!     exp_things = exp(s*(rx-r_xi)**2)
-!     exp_things = exp(-r_xi/2d0/rx)
-!     Omega = (Omega*exp_things+Omega_xi)/(1d0+exp_things)
 
     ! Regularises Shear
     Shear = exp_minus_rxi_over_r*(2.0*rxi_over_r_2*(Omega-Omega_xi)+Shear)

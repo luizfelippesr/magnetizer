@@ -25,6 +25,7 @@ module dynamo
       integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
       logical :: ok, able_to_construct_profiles, elliptical, timestep_ok, error
+      logical :: next_output
       integer :: fail_count, rank_actual
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
@@ -92,6 +93,7 @@ module dynamo
             elliptical = .false.
         endif
 
+        next_output = .false.
         ! Constructs galaxy model for the present snapshot
         if (it /= init_it .and. .not.elliptical) then
           if (p_oneSnaphotDebugMode) exit
@@ -102,10 +104,11 @@ module dynamo
             able_to_construct_profiles = construct_profiles()
             ! If unable to construct the profiles, write output and exit loop
             if (.not. able_to_construct_profiles) then
-              last_output = .true.
+                next_output = .true.
 !               call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
 !                                   alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
-              exit
+!               last_output = .true.
+!               exit
             endif
           endif
         endif
@@ -128,9 +131,10 @@ module dynamo
           ! If a run without magnetic field evolution was requested or
           ! if it is an elliptical galaxy, exits before the magnetic field
           ! calculations (adjusts unused arrays for output)
-          if (test_run .or. elliptical) then
+          if (test_run .or. elliptical .or. next_output) then
             call check_allocate(alp); alp = 0.0
             call check_allocate(Bzmod); Bzmod = 0.0
+
             exit
           endif
 

@@ -13,6 +13,7 @@ module pressureEquilibrium
   public solve_hydrostatic_equilibrium_numerical
   public computes_midplane_ISM_pressure_using_scaleheight
   public computes_midplane_ISM_pressure_from_B_and_rho
+  public computes_midplane_ISM_pressure_using_rotation
 
   double precision, parameter :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
   double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
@@ -44,6 +45,7 @@ contains
     use input_constants
     use global_input_parameters
     use root_finder, only: FindRoot
+    use messages, only: error_message
     double precision, intent(in) :: rdisk, M_g, M_star
     double precision, dimension(:), intent(in) :: r, B, Om, G
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d
@@ -54,6 +56,7 @@ contains
     double precision :: rs, rs_g
     !
     real(fgsl_double) :: minimum_h, maximum_h
+    real(fgsl_double) :: pressure_equation_min, pressure_equation_max
     real(fgsl_double), target, dimension(7) :: parameters_array
     integer :: i
     type(c_ptr) :: params_ptr
@@ -76,8 +79,8 @@ contains
     params_ptr = c_loc(parameters_array)
 
     ! Sets up a guessed initial search interval for r=0
-    minimum_h = 1d-5*rdisk
-    maximum_h = 6d0*rdisk
+    minimum_h = 1d-3*rdisk
+    maximum_h = 1d0*rdisk
     parameters_array(1) = rdisk
 
     do i=1, size(r)
@@ -85,17 +88,39 @@ contains
       parameters_array(2) = Sigma_d(i)
       parameters_array(3) = Sigma_star(i)
       parameters_array(4) = Rm(i)
-      parameters_array(5) = Om(i)
-      parameters_array(6) = G(i)
+      if (p_enable_P2) then
+        parameters_array(5) = Om(i)
+        parameters_array(6) = G(i)
+      else
+        parameters_array(5) = 0d0
+        parameters_array(6) = 0d0
+      endif
       parameters_array(7) = B(i)
 
-      ! Finds the root!
+      ! Initially tests whether the interval contains a root
+      ! (this assumes that is an odd number of root in the interval,
+      ! hopefully only one root!)
+      pressure_equation_min = pressure_equation(minimum_h, params_ptr)
+      pressure_equation_max = pressure_equation(maximum_h, params_ptr)
+      if (pressure_equation_min/pressure_equation_max > 0d0) then
+        minimum_h = 1d-5*rdisk
+        maximum_h = 1d0*rdisk
+        h_d(i) = 0d0
+        call error_message('solve_hydrostatic_equilibrium_numerical',      &
+                           'Initial guess does include a change of sign.'  &
+                           // 'Unable to find the root (i.e. h and rho).', &
+                           code='P')
+        cycle
+      endif
+
+      ! Finds the root
       h_d(i) = FindRoot(pressure_equation, params_ptr, &
                         [minimum_h, maximum_h])
+
       ! Uses previous h value to set up search interval for the next one
       ! (making things much faster!)
-      maximum_h = h_d(i)*1.25d0
-      minimum_h = h_d(i)*0.75d0
+      maximum_h = h_d(i)*1.35d0
+      minimum_h = h_d(i)*0.65d0
     end do
     ! Outputs optional quantities
     if (present(Rm_out)) Rm_out=Rm
@@ -103,8 +128,11 @@ contains
     if (present(Sigma_d_out)) Sigma_d_out=Sigma_d
 
     ! Computes density
-    rho_d = Sigma_d*Msun_SI/kpc_SI/kpc_SI /h_d/2d0/kpc_SI  * 1e-3
-
+    where(h_d/=0d0)
+      rho_d = Sigma_d*Msun_SI/kpc_SI/kpc_SI /h_d/2d0/kpc_SI  * density_SI_to_cgs
+    elsewhere
+      rho_d = 0d0
+    endwhere
   end subroutine solve_hydrostatic_equilibrium_numerical
 
   function pressure_equation(h, params) bind(c)
@@ -139,10 +167,10 @@ contains
     P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h_d)
 
     ! Computes the midplane pressure, from the density
-    rho_cgs = Sigma_d*Msun_SI/kpc_SI/kpc_SI /(2d0*h_d*kpc_SI) * 1e-3
+    rho_cgs = Sigma_d*Msun_SI/kpc_SI/kpc_SI /(2d0*h_d*kpc_SI) * density_SI_to_cgs
     Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B, rho_cgs)
 
-    pressure_equation = Pgas(1) - P1(1) - P2(1)
+    pressure_equation = P1(1) + P2(1) - Pgas(1)
 
   end function pressure_equation
 
@@ -376,6 +404,7 @@ contains
     ! Finishes calculation
     P = pi/2d0 * G_SI * Sigma_d_SI * (Sigma_d_SI*weight_d   &
                     + Sigma_star_SI*weight_star) * convertPressureSItoGaussian
+
     return
   end function computes_midplane_ISM_pressure_using_scaleheight
 
@@ -402,6 +431,7 @@ contains
     double precision, dimension(:), intent(in) :: Sigma_d, Om, S, h_d
     double precision, dimension(size(h_d)) :: P
     double precision, dimension(size(h_d)) :: Sigma_d_SI, Om_SI, S_SI, h_d_SI
+    double precision, parameter :: km_SI = 1d3
     ! Computes the non-local contribution to the ISM pressure at
     ! the midplane from the rotation curve
     !
@@ -412,11 +442,11 @@ contains
     ! Output: array containing the pressure in Gaussian units
 
     Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
-    Om_SI = Om * 1e3/kpc_SI
-    S_SI  = S  * 1e3/kpc_SI
+    Om_SI = Om * km_SI/kpc_SI
+    S_SI  = S  * km_SI/kpc_SI
     h_d_SI = h_d * kpc_SI
 
-    P = Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
+    P = - Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
   end function
 
 end module pressureEquilibrium

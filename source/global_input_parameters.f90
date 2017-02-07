@@ -194,6 +194,7 @@ module global_input_parameters
   ! where P_B + P_b = \xi P_{turb}
   ! (alternatively, P_B uses the actual B from the dynamo calculation).
   logical :: p_simplified_pressure = .true.
+  logical :: p_enable_P2 = .true.
 
   ! If true: ignores the radial correction to the gravitational potential (P2 in
   ! the paper) and solves the related cubic equation for the scaleheight.
@@ -216,7 +217,7 @@ module global_input_parameters
     p_allow_positive_shears, p_use_fixed_turbulent_to_scaleheight_ratio, &
     p_turbulent_to_scaleheight_ratio, p_simplified_pressure, &
     p_rreg_to_rdisk, p_rdisk_min, Mgas_disk_min, rmin_over_rmax, &
-    p_use_legacy_cubic_solver
+    p_use_legacy_cubic_solver, p_enable_P2
 
 
   ! -------------------------------------------------------

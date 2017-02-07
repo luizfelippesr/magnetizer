@@ -56,6 +56,8 @@ module input_params
     logical, intent(in), optional :: reduce_timestep
     double precision, dimension(:), optional :: h,v,etat
     logical :: reduce_ts, success
+    double precision :: minh
+    integer :: i
 
     success = .true.
 
@@ -67,11 +69,16 @@ module input_params
 
     tsnap = time_between_inputs/t0_Gyr
 
+    minh = 1d10
+    do i=1, size(h)
+      if (h(i)>0 .and. h(i) < minh)  minh=h(i)
+    enddo
+
     if (p_variable_timesteps) then
       if (present(h) .and. present(v) .and. present(etat)) then
         if (abs(maxval(v)) > 1d-20 .and. abs(maxval(etat)) > 1d-20) then
           dt = minval([ p_courant_v * dx/lambda/maxval(v), &
-                        p_courant_eta * minval(h)**2/maxval(etat) ])
+                        p_courant_eta * minh**2/maxval(etat) ])
           nsteps = int(tsnap/dt)
         else
           call message('set_timestep: max(v) or max(etat) is negligible', &

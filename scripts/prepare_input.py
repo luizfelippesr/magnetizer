@@ -31,7 +31,8 @@ description_dictionary = {
         'weight': 'The density of this type of galaxy in the simulation.',
         'central': 'Whether the galaxy is a central (1) or a satellite (0).',
         'GalaxyID':'Together with the redshift, this can be used '
-                    'to locate a galaxy within Galform\'s output.'
+                    'to locate a galaxy within Galform\'s output.',
+        'last_burst':'Time since the last burst of star formation (Gyr)'
         }
 
 dataset_names = {'rdisk' : 'r_disk',
@@ -48,7 +49,8 @@ dataset_names = {'rdisk' : 'r_disk',
                  'mstardot_average' : 'SFR',
                  'galaxy_weight' : 'weight',
                  'is_central' : 'central',
-                 'GalaxyID' :'GalaxyID'
+                 'GalaxyID' :'GalaxyID',
+                 'tburst':'last_burst'
                    }
 
 units_dictionary = {
@@ -64,7 +66,8 @@ units_dictionary = {
         'v_bulge': 'km/s',
         'r_halo' : 'kpc',
         'v_halo' : 'km/s',
-        'weight': 'Mpc^-3'
+        'weight': 'Mpc^-3',
+        'last_burst' :'Gyr'
         }
 
 def prepares_hdf5_input(data_dict, output_file):

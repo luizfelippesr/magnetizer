@@ -159,9 +159,6 @@ contains
     if (h_kpc(i_halfmass)>1.5*r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
-      conta_erros = conta_erros+1
-      print *, 'llll', conta_erros
-
       construct_profiles = .false.
     endif
 

@@ -58,7 +58,7 @@ contains
     real(fgsl_double) :: minimum_h, maximum_h
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
     real(fgsl_double), target, dimension(7) :: parameters_array
-    integer :: i
+    integer :: i, i_rreg
     type(c_ptr) :: params_ptr
 
     ! Prepares constants
@@ -82,8 +82,16 @@ contains
     minimum_h = 1d-3*rdisk
     maximum_h = 1d0*rdisk
     parameters_array(1) = rdisk
+    i_rreg = 2
 
     do i=1, size(r)
+      ! If truncation is requested, store the index and skip
+      if (p_truncates_within_rreg .and. r(i) < p_rreg_to_rdisk*rdisk) then
+        ! This avoid being bitten by the not-very physical behaviour at r=0
+        i_rreg = i
+        cycle
+      endif
+
       ! A bit of FGSL interfacing gymnastics
       parameters_array(2) = Sigma_d(i)
       parameters_array(3) = Sigma_star(i)
@@ -106,9 +114,9 @@ contains
         minimum_h = 1d-5*rdisk
         maximum_h = 1d0*rdisk
         h_d(i) = 0d0
-        call error_message('solve_hydrostatic_equilibrium_numerical',      &
-                           'Initial guess does include a change of sign.'  &
-                           // 'Unable to find the root (i.e. h and rho).', &
+        call error_message('solve_hydrostatic_equilibrium_numerical',         &
+                           'Initial guess does NOT include a change of sign.' &
+                           // 'Unable to find the root (i.e. h and rho).',    &
                            code='P')
         cycle
       endif
@@ -122,6 +130,12 @@ contains
       maximum_h = h_d(i)*1.35d0
       minimum_h = h_d(i)*0.65d0
     end do
+
+    ! If truncation was requested, uses the same value as rreg for r<rreg
+    if (i_rreg>1) then
+      h_d(1:i_rreg) = h_d(i_rreg+1)
+    endif
+
     ! Outputs optional quantities
     if (present(Rm_out)) Rm_out=Rm
     if (present(Sigma_star_out)) Sigma_star_out=Sigma_star
@@ -134,6 +148,7 @@ contains
       rho_d = 0d0
     endwhere
   end subroutine solve_hydrostatic_equilibrium_numerical
+
 
   function pressure_equation(h, params) bind(c)
     ! Hydrostatic pressure equation for interfacing with the

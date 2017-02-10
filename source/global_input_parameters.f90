@@ -194,14 +194,18 @@ module global_input_parameters
   ! where P_B + P_b = \xi P_{turb}
   ! (alternatively, P_B uses the actual B from the dynamo calculation).
   logical :: p_simplified_pressure = .true.
+  ! Includes the rotation curve correction in the calculation of the midplane pressure
   logical :: p_enable_P2 = .true.
+  ! Assumes constant scaleheight for r<rreg
+  logical :: p_truncates_within_rreg = .false.
 
-  ! If true: ignores the radial correction to the gravitational potential (P2 in
+  ! Ignores the radial correction to the gravitational potential (P2 in
   ! the paper) and solves the related cubic equation for the scaleheight.
   ! Otherwise, GSL's Brent's method root finder will be used.
   logical :: p_use_legacy_cubic_solver = .false.
 
-  double precision :: p_rreg_to_rdisk = 0.15
+  double precision :: p_rreg_to_rdisk = 0.1
+
 
   ! Defines what it means to have a negligible disk
   double precision :: p_rdisk_min=0.5 !kpc
@@ -217,7 +221,7 @@ module global_input_parameters
     p_allow_positive_shears, p_use_fixed_turbulent_to_scaleheight_ratio, &
     p_turbulent_to_scaleheight_ratio, p_simplified_pressure, &
     p_rreg_to_rdisk, p_rdisk_min, Mgas_disk_min, rmin_over_rmax, &
-    p_use_legacy_cubic_solver, p_enable_P2
+    p_use_legacy_cubic_solver, p_enable_P2, p_truncates_within_rreg
 
 
   ! -------------------------------------------------------

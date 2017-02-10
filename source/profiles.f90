@@ -31,12 +31,12 @@ contains
     double precision, dimension(nx) :: d2Urdr2, Ur_kms, Uz_kms
     double precision, dimension(nx) :: Om_kmskpc, G_kmskpc
     double precision, dimension(nx) :: etat_cm2s, etat_kmskpc
-    double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms, h_kpc_test
+    double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms
     double precision, dimension(nx) :: Om_d, Om_b, Om_h, Beq_mkG
     double precision, dimension(nx) :: G_d, G_b, G_h
     double precision, dimension(nx) :: B_actual, tau_Gyr, tau_s
     double precision, dimension(nx) :: rho_cgs
-    double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgas, Rm, Pgrav, Pradial
+    double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgas, Rm, Pgrav
     double precision, dimension(nx,3) :: all_roots
     double precision, parameter :: P_TOL=1e-10
     double precision :: rreg
@@ -159,6 +159,9 @@ contains
     if (h_kpc(i_halfmass)>1.5*r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
+      conta_erros = conta_erros+1
+      print *, 'llll', conta_erros
+
       construct_profiles = .false.
     endif
 

@@ -47,7 +47,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                     # New style indexing and extras
                     #'FirstProgenitorID',
                     #'EndMainBranchID','DescendantID',
-                    #'GalaxyID',
+                    'GalaxyID',
                     #'LastProgenitorID',
                     'galaxy_weight'
                    )

@@ -29,7 +29,9 @@ description_dictionary = {
         'v_halo': 'Circular velocity at the virial radius of the dark matter halo',
         'nfw_cs1': 'Inverse of the NFW concentration parameter',
         'weight': 'The density of this type of galaxy in the simulation.',
-        'central': 'Whether the galaxy is a central (1) or a satellite (0).'
+        'central': 'Whether the galaxy is a central (1) or a satellite (0).',
+        'GalaxyID':'Together with the redshift, this can be used '
+                    'to locate a galaxy within Galform\'s output.'
         }
 
 dataset_names = {'rdisk' : 'r_disk',
@@ -45,7 +47,9 @@ dataset_names = {'rdisk' : 'r_disk',
                  'mstars_bulge' : 'Mstars_bulge',
                  'mstardot_average' : 'SFR',
                  'galaxy_weight' : 'weight',
-                 'is_central' : 'central'}
+                 'is_central' : 'central',
+                 'GalaxyID' :'GalaxyID'
+                   }
 
 units_dictionary = {
         't' :'Gyr',

@@ -7,7 +7,7 @@ program magnetizer
   use IO
   use messages
 
-  implicit none 
+  implicit none
 
   integer :: igal, jgal, nmygals
   integer, parameter :: master=0
@@ -50,21 +50,26 @@ program magnetizer
   if (trim(command_argument)=='--help' .or. &
                   trim(command_argument)=='-h') then
     call get_command_argument(0, command_argument)
-    print *, 'Galform Magnetizer'
+    print *, 'Magnetizer '
+    print *,
+    print *, 'Usage:'
     print *, trim(command_argument), ' <input_parameters_file> [galaxy number]'
+    print *,
     print *, 'One day this will be a nice help message'
     stop
   endif
 
   ! Welcome messages
   if (nproc==1) then
-    call message('Starting galform magnetizer', rank=-1)
+    call message('Magnetizer', rank=-1)
+    call message(' ', rank=-1)
     call message('Runnning on a single processor')
   else
-    call message('Starting galform magnetizer', rank=rank, set_info=info, &
+    call message('Magnetizer', rank=rank, set_info=info, &
                  master_only=.true., info=0)
+    call message(' ', rank=-1)
     call message('Runnning on', val_int=nproc, msg_end='processors', &
-                 master_only=.true.)
+                 master_only=.true., info=0)
   endif
 
   if (len_trim(command_argument) == 0) then
@@ -112,18 +117,20 @@ program magnetizer
     endif
   endif
 
-  call message('List of galaxies to run', rank=rank)
-  ! The following doesn't work because an interface for printing vectors
-  ! wasn't yet writen.
-  ! call message('    mygals =',mygals(:nmygals), rank=rank)
-  ! Will do it by hand. Later, if this proves useful, the messages module can
-  ! be updated.
-  print *, str(rank),':  ','mygals = ',mygals(:nmygals)
+  if (ngals<1000) then
+    call message('List of galaxies to run', rank=rank)
+    ! The following doesn't work because an interface for printing vectors
+    ! wasn't yet writen.
+    ! call message('    mygals =',mygals(:nmygals), rank=rank)
+    ! Will do it by hand. Later, if this proves useful, the messages module can
+    ! be updated.
+    print *, str(rank),':  ','mygals = ',mygals(:nmygals)
+  endif
 
   if (nmygals > 0) then
     do jgal=1,nmygals
       ! Call dynamo code for each galaxy in mygals
-      call message('Starting',gal_id=mygals(jgal))
+      call message('Starting',gal_id=mygals(jgal), rank=rank)
       call dynamo_run(mygals(jgal), p_no_magnetic_fields_test_run, rank)
       ! Checks whether a STOP file exists
       inquire (file='STOP', exist=lstop)
@@ -134,7 +141,7 @@ program magnetizer
       endif
     enddo
   endif
-  
+
   call message('All computing done', info=0)
 
   ! Gets the date

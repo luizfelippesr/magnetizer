@@ -131,7 +131,7 @@ module dynamo
           ! If a run without magnetic field evolution was requested or
           ! if it is an elliptical galaxy, exits before the magnetic field
           ! calculations (adjusts unused arrays for output)
-          if (test_run .or. elliptical .or. next_output) then
+          if (test_run .or. elliptical .or. next_output .or. all(Beq<1d-10)) then
             call check_allocate(alp); alp = 0.0
             call check_allocate(Bzmod); Bzmod = 0.0
 

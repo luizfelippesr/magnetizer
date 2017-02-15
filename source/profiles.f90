@@ -163,7 +163,7 @@ contains
     endif
 
     ! Traps h or rho artificially set to zero
-    if (any(h==0)) then
+    if (any(h_kpc==0)) then
       construct_profiles = .false.
     endif
 

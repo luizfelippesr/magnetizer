@@ -62,6 +62,8 @@ module dynamo
       if (.not.able_to_construct_profiles) then
         call message('Could not construct profiles for this galaxy.', &
                      gal_id=gal_id, info=1)
+        call check_allocate(alp); alp = 0.0
+        call check_allocate(Bzmod); Bzmod = 0.0
         call write_and_finish(cpu_time_start, gal_id, this_t)
         return
       endif
@@ -131,7 +133,7 @@ module dynamo
           ! If a run without magnetic field evolution was requested or
           ! if it is an elliptical galaxy, exits before the magnetic field
           ! calculations (adjusts unused arrays for output)
-          if (test_run .or. elliptical .or. next_output .or. all(Beq<1d-10)) then
+          if (test_run .or. elliptical .or. next_output) then
             call check_allocate(alp); alp = 0.0
             call check_allocate(Bzmod); Bzmod = 0.0
 

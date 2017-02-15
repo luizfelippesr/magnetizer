@@ -155,12 +155,18 @@ contains
       construct_profiles = .false.
     endif
 
-    ! Stricter(ish) trap: h/r<2 at a half mass radius
+    ! Stricter(ish) trap: h/r<1.5 at a half mass radius
     if (h_kpc(i_halfmass)>1.5*r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
       construct_profiles = .false.
     endif
+
+    ! Traps h or rho artificially set to zero
+    if (any(h==0)) then
+      construct_profiles = .false.
+    endif
+
 
     ! NUMBER DENSITY PROFILE
     ! At some point, we have to improve this accounting for the metallicity of

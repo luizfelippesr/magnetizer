@@ -212,10 +212,6 @@ module equ  !Contains the partial differential equations to be solved
       ! CALCULATE MAGNETIC ENERGY (WITHOUT THE FACTOR 1/(8PI))
       Bsqtot= Br**2 + Bp**2 + Bzmod**2
 
-      where(Bsqtot==0)
-        Bsqtot = tiny(1d-30)
-      endwhere
-
       if (Alg_quench) then
         alp = alp_k/(1.d0 +Bsqtot/Beq**2)  !Formula for simple alpha quenching
       elseif (Dyn_quench) then

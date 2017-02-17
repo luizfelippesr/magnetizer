@@ -55,7 +55,7 @@ contains
     double precision, dimension(size(r)) :: Rm
     double precision :: rs, rs_g
     !
-    real(fgsl_double) :: minimum_h, maximum_h
+    real(fgsl_double) :: minimum_h, maximum_h, guess_h
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
     real(fgsl_double), target, dimension(7) :: parameters_array
     integer :: i, i_rreg
@@ -80,14 +80,13 @@ contains
 
     ! Sets up a guessed initial search interval for r=0
     minimum_h = 1d-3*rdisk
-    maximum_h = 1d0*rdisk
+    maximum_h = 2d0*rdisk
     parameters_array(1) = rdisk
-    i_rreg = 2
+    i_rreg = -1
 
     do i=1, size(r)
-      ! If truncation is requested, store the index and skip
       if (p_truncates_within_rreg .and. r(i) < p_rreg_to_rdisk*rdisk) then
-        ! This avoid being bitten by the not-very physical behaviour at r=0
+        ! If truncation is requested, stores the index and skips
         i_rreg = i
         cycle
       endif
@@ -104,36 +103,60 @@ contains
         parameters_array(6) = 0d0
       endif
       parameters_array(7) = B(i)
-
       ! Initially tests whether the interval contains a root
-      ! (this assumes that is an odd number of root in the interval,
+      ! (this assumes that is an odd number of roots in the interval,
       ! hopefully only one root!)
       pressure_equation_min = pressure_equation(minimum_h, params_ptr)
       pressure_equation_max = pressure_equation(maximum_h, params_ptr)
-      if (pressure_equation_min/pressure_equation_max > 0d0) then
-        minimum_h = 1d-5*rdisk
-        maximum_h = 1d0*rdisk
-        h_d(i) = 0d0
-        call error_message('solve_hydrostatic_equilibrium_numerical',         &
-                           'Initial guess does NOT include a change of sign.' &
-                           // 'Unable to find the root (i.e. h and rho).',    &
-                           code='P')
-        cycle
+
+      if (sign(1d0,pressure_equation_min) /= sign(1d0,pressure_equation_max)) then
+        ! If there is a change in sign, finds the root
+        h_d(i) = FindRoot(pressure_equation, params_ptr, &
+                          [minimum_h, maximum_h])
+      else
+        ! Otherwise, tries again with a larger interval (i.e. a second chance)
+        minimum_h = minimum_h/2d0
+        maximum_h = maximum_h*2d0
+
+        pressure_equation_min = pressure_equation(minimum_h, params_ptr)
+        pressure_equation_max = pressure_equation(maximum_h, params_ptr)
+
+        if (sign(1d0,pressure_equation_min) /= sign(1d0,pressure_equation_max)) then
+          h_d(i) = FindRoot(pressure_equation, params_ptr, &
+                        [minimum_h, maximum_h])
+        else
+          ! If the second chance fails, reports the error
+          call error_message('solve_hydrostatic_equilibrium_numerical',        &
+                             'Initial guess does NOT include a change of sign.'&
+                             // ' Unable to find the root (i.e. h and rho).'   &
+                             // ' Will using previous h value.', code='P')
+          h_d(i) = h_d(i-1)
+        endif
       endif
 
-      ! Finds the root
-      h_d(i) = FindRoot(pressure_equation, params_ptr, &
-                        [minimum_h, maximum_h])
+      ! Computes density
+      rho_d(i) = density_to_scaleheight(h_d(i), Sigma_d(i))
 
-      ! Uses previous h value to set up search interval for the next one
-      ! (making things much faster!)
-      maximum_h = h_d(i)*1.35d0
-      minimum_h = h_d(i)*0.65d0
+      ! Uses previous h value to set up search interval for the next one.
+      ! The guess assumes an exponentially increasing scaleheight
+      if (i/=size(r)) then
+        guess_h = h_d(i)*exp( (r(i+1)-r(i))/rs )
+        maximum_h = guess_h*1.2d0 ! assumes the root will be within \pm 20%
+        minimum_h = guess_h*0.8d0 ! assumes the root will be within \pm 20%
+      end if
+
+      if (rho_d(i) < p_minimum_density) then
+        ! Keeps density larger than the minimum
+        rho_d(i) = p_minimum_density
+        ! Ajusts scaleheight accordingly
+        h_d(i) = density_to_scaleheight(rho_d(i), Sigma_d(i))
+      endif
     end do
 
     ! If truncation was requested, uses the same value as rreg for r<rreg
     if (i_rreg>1) then
       h_d(1:i_rreg) = h_d(i_rreg+1)
+      rho_d(1:i_rreg) = rho_d(i_rreg+1)
     endif
 
     ! Outputs optional quantities
@@ -141,14 +164,15 @@ contains
     if (present(Sigma_star_out)) Sigma_star_out=Sigma_star
     if (present(Sigma_d_out)) Sigma_d_out=Sigma_d
 
-    ! Computes density
-    where(h_d/=0d0)
-      rho_d = Sigma_d*Msun_SI/kpc_SI/kpc_SI /h_d/2d0/kpc_SI  * density_SI_to_cgs
-    elsewhere
-      rho_d = 0d0
-    endwhere
   end subroutine solve_hydrostatic_equilibrium_numerical
 
+  elemental function density_to_scaleheight(h_d, Sigma_d) result(rho_d)
+    ! Converts a scale-height in kpc into a density in g/cm^3
+    ! (or vice-versa)
+    double precision, intent(in) :: h_d, Sigma_d
+    double precision :: rho_d
+    rho_d = Sigma_d*Msun_SI/kpc_SI/kpc_SI /h_d/2d0/kpc_SI  * density_SI_to_cgs
+  end function density_to_scaleheight
 
   function pressure_equation(h, params) bind(c)
     ! Hydrostatic pressure equation for interfacing with the
@@ -182,7 +206,7 @@ contains
     P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h_d)
 
     ! Computes the midplane pressure, from the density
-    rho_cgs = Sigma_d*Msun_SI/kpc_SI/kpc_SI /(2d0*h_d*kpc_SI) * density_SI_to_cgs
+    rho_cgs = density_to_scaleheight(h_d, Sigma_d)
     Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B, rho_cgs)
 
     pressure_equation = P1(1) + P2(1) - Pgas(1)
@@ -279,7 +303,6 @@ contains
       if (Sigma_d_nonSI(i) < 0.01) then
         rho_d(i) = 1d-28
         h_d(i) = Sigma_d(i)/rho_d(i)/2d0 / density_SI_to_cgs
-        print *, 'r', r(i), h_d(i), i, size(r)
       else
         h_d(i) = CubicRootClose(a3(i), a2(i), a1(i), a0(i), h_guess, roots)
       endif
@@ -462,6 +485,6 @@ contains
     h_d_SI = h_d * kpc_SI
 
     P = - Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
-  end function
+  end function computes_midplane_ISM_pressure_using_rotation
 
 end module pressureEquilibrium

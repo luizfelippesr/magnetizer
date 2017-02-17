@@ -169,8 +169,8 @@ contains
 
 
     ! NUMBER DENSITY PROFILE
-    ! At some point, we have to improve this accounting for the metallicity of
-    ! of the galaxy (i.e. multiplying by the mean molecular weight)
+    ! At some point, we may want to improve this accounting for the metallicity of
+    ! of the galaxy (e.g. using mean molecular weight of the diffuse phase)
     n_cm3 = rho_cgs/Hmass
     n = n_cm3 / n0_cm3 * n0
 

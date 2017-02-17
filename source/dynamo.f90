@@ -106,10 +106,10 @@ module dynamo
             able_to_construct_profiles = construct_profiles()
             ! If unable to construct the profiles, write output and exit loop
             if (.not. able_to_construct_profiles) then
-                next_output = .true.
+!                 next_output = .true.
 !               call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
 !                                   alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
-!               last_output = .true.
+              last_output = .true.
 !               exit
             endif
           endif

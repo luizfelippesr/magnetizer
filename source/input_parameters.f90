@@ -69,13 +69,13 @@ module input_params
 
     tsnap = time_between_inputs/t0_Gyr
 
-    minh = 1d10
-    do i=1, size(h)
-      if (h(i)>0 .and. h(i) < minh)  minh=h(i)
-    enddo
-
     if (p_variable_timesteps) then
       if (present(h) .and. present(v) .and. present(etat)) then
+        minh = 1d10
+        do i=1, size(h)
+          if (h(i)>0 .and. h(i) < minh)  minh=h(i)
+        enddo
+
         if (abs(maxval(v)) > 1d-20 .and. abs(maxval(etat)) > 1d-20) then
           dt = minval([ p_courant_v * dx/lambda/maxval(v), &
                         p_courant_eta * minh**2/maxval(etat) ])

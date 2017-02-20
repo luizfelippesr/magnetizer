@@ -130,7 +130,11 @@ contains
                              'Initial guess does NOT include a change of sign.'&
                              // ' Unable to find the root (i.e. h and rho).'   &
                              // ' Will using previous h value.', code='P')
-          h_d(i) = h_d(i-1)
+          if (i==1) then
+            h_d(i) = -1d0 ! Signals serious error!
+          else
+            h_d(i) = h_d(i-1)
+          endif
         endif
       endif
 

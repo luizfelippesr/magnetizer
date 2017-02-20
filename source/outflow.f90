@@ -58,6 +58,7 @@ contains
         ! This, together with a Blitz&Rosolowsky star formation law leads
         ! to:
         outflow_speed = 0.5 * p_outflow_nu0 * beta * h * fm
+        return
         ! Note: at the moment, nu0 and alpha_hot and Vhot are input
         ! parameters, but later these will be read from the input hdf5 files
         ! (which in turn contains the parameters used in that particular

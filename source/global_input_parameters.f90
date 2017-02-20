@@ -274,6 +274,7 @@ module global_input_parameters
     read(u,nml=io_parameters); rewind(u)
     read(u,nml=grid_parameters); rewind(u)
     read(u,nml=dynamo_parameters); rewind(u)
+    read(u,nml=outflow_parameters); rewind(u)
     read(u,nml=ISM_and_disk_parameters)
     close(u)
   end subroutine read_global_parameters

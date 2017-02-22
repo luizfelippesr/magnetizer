@@ -207,7 +207,7 @@ module global_input_parameters
   logical :: p_use_legacy_cubic_solver = .false.
 
   ! Minimum density floor (in g/cm^3)
-  double precision :: p_minimum_density = 1d-27 ! g cm^-3
+  double precision :: p_minimum_density = 1d-30 ! g cm^-3
 
   ! Defines what it means to have a negligible disk
   double precision :: p_rdisk_min=0.5 !kpc

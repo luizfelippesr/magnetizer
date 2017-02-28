@@ -7,7 +7,7 @@ FC_nonMPI=h5fc
 srcdir=source
 builddir=build
 
-_OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o
+_OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 # Special configurations
@@ -34,7 +34,8 @@ testRoots: ${builddir}/root_finder.o ${builddir}/tests.testRoots.o
 	$(FC) ${builddir}/root_finder.o ${builddir}/tests.testRoots.o $(FCFLAGS) -o testRoots.exe
 testPressureEquilibrium: ${builddir}/constants.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.pressureEquilibrium.o
 	$(FC) ${builddir}/constants.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.pressureEquilibrium.o $(FCFLAGS) -o testPressureEquilibrium.exe
-
+testIntegration: ${builddir}/integration.o ${builddir}/tests.integration.o
+	$(FC) $(FCFLAGS) ${builddir}/integration.o ${builddir}/tests.integration.o -o testIntegration.exe
 # All programs
 all: testRoots testProfiles mpi
 

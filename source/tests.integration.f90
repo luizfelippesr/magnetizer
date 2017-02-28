@@ -65,15 +65,36 @@ contains
     return
   end function Integrand4
 
-  double precision function fakePressure(x)
+  double precision function test_Pstars(x)
     !% Integral for unit testing.
     use Integration
     implicit none
     double precision, intent(in   ) :: x
-
-    fakePressure=exp(-x)
+    double precision, parameter :: xmax = 600
+    double precision, parameter :: hstars_to_hd = 3.0
+    if (x<xmax) then
+      test_Pstars= tanh(x)/cosh(x/hstars_to_hd)**2
+    else
+      test_Pstars= 0d0
+    endif
     return
-  end function fakePressure
+  end function test_Pstars
+
+  double precision function test_Pdm(x)
+    !% Integral for unit testing.
+    use Integration
+    implicit none
+    double precision, intent(in   ) :: x
+    double precision, parameter :: xmax = 10000
+    double precision, parameter :: hstars_to_hd = 30.0
+
+    if (x<xmax) then
+      test_Pdm = tanh(x)/(x/hstars_to_hd)/(1+(x/hstars_to_hd))**2
+    else
+      test_Pdm = 0d0
+    endif
+    return
+  end function test_Pdm
 
 end module
 program Test_Integration
@@ -85,30 +106,29 @@ program Test_Integration
   type            (fgsl_integration_workspace) :: integrationWorkspace
   logical                                      :: integrationReset
   double precision                             :: integral, expected, rel_err
+  integer i
+  double precision :: cpu_time_start, cpu_time_finish
 
-  ! Begin unit tests.
-!   call Unit_Tests_Begin_Group("Numerical integration")
-
-  ! Test simple integrations.
+  integrationReset=.true.
+!   ! Test simple integrations.
   integral=Integrate(0.0d0, 1.0d0, Integrand1, integrandFunction&
-       &,integrationWorkspace,toleranceRelative=1.0d-6)
+       &,integrationWorkspace,toleranceRelative=1.0d-6, reset=integrationReset)
   print *, "integrate f(x)=x          from x=0……1"
   expected = 0.5d0
   rel_err = abs((integral-expected)/expected)
   print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
   print *,
 
+!   integrationReset=.false.
   integral=Integrate(0.0d0,2.0d0*m_pi,Integrand2,integrandFunction&
-       &,integrationWorkspace,toleranceRelative=1.0d-6)
+       &,integrationWorkspace,toleranceRelative=1.0d-6, reset=integrationReset)
   print *, "integrate f(x)=sin(x)     from x=0…2π"
   expected = 0.0d0
-  rel_err = abs((integral-expected)/expected)
   print *, '  result=',integral,'  expected=', expected
   print *,
 
-  integrationReset=.true.
   integral=Integrate(0.0d0,10.0d0,Integrand3,integrandFunction&
-       &,integrationWorkspace,toleranceRelative=1.0d-6)
+       &,integrationWorkspace,toleranceRelative=1.0d-6, reset=integrationReset)
   print *, "integrate f(x)=1/√x       from x=0…10"
   expected = 2.0d0*sqrt(10.0d0)
   rel_err = abs((integral-expected)/expected)
@@ -116,31 +136,80 @@ program Test_Integration
   print *,
 
   ! Test 2D integrations.
-  integrationReset=.true.
   integral=Integrate(0.0d0,2.0d0*m_pi,Integrand4,integrandFunction&
-       &,integrationWorkspace,toleranceRelative=1.0d-6)
+       &,integrationWorkspace,toleranceRelative=1.0d-6, reset=integrationReset)
   print *, "integrate f(x,y)=y·cos(x) from x=0…2π and y=0…x"
   expected = 2.0d0*m_pi
   rel_err = abs((integral-expected)/expected)
   print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
   print *,
 
-  integrationReset=.true.
-  integral=Integrate(0.0d0,-1.0d0,fakePressure, integrandFunction&
-       &,integrationWorkspace, toInfinity=.true.,toleranceRelative=1.0d-10)
-  print *, "integrate f(x)=exp(-x**2)       from x=0…oo"
-  expected = 1d0
+
+  integrationReset = .true.
+  call cpu_time(cpu_time_start)
+  do i = 1, 100000
+    integral=Integrate(1d-20,-1.0d0,test_Pdm, integrandFunction,   &
+                       integrationWorkspace, toleranceRelative=1.0d-7, &
+                       toInfinity=.true., reset=integrationReset)
+  end do
+  call cpu_time(cpu_time_finish)
+  print *, "integrate f(x)=tanh(x)/(x/30)/(1+x/30)²       from x=0…∞"
+  expected = 97.946378405461
   rel_err = abs((integral-expected)/expected)
   print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
+  print *, '  time: ',cpu_time_finish-cpu_time_start, '(100,000 repetitions)'
   print *,
 
-    integrationReset=.true.
-  integral=Integrate(0.0d0,1000.0d0,fakePressure, integrandFunction&
-       &,integrationWorkspace, toInfinity=.false.,toleranceRelative=1.0d-10)
-  print *, "integrate f(x)=exp(-x**2)       from x=0…100"
-  expected = 1d0
+integrationReset = .true.
+  call cpu_time(cpu_time_start)
+  do i = 1, 100000
+    integral=Integrate(1d-10,100.0d0,test_Pdm, integrandFunction,  &
+                       integrationWorkspace, toleranceRelative=1.0d-7, &
+                       hasSingularities=.true.,toInfinity=.false.,     &
+                       reset=integrationReset)
+  end do
+  call cpu_time(cpu_time_finish)
+  print *, "integrate f(x)=tanh(x)/(x/30)/(1+x/30)²       from x=0…100"
+  expected = 97.946378405461
   rel_err = abs((integral-expected)/expected)
   print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
+  print *, '  time: ',cpu_time_finish-cpu_time_start, '(100,000 repetitions)'
+  print *,
+
+
+
+
+
+  integrationReset = .true.
+  call cpu_time(cpu_time_start)
+  do i = 1, 100000
+    integral=Integrate(1d-10,-1.0d0,test_Pstars, integrandFunction,   &
+                       integrationWorkspace, toleranceRelative=1.0d-7, &
+                       toInfinity=.true., reset=integrationReset)
+  end do
+  call cpu_time(cpu_time_finish)
+  print *, "integrate f(x)=tanh(x)/cosh²(x/3.)       from x=0…∞"
+  expected = 2.34839248149319
+  rel_err = abs((integral-expected)/expected)
+  print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
+  print *, '  time: ',cpu_time_finish-cpu_time_start, '(100,000 repetitions)'
+  print *,
+
+
+  integrationReset = .true.
+  call cpu_time(cpu_time_start)
+  do i = 1, 100000
+    integral=Integrate(1d-10,100.0d0,test_Pstars, integrandFunction,  &
+                       integrationWorkspace, toleranceRelative=1.0d-7, &
+                       hasSingularities=.true.,toInfinity=.false.,     &
+                       reset=integrationReset)
+  end do
+  call cpu_time(cpu_time_finish)
+  print *, "integrate f(x)=tanh(x)/cosh²(x/3.)       from x=0…100"
+  expected = 2.34839248149319
+  rel_err = abs((integral-expected)/expected)
+  print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
+  print *, '  time: ',cpu_time_finish-cpu_time_start, '(100,000 repetitions)'
   print *,
 
 end program Test_Integration

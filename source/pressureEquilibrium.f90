@@ -4,8 +4,8 @@
 module pressureEquilibrium
   use math_constants
   use fgsl
+  use input_params, only: r_halo, r_disk, Mhalo, Mstars_disk, Mgas_disk, nfw_cs1
   use, intrinsic :: iso_c_binding
-
   implicit none
   private
 
@@ -21,8 +21,18 @@ module pressureEquilibrium
   double precision, parameter :: density_SI_to_cgs = 1d-3
   double precision, parameter :: convertPressureSItoGaussian=10
 
+  ! Global variables used in the integration
+  double precision :: i_R_to_Rsdm, i_hd_to_RsDM, i_hd_to_hm, i_hd_to_hstar
+
+  type            (fgsl_function             ) :: integrandFunction
+  type            (fgsl_integration_workspace) :: integrationWorkspace
+  logical                                      :: integrationReset = .true.
+
+  !DEBUG
+  logical :: test_old =.false.
+
 contains
-  subroutine solve_hydrostatic_equilibrium_numerical(rdisk, M_g, M_star, r, B, &
+  subroutine solve_hydrostatic_equilibrium_numerical( r, B, &
                                                       Om, G, &
                                                       rho_d, h_d, &
                                                       Rm_out, &
@@ -30,10 +40,7 @@ contains
                                                       Sigma_d_out)
     ! Computes the mid-plane density and scale height under the assumption of
     ! hydrostatic equilibrium
-    ! Input:  rdisk -> half mass radius of the disk (kpc)
-    !         M_g -> total gas mass (Msun)
-    !         M_star -> total stellar mass (Msun)
-    !         r -> radii array (kpc)
+    ! Input:  r -> radii array (kpc)
     !         B -> magnetic field array (microgauss)
     ! Output: rho_d -> density profile of the gas at the midplane (g/cm^3)
     !         h_d   -> scaleheight profile of the gas at the midplane (kpc)
@@ -46,7 +53,6 @@ contains
     use global_input_parameters
     use root_finder, only: FindRoot
     use messages, only: error_message
-    double precision, intent(in) :: rdisk, M_g, M_star
     double precision, dimension(:), intent(in) :: r, B, Om, G
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d
     double precision, dimension(size(r)), intent(out), optional ::    &
@@ -62,15 +68,15 @@ contains
     type(c_ptr) :: params_ptr
 
     ! Prepares constants
-    rs = constDiskScaleToHalfMassRatio * rdisk ! kpc
+    rs = constDiskScaleToHalfMassRatio * r_disk ! kpc
     rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs ! kpc
 
     ! Computes (total) gas and stars surface densities
-    Sigma_g = exp_surface_density(rs_g, abs(r), M_g) ! Msun/kpc^2
-    Sigma_star = exp_surface_density(rs, abs(r), M_star) ! Msun/kpc^2
+    Sigma_g = exp_surface_density(rs_g, abs(r), Mgas_disk) ! Msun/kpc^2
+    Sigma_star = exp_surface_density(rs, abs(r), Mstars_disk) ! Msun/kpc^2
 
     ! Computes R_mol
-    Rm = molecular_to_diffuse_ratio(rdisk, Sigma_g, Sigma_star)
+    Rm = molecular_to_diffuse_ratio(r_disk, Sigma_g, Sigma_star)
 
     ! Computes diffuse gas surface density
     Sigma_d = Sigma_g / (Rm+1d0)
@@ -79,19 +85,20 @@ contains
     params_ptr = c_loc(parameters_array)
 
     ! Sets up a guessed initial search interval for r=0
-    minimum_h = 1d-3*rdisk
-    maximum_h = 2d0*rdisk
-    parameters_array(1) = rdisk
+    minimum_h = 1d-3*r_disk
+    maximum_h = 2d0*r_disk
+
     i_rreg = -1
 
     do i=1, size(r)
-      if (p_truncates_within_rreg .and. r(i) < p_rreg_to_rdisk*rdisk) then
+      if (p_truncates_within_rreg .and. r(i) < p_rreg_to_rdisk*r_disk) then
         ! If truncation is requested, stores the index and skips
         i_rreg = i
         cycle
       endif
 
       ! A bit of FGSL interfacing gymnastics
+      parameters_array(1) = r(i)
       parameters_array(2) = Sigma_d(i)
       parameters_array(3) = Sigma_star(i)
       parameters_array(4) = Rm(i)
@@ -103,6 +110,7 @@ contains
         parameters_array(6) = 0d0
       endif
       parameters_array(7) = B(i)
+
       ! Initially tests whether the interval contains a root
       ! (this assumes that is an odd number of roots in the interval,
       ! hopefully only one root!)
@@ -139,6 +147,11 @@ contains
       endif
 
       ! Computes density
+      if (h_d(i)==0) then
+        print *, h_d(i), i
+        stop
+      endif
+
       rho_d(i) = density_to_scaleheight(h_d(i), Sigma_d(i))
 
       ! Uses previous h value to set up search interval for the next one.
@@ -178,44 +191,46 @@ contains
     rho_d = Sigma_d*Msun_SI/kpc_SI/kpc_SI /h_d/2d0/kpc_SI  * density_SI_to_cgs
   end function density_to_scaleheight
 
+
   function pressure_equation(h, params) bind(c)
     ! Hydrostatic pressure equation for interfacing with the
     ! root finder GSL routine
     real(c_double), value :: h
     type(c_ptr), value :: params
     real(c_double) :: pressure_equation
-    real(fgsl_double), dimension(1) :: Sigma_d, Sigma_star, Rm
-    real(fgsl_double), dimension(1) :: B, Om, G, h_d, rho_cgs
-    real(fgsl_double) :: r_disk
-    real(fgsl_double), dimension(1) :: P1, P2, Pgas
+    real(fgsl_double) :: r, Sigma_d, Sigma_star, R_m
+    real(fgsl_double) :: B, Om, G, rho_cgs
+    real(fgsl_double) :: P1, P2, Pgas
     real(fgsl_double), pointer, dimension(:) :: p
 
     call c_f_pointer(params, p, [7])
 
+
+
+
     ! Converts argument and array of parameters into small "0-arrays"
     ! (this allows using the previous routines...)
-    r_disk     = p(1)
-    Sigma_d    = [p(2)]
-    Sigma_star = [p(3)]
-    Rm         = [p(4)]
-    Om         = [p(5)]
-    G          = [p(6)]
-    B          = [p(7)]
-    h_d        = [h]
+    r          = p(1)
+    Sigma_d    = p(2)
+    Sigma_star = p(3)
+    R_m         = p(4)
+    Om         = p(5)
+    G          = p(6)
+    B          = p(7)
 
     ! Computes the midplane pressure, from gravity (without radial part)
-    P1 = computes_midplane_ISM_pressure_using_scaleheight(  &
-                                        r_disk, Sigma_d, Sigma_star, Rm, h_d)
+    P1 = computes_midplane_ISM_pressure_numerical(r, Sigma_d, Sigma_star, R_m, h)
     ! Computes the midplane pressure, from gravity (the radial part)
-    P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h_d)
+    P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h)
 
     ! Computes the midplane pressure, from the density
-    rho_cgs = density_to_scaleheight(h_d, Sigma_d)
+    rho_cgs = density_to_scaleheight(h, Sigma_d)
     Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B, rho_cgs)
 
-    pressure_equation = P1(1) + P2(1) - Pgas(1)
+    pressure_equation = P1 - Pgas + P2
 
   end function pressure_equation
+
 
 
   subroutine solve_hydrostatic_equilibrium_cubic(rdisk, M_g, M_star, r, B,  &
@@ -407,6 +422,79 @@ contains
   end function midplane_pressure_Elmegreen
 
 
+  function computes_midplane_ISM_pressure_numerical(   &
+                                    r, Sigma_d, Sigma_star, R_m, h_d) result(P)
+    ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
+    ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
+    !        Sigma_stars -> Surface density profile of stars (Msun/kpc^2)
+    !        h_d -> Scale-height profile of the diffuse gas (kpc)
+    !        rdisk -> half mass radius of the disk (kpc)
+    ! Output: array containing the pressure in Gaussian units
+    use global_input_parameters
+    use input_constants
+    use Integration
+    double precision, intent(in) :: r, Sigma_d, Sigma_star, h_d, R_m
+    double precision :: P, Pm, Pstars, Pdm, Pbulge, Pd
+    double precision :: Sigma_d_SI, Sigma_star_SI
+    double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
+    double precision :: h_star, h_m, rs_DM, rho_dm_SI
+    double precision :: I_m, I_stars, I_dm, I_bulge, preFactor
+    double precision, parameter :: I_d = 0.5
+    double precision, parameter :: rel_TOL = 1d-8
+    double precision, parameter :: small = 1d-10
+
+    ! Computes missing scale heights (in kpc)
+    h_star = r_disk * rs_to_r50 * p_stellarHeightToRadiusScale
+    h_m = r_disk * rs_to_r50 * p_molecularHeightToRadiusScale
+    rs_DM = r_halo * nfw_cs1
+
+    ! Computes DM reference density
+    rho_dm_SI = Mhalo*Msun_SI/(rs_DM*kpc_SI)**3
+    rho_dm_SI = rho_dm_SI * (log(1d0+1/nfw_cs1) - 1d0/(1d0+1))
+
+    ! Adjusts units of surface densities
+    Sigma_star_SI = (Sigma_star*Msun_SI/kpc_SI/kpc_SI)
+    Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
+
+    ! Sets global variables (used in integrations)
+    i_hd_to_rsDM = h_d/rs_DM
+    i_hd_to_hm = h_d/h_m
+    i_hd_to_hstar = h_d/h_star
+    i_R_to_rsDM = r/rs_DM
+
+    ! Does the integrations
+    I_m = Integrate(small, 0d0, integrand_m, integrandFunction,      &
+                    integrationWorkspace, toleranceRelative=rel_TOL, &
+                    toInfinity=.true., reset=integrationReset)
+
+    I_stars = Integrate(small, 0d0, integrand_stars, integrandFunction,  &
+                        integrationWorkspace, toleranceRelative=rel_TOL, &
+                        toInfinity=.true., reset=integrationReset)
+
+!     I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
+!                      integrationWorkspace, toleranceRelative=rel_TOL, &
+!                      toInfinity=.true., reset=integrationReset)
+
+!     I_bulge = Integrate(1d-15, 0d0, integrand_bulge, integrandFunction,  &
+!                         integrationWorkspace, toleranceRelative=rel_TOL, &
+!                         toInfinity=.true., reset=integrationReset)
+
+    ! Computes all the pressure contributions
+    preFactor = pi * G_SI * Sigma_d_SI * convertPressureSItoGaussian
+
+    Pd = preFactor * Sigma_d_SI * 1d0 * I_d
+    Pm = preFactor * Sigma_d_SI*R_m * i_hd_to_hm * I_m
+    Pstars = preFactor * Sigma_star_SI * i_hd_to_hstar * I_stars
+!     Pbulge = 0d0 !pi * G_SI * Sigma_d_SI * ...... todo ... * I_bulge
+    Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
+
+    ! Finishes calculation
+    P = Pd + Pm + Pstars + Pdm !+ Pbulge
+
+    return
+  end function computes_midplane_ISM_pressure_numerical
+
+
   function computes_midplane_ISM_pressure_using_scaleheight(   &
                                 rdisk, Sigma_d, Sigma_star, R_m, h_d) result(P)
     ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
@@ -451,7 +539,7 @@ contains
   end function computes_midplane_ISM_pressure_using_scaleheight
 
 
-  function computes_midplane_ISM_pressure_from_B_and_rho(B, rho) result(P)
+  elemental function computes_midplane_ISM_pressure_from_B_and_rho(B, rho) result(P)
     ! Computes the ISM pressure, knowing the magnetic field and density
     ! (This helper function can be used for checking up the solution of
     !  other functions in this module)
@@ -459,8 +547,8 @@ contains
     !         rho -> density of diffuse gas (in g/cm^3)
     ! Output: P -> midplane pressure (in erg/cm^3)
     use global_input_parameters
-    double precision, dimension(:), intent(in) :: B, rho
-    double precision, dimension(size(rho)) :: P
+    double precision, intent(in) :: B, rho
+    double precision :: P
 
     P = (B*1d-6)**2/4d0/pi + (p_ISM_kappa/3d0*(1.+2.*p_ISM_xi) + 1d0/p_ISM_gamma) &
                              * (p_ISM_sound_speed_km_s*1d5)**2 * rho
@@ -468,11 +556,10 @@ contains
 
   end function computes_midplane_ISM_pressure_from_B_and_rho
 
-
-  function computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, S, h_d) result(P)
-    double precision, dimension(:), intent(in) :: Sigma_d, Om, S, h_d
-    double precision, dimension(size(h_d)) :: P
-    double precision, dimension(size(h_d)) :: Sigma_d_SI, Om_SI, S_SI, h_d_SI
+  elemental function computes_midplane_ISM_pressure_using_rotation(Sigma_d, &
+                                                          Om, S, h_d) result(P)
+    double precision, intent(in) :: Sigma_d, Om, S, h_d
+    double precision :: P, Sigma_d_SI, Om_SI, S_SI, h_d_SI
     double precision, parameter :: km_SI = 1d3
     ! Computes the non-local contribution to the ISM pressure at
     ! the midplane from the rotation curve
@@ -490,5 +577,65 @@ contains
 
     P = - Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
   end function computes_midplane_ISM_pressure_using_rotation
+
+  pure function integrand_dm(x)
+    ! Integrand in the dark matter halo case
+    ! Assumes a Navarro-Frenk-White DM profile
+    ! Assumes the diffuse gas follows a sech^2 vertical profile
+    ! Relies on global variables i_hd_to_Rsdm and i_R_to_Rsdm
+    double precision, intent(in) :: x
+    double precision :: y, integrand_dm
+    y = sqrt(i_R_to_Rsdm**2 + (i_hd_to_RsDM*x)**2)
+    integrand_dm = tanh(x)/y/(1d0+y)/(1d0+y)
+  end function integrand_dm
+
+  pure function integrand_stars(x)
+    ! Integrand in stars case
+    ! Assumes the gas follows a sech^2 vertical profile
+    ! Relies on global variable i_hd_to_hstar
+    double precision, intent(in) :: x
+    double precision :: integrand_stars, sech, y
+    y = x*i_hd_to_hstar
+    if (test_old) then
+      integrand_stars = exp(-x)*exp(-y)
+      return
+    endif
+
+    if (abs(y)<500) then
+      sech = 1d0/cosh(y)
+    else
+      sech = 0d0
+    endif
+    integrand_stars = tanh(x)*sech*sech
+  end function integrand_stars
+
+  pure function integrand_m(x)
+    ! Integrand in molecular gas case
+    ! Assumes the gas follows a sech^2 vertical profile
+    ! Relies on global variable i_hd_to_hm
+    double precision, intent(in) :: x
+    double precision :: integrand_m, sech, y
+    y = x*i_hd_to_hm
+    if (test_old) then
+      integrand_m = exp(-x)*exp(-y)
+      return
+    endif
+    if (abs(y)<500) then
+      sech = 1d0/cosh(y)
+    else
+      sech = 0d0
+    endif
+    integrand_m = tanh(x)*sech*sech
+  end function integrand_m
+
+  pure function integrand_bulge(x)
+    ! Integrand in bulge case
+    ! Assumes the bulge follows a Hernquist profile
+    ! Assumes the diffuse gas follows a sech^2 vertical profile
+    ! Relies on global variable i_hd_to_hm
+    double precision, intent(in) :: x
+    double precision :: integrand_bulge
+    integrand_bulge = 0d0
+  end function integrand_bulge
 
 end module pressureEquilibrium

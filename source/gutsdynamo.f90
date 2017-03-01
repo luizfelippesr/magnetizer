@@ -276,24 +276,53 @@ module equ  !Contains the partial differential equations to be solved
       dalp_mdr(nxghost+1)=0.d0
 !
       if (.not.Damp) then
-!       CASE 1: FOSA (tau-->0 LIMIT)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY
-        dfdt(:,1)=      -C_U*Uz*Br/h -lambda*Ur*Br/r -lambda*Ur*dBrdr         &
-                   -2.d0/pi/h*ctau*alp*Bp -pi**2/4/h**2*(ctau+Rm_inv)*etat*Br &
+        ! CASE 1: FOSA (tau-->0 LIMIT)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY
+        !            Vertical velocity terms
+        dfdt(:,1)= -C_U*Uz*Br/h                                               &
+                   ! alpha effect
+                   -2.d0/pi/h*ctau*alp*Bp                                     &
+                   ! Vertical diffusion
+                   -pi**2/4/h**2*(ctau+Rm_inv)*etat*Br                        &
+                   ! Radial diffusion indep of dhdr
                    +(ctau+Rm_inv)*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2)
-!                   +ctau*( detatdz*dBrdz -detatdz*lambda*dBzdr)  !Contains detatdz terms
-        dfdt(:,2)= G*Br -C_U*Uz*Bp/h -lambda*dUrdr*Bp -lambda*Ur*dBpdr        &
-                   -2.d0/pi/h*ctau*alp*Br -pi**2/4/h**2*(ctau+Rm_inv)*etat*Bp &
+                   ! Following commented out for simplicity
+                   !-lambda*Ur*Br/r -lambda*Ur*dBrdr
+
+                   !Omega effect
+        dfdt(:,2)=  G*Br                                                      &
+                   !Vertical velocity terms
+                   -C_U*Uz*Bp/h                                               &
+                   !alpha^2 effect
+                   -2.d0/pi/h*ctau*alp*Br                                     &
+                   !Vertical diffusion
+                   -pi**2/4/h**2*(ctau+Rm_inv)*etat*Bp                        &
+                   !Radial diffusion propto etat
                    +(ctau+Rm_inv)*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2) &
-                   +ctau*lambda**2*( detatdr*Bp/r +detatdr*dBpdr)  !Contains detatdr terms
-!                   +ctau*(detatdz*dBpdz)  !Contains detatdz terms
+                   !Radial diffusion propto detatdr
+                   +ctau*detatdr*lambda**2*( Bp/r +dBpdr)
+                   ! +Afloor*B_random
+                   ! Following commented out for simplicity
+                   !   -lambda*dUrdr*Bp -lambda*Ur*dBpdr
+
         if (.not.Alp_squared) then
-          dfdt(:,2)=dfdt(:,2) +2.d0/pi/h*ctau*alp*Br
+          ! Remove alpha^2 effect if turned off
+          dfdt(:,2)= dfdt(:,2) +2.d0/pi/h*ctau*alp*Br
         endif
         if (Dyn_quench) then
-          dfdt(:,3)= -2*(h0_kpc/l_kpc)**2*etat*(ctau*alp*(Br**2+Bp**2+Bzmod**2)/Beq**2                      &
-                     +ctau*3*etat/pi**(3.d0/2)/h*abs(Dyn_gen)**(1.d0/2d0)*Br*Bp/Beq**2+Rm_inv*alp_m) &
-                     -C_a*alp_m*Uz/h -lambda*alp_m*Ur/r -lambda*alp_m*dUrdr -lambda*Ur*dalp_mdr    &
-                     +R_kappa*etat*(lambda**2*d2alp_mdr2 +lambda**2/r*dalp_mdr +C_d/h**2*alp_m)
+          !            Emf.B term 1 (alpha)
+          dfdt(:,3)= -2*(h0_kpc/l_kpc)**2*etat*(ctau*alp*(Br**2+Bp**2+0d0*Bzmod**2)/Beq**2 &
+                     ! Emf.B term 2 (etat)
+                     +ctau*3*etat/pi**(3.d0/2d0)/h*abs(Dyn_gen)**(1.d0/2d0)*Br*Bp/Beq**2 &
+                     ! Ohmic dissipation
+                     +Rm_inv*alp_m)                                                    &
+                     ! Vertical velocity terms
+                     -C_a*alp_m*Uz/h                                                   &
+                     ! Vertical diffusion
+                     +R_kappa*etat*C_d/h**2*alp_m                                      &
+                     ! Radial diffusion propto etat, indep of dhdr
+                     +R_kappa*etat*lambda**2*(d2alp_mdr2 +dalp_mdr/r)                  &
+                     ! Rad diff propto detatdr, indep of dhdr
+                     +R_kappa*detatdr*lambda**2*dalp_mdr
         endif
       else
 !       CASE 2: MTA (FINITE tau)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY

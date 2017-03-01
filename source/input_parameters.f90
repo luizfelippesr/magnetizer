@@ -34,6 +34,7 @@ module input_params
   double precision, protected :: r_bulge, v_bulge
   double precision, protected :: r_halo, v_halo, nfw_cs1
   double precision, protected :: Mstars_disk, Mgas_disk, SFR
+  double precision, protected :: Mhalo, Mstars_bulge
   ! other
   double precision :: lambda
 
@@ -147,6 +148,8 @@ module input_params
     call IO_read_dataset_scalar('Mgas_disk', gal_id, galaxy_data(:,8))
     call IO_read_dataset_scalar('Mstars_disk', gal_id, galaxy_data(:,9))
     call IO_read_dataset_scalar('SFR', gal_id, galaxy_data(:,10))
+    call IO_read_dataset_scalar('Mhalo', gal_id, galaxy_data(:,11))
+    call IO_read_dataset_scalar('Mstars_bulge', gal_id, galaxy_data(:,12))
 
     ! Determines the maximum radius for this galaxy over the whole history
     r_max_kpc_history = maxval(galaxy_data(:,1)) * p_rmax_over_rdisk
@@ -229,6 +232,8 @@ module input_params
     Mgas_disk = galaxy_data(iread,8)
     Mstars_disk = galaxy_data(iread,9)
     SFR = galaxy_data(iread,10)
+    Mhalo = galaxy_data(:,11)
+    Mstars_bulge = galaxy_data(:,12)
     ! Temporarily setting v_sol_kms to the turbulent speed
     v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     l_sol_kpc = p_ISM_turbulent_length

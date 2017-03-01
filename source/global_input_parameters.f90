@@ -77,7 +77,7 @@ module global_input_parameters
   logical :: p_use_fixed_physical_grid=.false.
   ! The maximum radius to use for computations divided by the half mass radius
   ! i.e. rmax = p_rmax_over_rdisk * rdisk
-  double precision :: p_rmax_over_rdisk = 2.25d0
+  double precision :: p_rmax_over_rdisk = 2.75d0
   ! Which method to use for the interpolation, valid options are:
   ! 'simple' (linear, without using fgsl), 'linear' (fgsl),
   ! 'cubic_spline' (fgsl) and 'akima' (fgsl)
@@ -137,11 +137,15 @@ module global_input_parameters
   ! Imposes Neumann boundary condition at the maximum radius
   ! I.e. at R=Rmax, symmetric boundary
   logical :: p_neumann_boundary_condition_rmax = .false.
+  ! ALPHA EFFECT
+  !Factor determining strength of alpha effect
+  double precision :: C_alp=   1.0d0
 
   namelist /dynamo_parameters/ &
     Dyn_quench, Alg_quench, lFloor, Damp, &
     frac_seed, p_seed_choice, p_r_seed_decay, p_nn_seed, &
-    Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif
+    Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif, &
+    p_neumann_boundary_condition_rmax, C_alp
 
 
   ! -------------------------------------------------------

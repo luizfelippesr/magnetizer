@@ -71,9 +71,6 @@ module input_constants  ! Contains physical, model-dependent, constants
   ! RESISTIVITY
   !1.e-5 !Inverse magnetic Reynolds number
   double precision, parameter :: Rm_inv= 0.d0
-  ! ALPHA EFFECT
-  !Factor determining strength of alpha effect
-  double precision, parameter :: C_alp=   1.0d0
    !Relevant only if module Alp_ceiling=1; Limits maximum value of alpha to ceiling*v_kms
   double precision, parameter :: alpceil= 1d0 !0.5d0
   ! RANDOM MAGNETIC FIELD

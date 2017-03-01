@@ -24,7 +24,6 @@ module Test_Integration_Functions
   use fgsl
   type   (fgsl_function             ), save, private :: integrandFunction
   type   (fgsl_integration_workspace), save, private :: integrationWorkspace
-  logical                            , save, private :: integrationReset    =.true.
 
 contains
   double precision function Integrand1(x)
@@ -96,6 +95,37 @@ contains
     return
   end function test_Pdm
 
+  double precision function test_Pstars_alt(x)
+    !% Integral for unit testing.
+    use Integration
+    implicit none
+    double precision, intent(in   ) :: x
+    double precision, parameter :: xmax = 600
+    double precision, parameter :: hstars_to_hd = 3.0
+    if (x<xmax) then
+      test_Pstars_alt= exp(-x)/cosh(x/hstars_to_hd)**2
+    else
+      test_Pstars_alt= 0d0
+    endif
+    return
+  end function test_Pstars_alt
+
+  double precision function test_Pdm_alt(x)
+    !% Integral for unit testing.
+    use Integration
+    implicit none
+    double precision, intent(in   ) :: x
+    double precision, parameter :: xmax = 10000
+    double precision, parameter :: hstars_to_hd = 30.0
+
+    if (x<xmax) then
+      test_Pdm_alt = exp(-x)/(x/hstars_to_hd)/(1+(x/hstars_to_hd))**2
+    else
+      test_Pdm_alt = 0d0
+    endif
+    return
+  end function test_Pdm_alt
+
 end module
 program Test_Integration
   !% Tests that numerical integration routines work.
@@ -160,10 +190,10 @@ program Test_Integration
   print *, '  time: ',cpu_time_finish-cpu_time_start, '(100,000 repetitions)'
   print *,
 
-integrationReset = .true.
+  integrationReset = .true.
   call cpu_time(cpu_time_start)
   do i = 1, 100000
-    integral=Integrate(1d-10,100.0d0,test_Pdm, integrandFunction,  &
+    integral=Integrate(0.0d0,100.0d0,test_Pdm, integrandFunction,  &
                        integrationWorkspace, toleranceRelative=1.0d-7, &
                        hasSingularities=.true.,toInfinity=.false.,     &
                        reset=integrationReset)
@@ -175,10 +205,6 @@ integrationReset = .true.
   print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
   print *, '  time: ',cpu_time_finish-cpu_time_start, '(100,000 repetitions)'
   print *,
-
-
-
-
 
   integrationReset = .true.
   call cpu_time(cpu_time_start)
@@ -211,5 +237,27 @@ integrationReset = .true.
   print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
   print *, '  time: ',cpu_time_finish-cpu_time_start, '(100,000 repetitions)'
   print *,
+
+
+  integral=Integrate(1d-10,100.0d0,test_Pdm_alt, integrandFunction,  &
+                     integrationWorkspace, toleranceRelative=1.0d-7, &
+                     toInfinity=.true., reset=integrationReset)
+  print *, "integrate f(x)=exp(-x)/(x/30)/(1+x/30)²       from x=0…∞"
+  expected = 97.946378405461
+  rel_err = abs((integral-expected)/expected)
+  print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
+  print *,
+
+
+  integral=Integrate(1d-10,-1.0d0,test_Pstars_alt, integrandFunction,   &
+                      integrationWorkspace, toleranceRelative=1.0d-7, &
+                      toInfinity=.true., reset=integrationReset)
+  print *, "integrate f(x)=exp(-x)/cosh²(x/3.)       from x=0…∞"
+  expected = 2.34839248149319
+  rel_err = abs((integral-expected)/expected)
+  print *, '  result=',integral,'  expected=', expected, 'rel_err =', rel_err
+  print *,
+
+
 
 end program Test_Integration

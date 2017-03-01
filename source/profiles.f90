@@ -116,13 +116,10 @@ contains
     ! Solves for density and height
     if (.not.p_use_legacy_cubic_solver) then
       ! Computes h and rho solving for hydrostatic equilibrium
-      call solve_hydrostatic_equilibrium_numerical(r_disk, &
-                                                   Mgas_disk, Mstars_disk, &
-                                                   abs(r_kpc), B_actual, &
+      call solve_hydrostatic_equilibrium_numerical(abs(r_kpc), B_actual, &
                                                    Om_kmskpc, G_kmskpc, &
                                                    rho_cgs, h_kpc, Rm, &
                                                    Sigma_d_out=Sigma_d)
-
     else
       if (.not.p_check_hydro_solution) then
         call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &

@@ -45,7 +45,7 @@ ${builddir}/%.o : ${srcdir}/%.f90
 	$(FC)  $(FCFLAGS) -c $^ -o $@
 
 # Explicit dependencies between files
-$(srcdir)/pressureEquilibrium.f90: ${builddir}/root_finder.o ${builddir}/constants.o ${builddir}/global_input_parameters.o
+$(srcdir)/pressureEquilibrium.f90: ${builddir}/root_finder.o ${builddir}/constants.o ${builddir}/global_input_parameters.o ${builddir}/input_parameters.o ${builddir}/integration.o
 $(srcdir)/outflow.f90: ${builddir}/input_parameters.o
 $(srcdir)/grid.f90: ${builddir}/constants.o ${builddir}/global_input_parameters.o ${builddir}/messages.o ${builddir}/interpolation.o
 $(srcdir)/deriv.f90: ${builddir}/grid.o

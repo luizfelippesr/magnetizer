@@ -232,8 +232,8 @@ module input_params
     Mgas_disk = galaxy_data(iread,8)
     Mstars_disk = galaxy_data(iread,9)
     SFR = galaxy_data(iread,10)
-    Mhalo = galaxy_data(:,11)
-    Mstars_bulge = galaxy_data(:,12)
+    Mhalo = galaxy_data(iread,11)
+    Mstars_bulge = galaxy_data(iread,12)
     ! Temporarily setting v_sol_kms to the turbulent speed
     v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     l_sol_kpc = p_ISM_turbulent_length

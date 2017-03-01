@@ -39,7 +39,7 @@ module input_params
   double precision :: lambda
 
   ! Maximum number of columns in the galaxy input files
-  integer, private, parameter :: number_of_columns=11
+  integer, private, parameter :: number_of_columns=13
   ! All galaxy data
   double precision, allocatable, dimension(:,:),private :: galaxy_data
   double precision, allocatable, dimension(:), private :: output_times

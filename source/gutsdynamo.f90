@@ -41,14 +41,26 @@ module boundary_conditions  !Specify and implement boundary conditions at r=0, r
       integer :: ix
 !
       if (nxghost/=0) then
-        f(nxghost+1 ,1:2)=  0.d0  !Set Br=Bp=0 at r=0 	Dirichlet BC on Br, Bp
-        f(nx-nxghost,1:2)=  0.d0  !Set Br=Bp=0 at r=R 	Dirichlet BC on Br, Bp
+        !Set Br=Bp=0 at r=0 	Dirichlet BC on Br, Bp
+        f(nxghost+1 ,1:2)=  0.d0
+        !Set Br=Bp=0 at r=R 	Dirichlet BC on Br, Bp
+        f(nx-nxghost,1:2)=  0.d0
         do ix=1,nxghost
-          f(ix     ,1:2)= -f(2*(nxghost+1)-ix     ,1:2)  !Antisymmetric about r=0    Dirichlet BC on Br, Bp: Br=Bp=0 at r=0
-          f(nx+1-ix,1:2)= -f(nx+1-2*(nxghost+1)+ix,1:2)  !Antisymmetric about r=R    Dirichlet BC on Br, Bp: Br=Bp=0 at r=R
+          !Antisymmetric about r=0    Dirichlet BC on Br, Bp: Br=Bp=0 at r=0
+          f(ix     ,1:2)= -f(2*(nxghost+1)-ix     ,1:2)
+          if (p_neumann_boundary_condition_rmax) then
+          !Symmetric     about r=R    Neumann   BC on alp_m    : dBrdr=dBpdr=0 at r=R
+            f(nx+1-ix,nvar  )=  f(nx+1-2*(nxghost+1)+ix,1:2)
+          else
+            !Antisymmetric about r=R    Dirichlet BC on Br, Bp: Br=Bp=0 at r=R
+            f(nx+1-ix,1:2)= -f(nx+1-2*(nxghost+1)+ix,1:2)
+          endif
+
           if (Dyn_quench) then
-            f(ix     ,nvar  )=  f(2*(nxghost+1)-ix     ,nvar  )  !Symmetric     about r=0    Neumann   BC on alp_m    : dalp_mdr=0 at r=0
-            f(nx+1-ix,nvar  )=  f(nx+1-2*(nxghost+1)+ix,nvar  )  !Symmetric     about r=R    Neumann   BC on alp_m    : dalp_mdr=0 at r=R
+            !Symmetric     about r=0    Neumann   BC on alp_m    : dalp_mdr=0 at r=0
+            f(ix     ,nvar  )=  f(2*(nxghost+1)-ix     ,nvar  )
+            !Symmetric     about r=R    Neumann   BC on alp_m    : dalp_mdr=0 at r=R
+            f(nx+1-ix,nvar  )=  f(nx+1-2*(nxghost+1)+ix,nvar  )
           endif
         enddo
       endif

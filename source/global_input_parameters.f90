@@ -119,25 +119,24 @@ module global_input_parameters
   character(len=20) :: p_seed_choice = 'random'
   double precision :: p_r_seed_decay = 15.0d0
   integer:: p_nn_seed = 2 !Only relevant if Rand_seed=F
-
   ! CEILING ON ALPHA EFFECT
   ! Set to T to put a ceiling for alpha at alpceil*v
   logical :: Alp_ceiling = .true.
-
   ! ALPHA^2 EFFECT
   ! Set to T to include alpha^2 effect; set to F to use alpha-omega approximation equations
   logical :: Alp_squared= .false.
-
   ! KRAUSE'S LAW
   ! Set to T for alpha effect to decrease in proportion to omega (Krause's formula)
   logical :: Krause= .true.
-
   ! ADVECTION
   ! Set to F to turn off advection of the magnetic field
   logical :: Advect= .true.
-
   ! TURBULENT DIFFUSION
-  logical :: Turb_dif= .true.  !Set to F to turn off turbulent diffusion
+  !Set to F to turn off turbulent diffusion
+  logical :: Turb_dif= .true.
+  ! Imposes Neumann boundary condition at the maximum radius
+  ! I.e. at R=Rmax, symmetric boundary
+  logical :: p_neumann_boundary_condition_rmax = .false.
 
   namelist /dynamo_parameters/ &
     Dyn_quench, Alg_quench, lFloor, Damp, &

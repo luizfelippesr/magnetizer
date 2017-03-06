@@ -8,6 +8,7 @@ module profiles
   double precision, dimension(:), allocatable :: etat, tau, Beq, alp_k
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
+  double precision :: delta_r
   private :: prepare_profiles_module_public_variables
 contains
   logical function construct_profiles(B)
@@ -55,6 +56,8 @@ contains
 
     ! Sets the minimum radius to be followed (for the disk rotation curve)
     r_disk_min = r_max_kpc*rmin_over_rmax
+    ! Adjust units of delta_r (which is used to get the seed field)
+    delta_r = p_delta_r_kpc/r_max_kpc
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component
@@ -153,7 +156,7 @@ contains
     endif
 
     ! Stricter(ish) trap: h/r<1.5 at a half mass radius
-    if (h_kpc(i_halfmass)>2d0*r_disk) then
+    if (h_kpc(i_halfmass)>r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
 !       construct_profiles = .false.

@@ -244,12 +244,12 @@ module equ  !Contains the partial differential equations to be solved
       ! IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT
       ! FLUCTUATING MAGNETIC FIELD
       if (lFloor) then
-        !Estimate of critical dynamo number
-        Dyn_crit= -(pi/2)**5*(1.d0 +4*C_U*R_U/pi**2)**2  
-        !Ratio of Dynamo number to critical dynamo number
-        Dtilde= Dyn_gen/Dyn_crit
         !Dimensionless outflow parameter
         R_U= Uz*h/etat
+        !Estimate of critical dynamo number
+        Dyn_crit= -(pi/2)**5*(1.d0 +4*C_U*R_U/pi**2)**2
+        !Ratio of Dynamo number to critical dynamo number
+        Dtilde= Dyn_gen/Dyn_crit
         !Coefficient of Bfloor for source term to get Bp=Bfloor
         Afloor= (pi/2)**2*etat/h**2*(1.d0+4*C_U*R_U/pi**2)*(1.d0-Dtilde)
 !         Afloor=1d0

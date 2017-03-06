@@ -4,7 +4,7 @@
 module pressureEquilibrium
   use math_constants
   use fgsl
-  use input_params, only: r_halo, r_disk, Mhalo, Mstars_disk, Mgas_disk, nfw_cs1
+  use input_params, only: r_bulge , r_halo, r_disk, Mhalo, Mstars_disk, Mstars_bulge, Mgas_disk, nfw_cs1
   use, intrinsic :: iso_c_binding
   implicit none
   private
@@ -22,14 +22,16 @@ module pressureEquilibrium
   double precision, parameter :: convertPressureSItoGaussian=10
 
   ! Global variables used in the integration
-  double precision :: i_R_to_Rsdm, i_hd_to_RsDM, i_hd_to_hm, i_hd_to_hstar
+  double precision :: i_R_to_Rsdm, i_hd_to_RsDM
+  double precision :: i_R_to_Rb,   i_hd_to_Rb
+  double precision :: i_hd_to_hm, i_hd_to_hstar
 
   type            (fgsl_function             ) :: integrandFunction
   type            (fgsl_integration_workspace) :: integrationWorkspace
   logical                                      :: integrationReset = .true.
 
   !DEBUG
-  logical :: test_old =.false.
+  logical :: test_old =.true.
 
 contains
   subroutine solve_hydrostatic_equilibrium_numerical( r, B, &
@@ -146,12 +148,6 @@ contains
         endif
       endif
 
-      ! Computes density
-      if (h_d(i)==0) then
-        print *, h_d(i), i
-        stop
-      endif
-
       rho_d(i) = density_to_scaleheight(h_d(i), Sigma_d(i))
 
       ! Uses previous h value to set up search interval for the next one.
@@ -230,7 +226,6 @@ contains
     pressure_equation = P1 - Pgas + P2
 
   end function pressure_equation
-
 
 
   subroutine solve_hydrostatic_equilibrium_cubic(rdisk, M_g, M_star, r, B,  &
@@ -437,31 +432,39 @@ contains
     double precision :: P, Pm, Pstars, Pdm, Pbulge, Pd
     double precision :: Sigma_d_SI, Sigma_star_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
-    double precision :: h_star, h_m, rs_DM, rho_dm_SI
+    double precision :: h_star, h_m, rs_DM, rho_dm_SI, rho_b_SI, rb
     double precision :: I_m, I_stars, I_dm, I_bulge, preFactor
     double precision, parameter :: I_d = 0.5
     double precision, parameter :: rel_TOL = 1d-8
     double precision, parameter :: small = 1d-10
+    double precision, parameter :: rb_to_r50 = (sqrt(2.0d0)-1.0d0)
 
     ! Computes missing scale heights (in kpc)
     h_star = r_disk * rs_to_r50 * p_stellarHeightToRadiusScale
     h_m = r_disk * rs_to_r50 * p_molecularHeightToRadiusScale
     rs_DM = r_halo * nfw_cs1
 
-    ! Computes DM reference density
-    rho_dm_SI = Mhalo*Msun_SI/(rs_DM*kpc_SI)**3
+    ! Computes DM and bulge reference densities
+    rho_dm_SI = Mhalo*Msun_SI*(rs_DM*kpc_SI)**(-3)
     rho_dm_SI = rho_dm_SI * (log(1d0+1/nfw_cs1) - 1d0/(1d0+1))
+
 
     ! Adjusts units of surface densities
     Sigma_star_SI = (Sigma_star*Msun_SI/kpc_SI/kpc_SI)
     Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
 
     ! Sets global variables (used in integrations)
-    i_hd_to_rsDM = h_d/rs_DM
     i_hd_to_hm = h_d/h_m
     i_hd_to_hstar = h_d/h_star
-    i_R_to_rsDM = r/rs_DM
+    i_hd_to_Rsdm = h_d/rs_DM
+    i_R_to_Rsdm = r/rs_DM
 
+    if (Mstars_bulge>1d3) then
+      rb = r_bulge * rb_to_r50
+      rho_b_SI = Mstars_bulge*Msun_SI/(2d0*pi)*(rb*kpc_SI)**(-3)
+      i_hd_to_rb = h_d/rb
+      i_R_to_Rb = r/rb
+    endif
     ! Does the integrations
     I_m = Integrate(small, 0d0, integrand_m, integrandFunction,      &
                     integrationWorkspace, toleranceRelative=rel_TOL, &
@@ -471,13 +474,17 @@ contains
                         integrationWorkspace, toleranceRelative=rel_TOL, &
                         toInfinity=.true., reset=integrationReset)
 
-!     I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
-!                      integrationWorkspace, toleranceRelative=rel_TOL, &
-!                      toInfinity=.true., reset=integrationReset)
+    I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
+                     integrationWorkspace, toleranceRelative=rel_TOL, &
+                     toInfinity=.true., reset=integrationReset)
 
-!     I_bulge = Integrate(1d-15, 0d0, integrand_bulge, integrandFunction,  &
-!                         integrationWorkspace, toleranceRelative=rel_TOL, &
-!                         toInfinity=.true., reset=integrationReset)
+    if (Mstars_bulge>1d3) then
+      I_bulge = Integrate(1d-15, 0d0, integrand_bulge, integrandFunction,  &
+                          integrationWorkspace, toleranceRelative=rel_TOL, &
+                          toInfinity=.true., reset=integrationReset)
+    else
+      I_bulge = 0d0
+    endif
 
     ! Computes all the pressure contributions
     preFactor = pi * G_SI * Sigma_d_SI * convertPressureSItoGaussian
@@ -485,11 +492,16 @@ contains
     Pd = preFactor * Sigma_d_SI * 1d0 * I_d
     Pm = preFactor * Sigma_d_SI*R_m * i_hd_to_hm * I_m
     Pstars = preFactor * Sigma_star_SI * i_hd_to_hstar * I_stars
-!     Pbulge = 0d0 !pi * G_SI * Sigma_d_SI * ...... todo ... * I_bulge
+    if (Mstars_bulge>1d3) then
+      Pbulge = preFactor * 2d0 * rho_b_SI * (h_d*kpc_SI) * I_bulge
+    else
+      Pbulge = 0d0
+    endif
     Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
 
     ! Finishes calculation
-    P = Pd + Pm + Pstars + Pdm !+ Pbulge
+    P = Pd + Pm + Pstars !+ Pbulge !+ Pdm
+!     P = Pstars + Pdm !+ Pbulge
 
     return
   end function computes_midplane_ISM_pressure_numerical
@@ -578,17 +590,6 @@ contains
     P = - Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
   end function computes_midplane_ISM_pressure_using_rotation
 
-  pure function integrand_dm(x)
-    ! Integrand in the dark matter halo case
-    ! Assumes a Navarro-Frenk-White DM profile
-    ! Assumes the diffuse gas follows a sech^2 vertical profile
-    ! Relies on global variables i_hd_to_Rsdm and i_R_to_Rsdm
-    double precision, intent(in) :: x
-    double precision :: y, integrand_dm
-    y = sqrt(i_R_to_Rsdm**2 + (i_hd_to_RsDM*x)**2)
-    integrand_dm = tanh(x)/y/(1d0+y)/(1d0+y)
-  end function integrand_dm
-
   pure function integrand_stars(x)
     ! Integrand in stars case
     ! Assumes the gas follows a sech^2 vertical profile
@@ -634,8 +635,28 @@ contains
     ! Assumes the diffuse gas follows a sech^2 vertical profile
     ! Relies on global variable i_hd_to_hm
     double precision, intent(in) :: x
-    double precision :: integrand_bulge
-    integrand_bulge = 0d0
+    double precision :: y, integrand_bulge
+    y = sqrt(i_R_to_Rb**2 + (i_hd_to_Rb*x)**2)
+    if (test_old) then
+      integrand_bulge = exp(-x)/y/(1d0+y)/(1d0+y)/(1d0+y)
+      return
+    endif
+    integrand_bulge = tanh(x)/y/(1d0+y)/(1d0+y)/(1d0+y)
   end function integrand_bulge
+
+  pure function integrand_dm(x)
+    ! Integrand in the dark matter halo case
+    ! Assumes a Navarro-Frenk-White DM profile
+    ! Assumes the diffuse gas follows a sech^2 vertical profile
+    ! Relies on global variables i_hd_to_Rsdm and i_R_to_Rsdm
+    double precision, intent(in) :: x
+    double precision :: y, integrand_dm
+    y = sqrt(i_R_to_Rsdm**2 + (i_hd_to_RsDM*x)**2)
+    if (test_old) then
+      integrand_dm = exp(-x)/y/(1d0+y)/(1d0+y)
+      return
+    endif
+    integrand_dm = tanh(x)/y/(1d0+y)/(1d0+y)
+  end function integrand_dm
 
 end module pressureEquilibrium

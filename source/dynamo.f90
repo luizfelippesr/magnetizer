@@ -55,6 +55,9 @@ module dynamo
       call construct_grid(r_disk, r_max_kpc_history)
       ! Allocates f-array (which contains all the data for the calculations)
       call check_allocate_f_array(f, nvar)
+      call check_allocate(alp); alp = 0.0
+      call check_allocate(Bzmod); Bzmod = 0.0
+
       ! Sets other necessary parameters
       call set_calc_params
       ! Constructs galaxy model for the initial snapshot
@@ -62,8 +65,6 @@ module dynamo
       if (.not.able_to_construct_profiles) then
         call message('Could not construct profiles for this galaxy.', &
                      gal_id=gal_id, info=1)
-        call check_allocate(alp); alp = 0.0
-        call check_allocate(Bzmod); Bzmod = 0.0
         call write_and_finish(cpu_time_start, gal_id, this_t)
         return
       endif

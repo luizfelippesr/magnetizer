@@ -140,12 +140,15 @@ module global_input_parameters
   ! ALPHA EFFECT
   !Factor determining strength of alpha effect
   double precision :: C_alp=   1.0d0
+  ! Width of the localization of the Eigenfunction (in kpc)
+  double precision :: p_delta_r_kpc = 2d0
+
 
   namelist /dynamo_parameters/ &
     Dyn_quench, Alg_quench, lFloor, Damp, &
     frac_seed, p_seed_choice, p_r_seed_decay, p_nn_seed, &
     Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif, &
-    p_neumann_boundary_condition_rmax, C_alp
+    p_neumann_boundary_condition_rmax, C_alp, p_delta_r_kpc
 
 
   ! -------------------------------------------------------

@@ -156,7 +156,7 @@ module equ  !Contains the partial differential equations to be solved
   implicit none
   integer, private :: i
   double precision, dimension(:), allocatable :: alp_m, alp
-  double precision :: rmax, delta_r, hmax, lmax!, Ncells
+  double precision :: rmax, hmax, lmax!, Ncells
 
   contains
     subroutine pde(f,dfdt)
@@ -252,12 +252,13 @@ module equ  !Contains the partial differential equations to be solved
         R_U= Uz*h/etat
         !Coefficient of Bfloor for source term to get Bp=Bfloor
         Afloor= (pi/2)**2*etat/h**2*(1.d0+4*C_U*R_U/pi**2)*(1.d0-Dtilde)
+!         Afloor=1d0
         !Number of turbulent cells in the annular volume
-        Ncells= 3.d0*r*Delta_r*h/l**3/lambda**2
+        Ncells= abs(3.d0*r*Delta_r*h/l**3/lambda**2)
         !Small-scale magnetic field strength
         brms= fmag*Beq
         !Floor magnetic field
-        B_floor= exp(-Delta_r_kpc/2/r_kpc)*brms/Ncells^(1d0/2d0)*l/Delta_r*lambda/3
+        B_floor= exp(-Delta_r/2/r)*brms/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
         !!Old version:
         !do i=nxghost+1,nx-nxghost
         !  if (abs(Bp(i))==maxval(abs(Bp))) then
@@ -319,7 +320,7 @@ module equ  !Contains the partial differential equations to be solved
                    !Radial diffusion propto etat
                    +(ctau+Rm_inv)*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2)           &
                    !Radial diffusion propto detatdr
-                   +ctau*detatdr*lambda**2*( Bp/r +dBpdr)
+                   +ctau*detatdr*lambda**2*( Bp/r +dBpdr)                               &
                    !Forcing function that enforces floor at B_floor
                    +Afloor*B_floor
                    ! Following commented out for simplicity
@@ -431,7 +432,7 @@ module equ  !Contains the partial differential equations to be solved
                      !Turbulent radial diffusion propto etat
                      +lambda**2*(d2alp_mdr2 +dalp_mdr/r))                                &
                      !Turbulent radial diffusion propto detatdr
-                     +R_kappa*detatdr*lambda**2*dalp_mdr                                 &
+                     +R_kappa*detatdr*lambda**2*dalp_mdr
                      ! Following commented out for simplicity
                      !-lambda*alp_m*Ur/r -lambda*alp_m*dUrdr -lambda*Ur*dalp_mdr
 !

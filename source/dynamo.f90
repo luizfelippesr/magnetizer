@@ -49,7 +49,6 @@ module dynamo
       ! Reads in the model parameters (for the first snapshot)
       call set_input_params(gal_id, error)
       if (error) then
-        call write_and_finish(cpu_time_start, gal_id, this_t)
         return
       endif
       call construct_grid(r_disk, r_max_kpc_history)
@@ -263,6 +262,7 @@ module dynamo
 
       !Writes final simulation output
       call cpu_time(cpu_time_finish)
+
       call estimate_Bzmod(f)
 
       if (it == 0) it = init_it ! If a problem happened before entering the

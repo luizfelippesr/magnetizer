@@ -139,7 +139,9 @@ module global_input_parameters
   logical :: p_neumann_boundary_condition_rmax = .false.
   ! ALPHA EFFECT
   !Factor determining strength of alpha effect
-  double precision :: C_alp=   1.0d0
+  double precision :: C_alp = 1.0d0
+  !Factor determining strength of alpha effect
+  double precision :: C_floor = 1.0d0
   ! Width of the localization of the Eigenfunction (in kpc)
   double precision :: p_delta_r_kpc = 2d0
 
@@ -148,7 +150,8 @@ module global_input_parameters
     Dyn_quench, Alg_quench, lFloor, Damp, &
     frac_seed, p_seed_choice, p_r_seed_decay, p_nn_seed, &
     Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif, &
-    p_neumann_boundary_condition_rmax, C_alp, p_delta_r_kpc
+    p_neumann_boundary_condition_rmax, C_alp, C_floor, &
+    p_delta_r_kpc
 
 
   ! -------------------------------------------------------

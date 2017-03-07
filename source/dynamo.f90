@@ -28,9 +28,10 @@ module dynamo
       logical :: next_output
       integer :: fail_count, rank_actual
       double precision, dimension(nx) :: Btmp
-      double precision :: this_t
-
+      double precision :: this_t, t_last_sign_choice
       elliptical = .false. ;  ok = .true.
+
+      t_last_sign_choice = 0d0
 
       if (present(rank)) then
           rank_actual = rank
@@ -168,6 +169,13 @@ module dynamo
                 exit
               endif
             endif
+
+            if (this_t-t_last_sign_choice > minval(tau)*t0_Gyr) then
+               call random_number(Bfloor_sign)
+               Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
+               t_last_sign_choice = this_t
+            endif
+
             ! Runs Runge-Kutta time-stepping routine
             call rk(f)
 

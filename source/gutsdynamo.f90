@@ -156,6 +156,7 @@ module equ  !Contains the partial differential equations to be solved
   implicit none
   integer, private :: i
   double precision, dimension(:), allocatable :: alp_m, alp
+  double precision :: Bfloor_sign
   double precision :: rmax, hmax, lmax!, Ncells
 
   contains
@@ -259,6 +260,7 @@ module equ  !Contains the partial differential equations to be solved
         brms= fmag*Beq
         !Floor magnetic field
         B_floor= exp(-Delta_r/2/r)*brms/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
+        B_floor = B_floor * Bfloor_sign * C_floor
         !!Old version:
         !do i=nxghost+1,nx-nxghost
         !  if (abs(Bp(i))==maxval(abs(Bp))) then

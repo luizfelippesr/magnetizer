@@ -151,7 +151,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                 # Otherwise, remove galaxy from target dictionary
                 del target_IDs[ID]
 
-        if (zidx == 0) or sample_all_z:
+        if (zidx == 0) or (sample_all_z and zidx!=z_indices[-1]):
             if zidx != 0 :
                 number_of_galaxies = number_of_galaxies_high_z
             print number_of_galaxies

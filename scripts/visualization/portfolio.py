@@ -34,7 +34,7 @@ quantities_dict = {'Bp'   : r'B_\phi',
 
 
 def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
-                  ax=plt.figure().add_subplot(111),ts=None):
+                  ax=plt.figure().add_subplot(111),ts=None, **args):
     """Plots the time variation of a given quantity for a given galaxy """
     if ts is None:
         ts = data_dict['t'][:]
@@ -50,7 +50,7 @@ def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
         ok = data_dict['Omega'][igal,:,it] > 0
 
         data = data_dict[quantity][igal,:,it]
-        ax.plot(r[ok], data[ok],color=color, rasterized=True)
+        ax.plot(r[ok], data[ok],color=color, rasterized=True, **args)
 
         ax.set_xlabel(r'$r\,[\rm kpc]$')
 

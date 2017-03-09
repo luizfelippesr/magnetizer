@@ -154,7 +154,6 @@ module equ  !Contains the partial differential equations to be solved
   use bzcalc
 
   implicit none
-  integer, private :: i
   double precision, dimension(:), allocatable :: alp_m, alp
   double precision :: Bfloor_sign
   double precision :: rmax, hmax, lmax!, Ncells

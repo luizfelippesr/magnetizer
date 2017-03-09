@@ -37,8 +37,7 @@ contains
     double precision, dimension(nx) :: G_d, G_b, G_h
     double precision, dimension(nx) :: B_actual, tau_Gyr, tau_s
     double precision, dimension(nx) :: rho_cgs
-    double precision, dimension(nx) :: Sigma_d, Sigma_star, Pgas, Rm, Pgrav
-    double precision, dimension(nx,3) :: all_roots
+    double precision, dimension(nx) :: Sigma_d, Rm
     double precision, parameter :: P_TOL=1e-10
     double precision :: rreg
     double precision :: r_disk_min
@@ -124,28 +123,8 @@ contains
                                                    rho_cgs, h_kpc, Rm, &
                                                    Sigma_d_out=Sigma_d)
     else
-      if (.not.p_check_hydro_solution) then
         call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &
                             abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
-      else
-        ! If required, checks the solution.
-        ! (This is a slow step. Should be used for debugging only.)
-        call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &
-                                        abs(r_kpc), B_actual, rho_cgs, h_kpc, &
-                                            Sigma_star, Sigma_d, Rm, all_roots)
-        ! Computes the midplane pressure, from gravity
-        Pgrav = computes_midplane_ISM_pressure_using_scaleheight(  &
-                                          r_disk, Sigma_d, Sigma_star, Rm, h_kpc)
-        ! Computes the midplane pressure, from the density
-        Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B_actual, rho_cgs)
-
-        if (any(abs(Pgrav-Pgas)/Pgas>P_TOL)) then
-          call error_message('construct_profiles', &
-                            'Invalid solution for the hydrostatic equilibrium.',&
-                            code='P')
-          construct_profiles = .false.
-        end if
-      end if
     endif
 
     ! Traps possible aberrant values for the scale height

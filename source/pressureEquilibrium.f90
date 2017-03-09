@@ -4,6 +4,7 @@
 module pressureEquilibrium
   use math_constants
   use fgsl
+  use global_input_parameters
   use input_params, only: r_bulge , r_halo, r_disk, Mhalo, Mstars_disk, Mstars_bulge, Mgas_disk, nfw_cs1
   use, intrinsic :: iso_c_binding
   implicit none
@@ -11,9 +12,9 @@ module pressureEquilibrium
 
   public solve_hydrostatic_equilibrium_cubic
   public solve_hydrostatic_equilibrium_numerical
-  public computes_midplane_ISM_pressure_using_scaleheight
+  public computes_midplane_ISM_pressure_P1
   public computes_midplane_ISM_pressure_from_B_and_rho
-  public computes_midplane_ISM_pressure_using_rotation
+  public computes_midplane_ISM_pressure_P2
 
   double precision, parameter :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
   double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
@@ -29,9 +30,6 @@ module pressureEquilibrium
   type            (fgsl_function             ) :: integrandFunction
   type            (fgsl_integration_workspace) :: integrationWorkspace
   logical                                      :: integrationReset = .true.
-
-  !DEBUG
-  logical :: test_old =.true.
 
 contains
   subroutine solve_hydrostatic_equilibrium_numerical( r, B, &
@@ -52,7 +50,6 @@ contains
     !         Rm_out -> Molecular to atomic gas ratio profile (n-array)
     !
     use input_constants
-    use global_input_parameters
     use root_finder, only: FindRoot
     use messages, only: error_message
     double precision, dimension(:), intent(in) :: r, B, Om, G
@@ -215,9 +212,9 @@ contains
     B          = p(7)
 
     ! Computes the midplane pressure, from gravity (without radial part)
-    P1 = computes_midplane_ISM_pressure_numerical(r, Sigma_d, Sigma_star, R_m, h)
+    P1 = computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, h)
     ! Computes the midplane pressure, from gravity (the radial part)
-    P2 = computes_midplane_ISM_pressure_using_rotation(Sigma_d, Om, G, h)
+    P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om, G, h)
 
     ! Computes the midplane pressure, from the density
     rho_cgs = density_to_scaleheight(h, Sigma_d)
@@ -248,7 +245,6 @@ contains
     !         all_roots -> outputs all roots from the solve (nx3-array)
     !
     use input_constants
-    use global_input_parameters
     use root_finder
     double precision, intent(in) :: rdisk, M_g, M_star
     double precision, dimension(:), intent(in) :: r, B
@@ -360,7 +356,6 @@ contains
     !        Sigma_stars -> Surface density profile of stars (Msun/kpc^2)
     !        rdisk -> half mass radius of the disk, in kpc
     ! Output: Array $f_\text{mol}$
-    use global_input_parameters
     double precision, dimension(:), intent(in) :: Sigma_g, Sigma_star
     double precision, intent(in) :: rdisk
     double precision, dimension(size(Sigma_g)) :: Rmol, Pnot
@@ -379,7 +374,6 @@ contains
     !        v_gas -> optional: velocity dispersion of gas in km/s.
     !                 Default: 10km/s
     ! Output: array containing the pressure in Gaussian units
-    use global_input_parameters
     use input_constants
     use fgsl
     double precision, intent(in) :: rdisk
@@ -417,7 +411,7 @@ contains
   end function midplane_pressure_Elmegreen
 
 
-  function computes_midplane_ISM_pressure_numerical(   &
+  function computes_midplane_ISM_pressure_P1(   &
                                     r, Sigma_d, Sigma_star, R_m, h_d) result(P)
     ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
     ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
@@ -425,7 +419,6 @@ contains
     !        h_d -> Scale-height profile of the diffuse gas (kpc)
     !        rdisk -> half mass radius of the disk (kpc)
     ! Output: array containing the pressure in Gaussian units
-    use global_input_parameters
     use input_constants
     use Integration
     double precision, intent(in) :: r, Sigma_d, Sigma_star, h_d, R_m
@@ -436,8 +429,9 @@ contains
     double precision :: I_m, I_stars, I_dm, I_bulge, preFactor
     double precision, parameter :: I_d = 0.5
     double precision, parameter :: rel_TOL = 1d-8
-    double precision, parameter :: small = 1d-10
+    double precision, parameter :: small = 1d-12
     double precision, parameter :: rb_to_r50 = (sqrt(2.0d0)-1.0d0)
+    double precision, parameter :: Mstars_bulge_min = 1d3 ! Msun
 
     ! Computes missing scale heights (in kpc)
     h_star = r_disk * rs_to_r50 * p_stellarHeightToRadiusScale
@@ -448,7 +442,6 @@ contains
     rho_dm_SI = Mhalo*Msun_SI*(rs_DM*kpc_SI)**(-3)
     rho_dm_SI = rho_dm_SI * (log(1d0+1/nfw_cs1) - 1d0/(1d0+1))
 
-
     ! Adjusts units of surface densities
     Sigma_star_SI = (Sigma_star*Msun_SI/kpc_SI/kpc_SI)
     Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
@@ -456,109 +449,74 @@ contains
     ! Sets global variables (used in integrations)
     i_hd_to_hm = h_d/h_m
     i_hd_to_hstar = h_d/h_star
-    i_hd_to_Rsdm = h_d/rs_DM
-    i_R_to_Rsdm = r/rs_DM
 
-    if (Mstars_bulge>1d3) then
+    preFactor = pi * G_SI * Sigma_d_SI * convertPressureSItoGaussian
+
+    Pd = preFactor * Sigma_d_SI * 1d0 * I_d
+
+    if (.not.p_sech2_profile) then
+      ! If a exp(-z/h) profile is assumed, uses the analytic simple solution
+      I_stars = h_d/(h_star+h_d)
+      I_m = h_d/(h_m+h_d)
+    else
+      ! If a sech^2(z/h) is chosen, do the numerical integration
+      I_m = i_hd_to_hm *Integrate(small, 0d0, integrand_m,   &
+                                  integrandFunction,         &
+                                  integrationWorkspace,      &
+                                  toleranceRelative=rel_TOL, &
+                                  toInfinity=.true.,         &
+                                  reset=integrationReset)
+
+      I_stars = i_hd_to_hstar * Integrate(small, 0d0, integrand_stars, &
+                                          integrandFunction,           &
+                                          integrationWorkspace,        &
+                                          toleranceRelative=rel_TOL,   &
+                                          toInfinity=.true.,           &
+                                          reset=integrationReset)
+    endif
+    Pm = preFactor * Sigma_d_SI*R_m *  I_m
+    Pstars = preFactor * Sigma_star_SI * I_stars
+
+    ! Galaxy stellar bulge
+    if (p_use_Pbulge .and. Mstars_bulge>Mstars_bulge_min) then
+      ! Prepares global variables
       rb = r_bulge * rb_to_r50
       rho_b_SI = Mstars_bulge*Msun_SI/(2d0*pi)*(rb*kpc_SI)**(-3)
       i_hd_to_rb = h_d/rb
       i_R_to_Rb = r/rb
-    endif
-    ! Does the integrations
-    I_m = Integrate(small, 0d0, integrand_m, integrandFunction,      &
-                    integrationWorkspace, toleranceRelative=rel_TOL, &
-                    toInfinity=.true., reset=integrationReset)
-
-    I_stars = Integrate(small, 0d0, integrand_stars, integrandFunction,  &
-                        integrationWorkspace, toleranceRelative=rel_TOL, &
-                        toInfinity=.true., reset=integrationReset)
-
-    I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
-                     integrationWorkspace, toleranceRelative=rel_TOL, &
-                     toInfinity=.true., reset=integrationReset)
-
-    if (Mstars_bulge>1d3) then
+      ! Numerically integrates and computes result
       I_bulge = Integrate(1d-15, 0d0, integrand_bulge, integrandFunction,  &
                           integrationWorkspace, toleranceRelative=rel_TOL, &
                           toInfinity=.true., reset=integrationReset)
-    else
-      I_bulge = 0d0
-    endif
-
-    ! Computes all the pressure contributions
-    preFactor = pi * G_SI * Sigma_d_SI * convertPressureSItoGaussian
-
-    Pd = preFactor * Sigma_d_SI * 1d0 * I_d
-    Pm = preFactor * Sigma_d_SI*R_m * i_hd_to_hm * I_m
-    Pstars = preFactor * Sigma_star_SI * i_hd_to_hstar * I_stars
-    if (Mstars_bulge>1d3) then
       Pbulge = preFactor * 2d0 * rho_b_SI * (h_d*kpc_SI) * I_bulge
     else
       Pbulge = 0d0
     endif
-    Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
+    ! Halo dark matter halo
+    if (p_use_Pdm) then
+      ! Prepares global variables
+      i_hd_to_Rsdm = h_d/rs_DM
+      i_R_to_Rsdm = r/rs_DM
+      ! Numerically integrates and computes result
+      I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
+                       integrationWorkspace, toleranceRelative=rel_TOL, &
+                       toInfinity=.true., reset=integrationReset)
+      Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
+    else
+      Pdm = 0d0
+    endif
 
     ! Finishes calculation
-    P = Pd + Pm + Pstars !+ Pbulge !+ Pdm
-!     P = Pstars + Pdm !+ Pbulge
+    P = Pd + Pm + Pstars + Pbulge + Pdm
 
     return
-  end function computes_midplane_ISM_pressure_numerical
-
-
-  function computes_midplane_ISM_pressure_using_scaleheight(   &
-                                rdisk, Sigma_d, Sigma_star, R_m, h_d) result(P)
-    ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
-    ! (This helper function can be used for checking up the solution of
-    !  other functions in this module)
-    ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
-    !        Sigma_stars -> Surface density profile of stars (Msun/kpc^2)
-    !        h_d -> Scale-height profile of the diffuse gas (kpc)
-    !        rdisk -> half mass radius of the disk (kpc)
-    ! Output: array containing the pressure in Gaussian units
-    use global_input_parameters
-    use input_constants
-    use fgsl
-    double precision, intent(in) :: rdisk
-    double precision, dimension(:), intent(in) :: Sigma_d, Sigma_star
-    double precision, dimension(:), intent(in) :: h_d, R_m
-    double precision, dimension(size(Sigma_star)) :: weight_d, weight_star
-    double precision, dimension(size(Sigma_star)) :: P
-    double precision, dimension(size(Sigma_star)) :: Sigma_d_SI, Sigma_star_SI
-    double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
-    double precision :: h_star, h_m
-
-    ! Computes missing scale heights (in kpc)
-    h_star = rdisk * rs_to_r50 * p_stellarHeightToRadiusScale
-    h_m = rdisk * rs_to_r50 * p_molecularHeightToRadiusScale
-
-    ! Adjusts units of surface densities
-    Sigma_star_SI = (Sigma_star*Msun_SI/kpc_SI/kpc_SI)
-    Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
-
-    ! Computes weighting associated with stars
-    weight_star = 2d0*h_d/(h_star+h_d)
-
-    ! Computes weighting associated with diffuse gas
-    weight_d = R_m*2d0*h_d/(h_m+h_d) + 1d0
-
-    ! Finishes calculation
-    P = pi/2d0 * G_SI * Sigma_d_SI * (Sigma_d_SI*weight_d   &
-                    + Sigma_star_SI*weight_star) * convertPressureSItoGaussian
-
-    return
-  end function computes_midplane_ISM_pressure_using_scaleheight
-
+  end function computes_midplane_ISM_pressure_P1
 
   elemental function computes_midplane_ISM_pressure_from_B_and_rho(B, rho) result(P)
     ! Computes the ISM pressure, knowing the magnetic field and density
-    ! (This helper function can be used for checking up the solution of
-    !  other functions in this module)
     ! Input:  B   -> magnetic field (in microgauss)
     !         rho -> density of diffuse gas (in g/cm^3)
     ! Output: P -> midplane pressure (in erg/cm^3)
-    use global_input_parameters
     double precision, intent(in) :: B, rho
     double precision :: P
 
@@ -568,7 +526,7 @@ contains
 
   end function computes_midplane_ISM_pressure_from_B_and_rho
 
-  elemental function computes_midplane_ISM_pressure_using_rotation(Sigma_d, &
+  elemental function computes_midplane_ISM_pressure_P2(Sigma_d, &
                                                           Om, S, h_d) result(P)
     double precision, intent(in) :: Sigma_d, Om, S, h_d
     double precision :: P, Sigma_d_SI, Om_SI, S_SI, h_d_SI
@@ -588,7 +546,7 @@ contains
     h_d_SI = h_d * kpc_SI
 
     P = - Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
-  end function computes_midplane_ISM_pressure_using_rotation
+  end function computes_midplane_ISM_pressure_P2
 
   pure function integrand_stars(x)
     ! Integrand in stars case
@@ -597,17 +555,16 @@ contains
     double precision, intent(in) :: x
     double precision :: integrand_stars, sech, y
     y = x*i_hd_to_hstar
-    if (test_old) then
+    if (.not.p_sech2_profile) then
       integrand_stars = exp(-x)*exp(-y)
-      return
-    endif
-
-    if (abs(y)<500) then
-      sech = 1d0/cosh(y)
     else
-      sech = 0d0
+      if (abs(y)<500) then
+        sech = 1d0/cosh(y)
+      else
+        sech = 0d0
+      endif
+      integrand_stars = tanh(x)*sech*sech
     endif
-    integrand_stars = tanh(x)*sech*sech
   end function integrand_stars
 
   pure function integrand_m(x)
@@ -617,16 +574,16 @@ contains
     double precision, intent(in) :: x
     double precision :: integrand_m, sech, y
     y = x*i_hd_to_hm
-    if (test_old) then
+    if (.not.p_sech2_profile) then
       integrand_m = exp(-x)*exp(-y)
-      return
-    endif
-    if (abs(y)<500) then
-      sech = 1d0/cosh(y)
     else
-      sech = 0d0
+      if (abs(y)<500) then
+        sech = 1d0/cosh(y)
+      else
+        sech = 0d0
+      endif
+      integrand_m = tanh(x)*sech*sech
     endif
-    integrand_m = tanh(x)*sech*sech
   end function integrand_m
 
   pure function integrand_bulge(x)
@@ -637,11 +594,11 @@ contains
     double precision, intent(in) :: x
     double precision :: y, integrand_bulge
     y = sqrt(i_R_to_Rb**2 + (i_hd_to_Rb*x)**2)
-    if (test_old) then
+    if (.not.p_sech2_profile) then
       integrand_bulge = exp(-x)/y/(1d0+y)/(1d0+y)/(1d0+y)
-      return
+    else
+      integrand_bulge = tanh(x)/y/(1d0+y)/(1d0+y)/(1d0+y)
     endif
-    integrand_bulge = tanh(x)/y/(1d0+y)/(1d0+y)/(1d0+y)
   end function integrand_bulge
 
   pure function integrand_dm(x)
@@ -652,11 +609,11 @@ contains
     double precision, intent(in) :: x
     double precision :: y, integrand_dm
     y = sqrt(i_R_to_Rsdm**2 + (i_hd_to_RsDM*x)**2)
-    if (test_old) then
+    if (.not.p_sech2_profile) then
       integrand_dm = exp(-x)/y/(1d0+y)/(1d0+y)
-      return
+    else
+      integrand_dm = tanh(x)/y/(1d0+y)/(1d0+y)
     endif
-    integrand_dm = tanh(x)/y/(1d0+y)/(1d0+y)
   end function integrand_dm
 
 end module pressureEquilibrium

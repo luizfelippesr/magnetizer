@@ -223,6 +223,12 @@ module global_input_parameters
   double precision :: Mgas_disk_min=1d4 ! solar masses
   double precision :: rmin_over_rmax=0.001
 
+  ! Adopts a \rho \propto sech^2(z/h) profile for gas and stars
+  ! NB Defaul: rho \propto exp(-|z|/h)
+  logical :: p_sech2_profile = .false.
+  logical :: p_use_Pdm = .true.
+  logical :: p_use_Pbulge = .true.
+
   namelist /ISM_and_disk_parameters/ &
     p_ISM_sound_speed_km_s, p_ISM_kappa, p_ISM_xi, p_ISM_gamma, &
     p_ISM_turbulent_length, p_limit_turbulent_scale, &
@@ -233,7 +239,7 @@ module global_input_parameters
     p_turbulent_to_scaleheight_ratio, p_simplified_pressure, &
     p_rreg_to_rdisk, p_rdisk_min, Mgas_disk_min, rmin_over_rmax, &
     p_use_legacy_cubic_solver, p_enable_P2, p_truncates_within_rreg, &
-    p_minimum_density
+    p_minimum_density, p_sech2_profile, p_use_Pdm, p_use_Pbulge
 
 
   ! -------------------------------------------------------

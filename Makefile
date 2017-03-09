@@ -41,7 +41,6 @@ all: testRoots testProfiles mpi
 
 # Builds all objects/modules following
 ${builddir}/%.o : ${srcdir}/%.f90
-	echo ${HOSTNAME}
 	$(FC)  $(FCFLAGS) -c $^ -o $@
 
 # Explicit dependencies between files

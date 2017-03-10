@@ -9,7 +9,8 @@ import numpy as np
     
 def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                            select_r=slice(None,None,None),
-                           select_z=slice(None,None,None)):
+                           select_z=slice(None,None,None),
+                           return_units=False):
     """ 
     Computes extra Magnetizer quantites.
     
@@ -23,9 +24,11 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
     
     # Shorthands
     ig, ir, iz = select_gal, select_r, select_z
-    
+    unit = None
+
     if qname == 'V':
-        return f['Omega'][ig,ir,iz]*f['r'][ig,ir,iz]
+        quantity = f['Omega'][ig,ir,iz]*f['r'][ig,ir,iz]
+        unit = r'km/s'
 
     elif qname == 'D':
         S = f['Shear'][ig,ir,iz]
@@ -33,47 +36,85 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
         alpha = f['alp'][ig,ir,iz]
         h = f['h'][ig,ir,iz]
 
-        return alpha * S * (h/1e3)**3 / (eta_t**2)
+        quantity = alpha * S * (h/1e3)**3 / (eta_t**2)
 
     elif qname in (r'D_{{\rm crit}}','Dc','Dcrit'):
         Ru = compute_extra_quantity('R_u', f, ig,ir,iz)
         Cu = 0.25
-        return - (pi/2.)**5 * (1. + 4./pi**2 *Cu * Ru)**2
+        quantity = - (pi/2.)**5 * (1. + 4./pi**2 *Cu * Ru)**2
 
     elif qname == 'R_u':
-        return f['Uz'][ig,ir,iz] * (h/1e3) / f['etat'][ig,ir,iz]
+        quantity = f['Uz'][ig,ir,iz] * (h/1e3) / f['etat'][ig,ir,iz]
 
     elif qname == '|Bp|':
-        return np.abs(f['Bp'][ig,ir,iz])
+        quantity = np.abs(f['Bp'][ig,ir,iz])
+        unit = r'microgauss'
 
     elif qname == '|Br|':
-        return np.abs(f['Bp'][ig,ir,iz])
+        quantity = np.abs(f['Bp'][ig,ir,iz])
+        unit = r'microgauss'
 
     elif qname == '|Bz|':
-        return f['Bzmod'][ig,ir,iz]
+        quantity = f['Bzmod'][ig,ir,iz]
+        unit = r'microgauss'
 
     elif qname == 'p':
-        return arctan(f['Br'][ig,ir,iz]/f['Bp'][ig,ir,iz])*180/pi
+        quantity = arctan(f['Br'][ig,ir,iz]/f['Bp'][ig,ir,iz])*180/pi
 
     elif qname == 'q':
-        return -f['Shear'][ig,ir,iz]/f['Omega'][ig,ir,iz],
+        quantity = -f['Shear'][ig,ir,iz]/f['Omega'][ig,ir,iz],
 
     elif qname == 'l/h':
-        return f['l'][ig,ir,iz]/f['h'][ig,ir,iz]
+        quantity = f['l'][ig,ir,iz]/f['h'][ig,ir,iz]
 
     elif qname == 'h/r':
-        return f['h'][ig,ir,iz]/f['r'][ig,ir,iz]/1e3
+        quantity = f['h'][ig,ir,iz]/f['r'][ig,ir,iz]/1e3
 
     elif qname == 'q/(l/h)^2':
-        return -f['Shear'][ig,ir,iz]/f['Omega'][ig,ir,iz]/(f['l'][ig,ir,iz]/f['h'][ig,ir,iz])**2
+        quantity = -f['Shear'][ig,ir,iz]/f['Omega'][ig,ir,iz]/(f['l'][ig,ir,iz]/f['h'][ig,ir,iz])**2
 
     elif qname == r'\tau\Omega':
-        return f['tau'][ig,ir,iz]*f['Omega'][ig,ir,iz]
+        quantity = f['tau'][ig,ir,iz]*f['Omega'][ig,ir,iz]
 
     elif qname == r'Btot':
-        return sqrt(f['Bp'][ig,ir,iz]**2 + f['Br'][ig,ir,iz]**2 + f['Bzmod'][ig,ir,iz]**2)
+        quantity = sqrt(f['Bp'][ig,ir,iz]**2 +
+                    f['Br'][ig,ir,iz]**2 +
+                    f['Bzmod'][ig,ir,iz]**2)
+        unit = r'microgauss'
 
+    elif qname == r'Bfloor':
+        h = f['h'][ig,ir,iz]/1e3
+        l = f['l'][ig,ir,iz]/1e3
+        Delta_r = 2.
+        fmag = 0.5
+        r = f['r'][ig,ir,iz]
+        Ncells= np.abs(3.*r*Delta_r*h/l**3)
+        Beq = f['Beq'][ig,ir,iz]
+        brms= fmag*Beq
+        quantity = np.exp(-Delta_r/2./r)*brms/Ncells**(0.5)*l/Delta_r/3.
+
+    elif qname == r'growth':
+        if iz==0:
+            quantity = 0.0 * f['r'][ig,ir,iz]
+            unit = r'Gyr^-1'
+        else:
+            Btot1 = sqrt(f['Bp'][ig,ir,iz]**2 +
+                         f['Br'][ig,ir,iz]**2 +
+                         f['Bzmod'][ig,ir,iz]**2)
+            Btot0 = sqrt(f['Bp'][ig,ir,iz-1]**2 +
+                         f['Br'][ig,ir,iz-1]**2 +
+                         f['Bzmod'][ig,ir,iz-1]**2)
+          
+            delta_logB = np.log(Btot1) - np.log(Btot0)
+            delta_t = f['t'][iz] - f['t'][iz-1]
+
+            quantity = delta_logB/delta_t
+            unit = r'Gyr^-1'
     else:
-        raise ValueError, qname, 'is unknown.'
+        raise ValueError, qname + ' is unknown.'
 
+    if not return_units:
+        return quantity
+    else:
+        return quantity, unit
 

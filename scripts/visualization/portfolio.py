@@ -8,6 +8,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import numpy as np
 import h5py, random
+from extra_quantities import compute_extra_quantity
+
 
 units_dict = {}
 
@@ -16,12 +18,14 @@ formatted_units_dict = {'microgauss':r'\mu{{\rm G}}',
               'pc':r'{{\rm pc}}',
               'km/s':r'{{\rm km}}\,{{\rm s}}^{{-1}}',
               'km/s/kpc':r'{{\rm km}}\,{{\rm s}}^{{-1}}\,{{\rm kpc}}^{{-1}}',
-              'kpc km/s':r'{{\rm kpc}}\,{{\rm km}}\,{{\rm s}}^{{-1}}'}
+              'kpc km/s':r'{{\rm kpc}}\,{{\rm km}}\,{{\rm s}}^{{-1}}',
+              'Gyr^-1' : r'\rm Gyr^{{-1}}'
+              }
 
-quantities_dict = {'Bp'   : r'B_\phi',
-                   'Beq'  : r'B_{{\rm eq}}',
-                   'Br'   : r'B_r',
-                   'Bzmod':r'|B_z|',
+quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
+                   'Beq'  : r'\overline{{B}}_{{\rm eq}}',
+                   'Br'   : r'\overline{{B}}_r',
+                   'Bzmod':r'|\overline{{B}}_z|',
                    'Uz'   : r'U_z',
                    'Shear': r'S',
                    'Omega':r'\Omega',
@@ -29,16 +33,36 @@ quantities_dict = {'Bp'   : r'B_\phi',
                    'alp'  : r'\alpha',
                    'alp_k': r'\alpha_k',
                    'alp_m': r'\alpha_m',
-                   'etat' : r'\eta_t'
+                   'etat' : r'\eta_t',
+                   'Bfloor' : r'B_{\rm floor}',
+                   'Btot' : r'|\mathbf{{\overline{{B}}}}|',
+                   'growth' : r'\Gamma'
                    }
 
 
 def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
                   ax=plt.figure().add_subplot(111),ts=None, **args):
     """Plots the time variation of a given quantity for a given galaxy """
+
     if ts is None:
         ts = data_dict['t'][:]
-    data = data_dict[quantity]
+
+    unit = None
+
+    if data_dict[quantity] is None:
+        ngals, nr, nz = data_dict['Omega'].shape
+        data = np.empty((nr, nz))
+        for t in ts:
+            it = np.argmin(abs(data_dict['t'][:]-t))
+            data[:,it], unit = compute_extra_quantity(quantity, data_dict,
+                                                      select_gal=igal,
+                                                      select_z=it,
+                                                      return_units=True)
+    elif len(data_dict[quantity].shape)>2:
+        data = data_dict[quantity][igal,:,:]
+    else:
+        print quantity, igal, data_dict[quantity].shape
+        exit()
 
     for t in ts:
         it = np.argmin(abs(data_dict['t'][:]-t))
@@ -49,8 +73,7 @@ def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
         r = data_dict['r'][igal,:,it]
         ok = data_dict['Omega'][igal,:,it] > 0
 
-        data = data_dict[quantity][igal,:,it]
-        ax.plot(r[ok], data[ok],color=color, rasterized=True, **args)
+        ax.plot(r[ok], data[:,it][ok],color=color, rasterized=True, **args)
 
         ax.set_xlabel(r'$r\,[\rm kpc]$')
 
@@ -65,8 +88,10 @@ def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
             q = quantity
 
         if quantity in units_dict:
+            unit = units_dict[quantity]
+
+        if unit is not None:
           q += r'\,\,['
-          unit = units_dict[quantity]
           if unit in formatted_units_dict:
               q += formatted_units_dict[unit]
           else:
@@ -75,8 +100,8 @@ def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
 
         ax.set_ylabel(r'${0}$'.format(q))
         ax.grid(alpha=0.2)
-        if quantity=='alp_m' or quantity=='alp':
-          ax.set_ylim([-6,6])
+        #if quantity=='alp_m' or quantity=='alp':
+          #ax.set_ylim([-6,6])
         if quantity in ('Beq','n','h'):
           ax.set_yscale('log')
 
@@ -105,12 +130,13 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
                 'r' : foutput['r']}
     global units_dict
     units_dict = {}
-    for k in foutput:
-        if 'Units' in foutput[k].attrs.keys():
-            units_dict[k] = foutput[k].attrs['Units'][0]
-        if k not in selected_quantities:
-            continue
-        data_dict[k] = foutput[k]
+    for k in selected_quantities:
+        if k in foutput:
+            if 'Units' in foutput[k].attrs.keys():
+                units_dict[k] = foutput[k].attrs['Units'][0]
+            data_dict[k] = foutput[k]
+        else:
+            data_dict[k] = None
 
     # Gets the disk stellar mass in the final redshift
     mstars = finput['Mstars_disk'][:,-1]
@@ -134,11 +160,15 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     else:
         selected_igals = np.array(selected_galaxies)
 
-    # The following was meant to be parallelized with parmap
-    # however, multiprocessing breaks h5py!
     print 'Producing all figures'
     print
-    figures = [single_galaxy_portfolio(igal, data_dict, mstars=mstars, radius=radius, mgas=mgas) for igal in selected_igals]
+    figures = []
+    for igal in selected_igals:
+      fig = single_galaxy_portfolio(igal, data_dict, mstars=mstars,
+                                    radius=radius, mgas=mgas,
+                                    selected_quantities=selected_quantities)
+      figures.append(fig)
+
     pdf = PdfPages(pdf_filename)
     for fig in figures:
         if not fig:
@@ -150,26 +180,30 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
     return
 
 
-def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None, mgas=None):
+def single_galaxy_portfolio(igal, data_dict, nrows=5, ncols=3, mstars=None, radius=None, mgas=None, selected_quantities=None):
   if igal==None:
       return
   if mstars is not None:
-      #info = r' $-$  $\log(M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}}) = {0:.2f}$'.format(
-        #np.log10(mstars[igal]))
-      info = r' $-$  $M_{{\star,{{\rm disk}} }}/{{\rm M}}_{{\odot}} = {0:.3g}$'.format(mstars[igal])
+      info = r' $-$  $M_{{\star,disk}} = {0:.2g}\times10^{{{1}}}\rm M_\odot$'.format(
+        mstars[igal]/10**np.floor(np.log10(mstars[igal])),
+        int(np.floor(np.log10(mstars[igal]))))
   else:
       info =''
   if radius is not None:
-      info += r' $-$  $r_{{\rm disk}} = {0}$'.format(radius[igal])
+      info += r' $-$  $r_{{\rm disk}} = {0:.2f} \,\rm kpc$'.format(radius[igal])
   if mgas is not None:
-      info += r' $-$  $M_{{\rm gas,disk}} = {0:.3g}$'.format(mgas[igal])
+      info += r' $-$  $M_{{\rm gas,disk}} = {0:.2g}\times10^{{{1}}}\rm M_\odot$'.format(
+        mgas[igal]/10**np.floor(np.log10(mgas[igal])), int(np.floor(np.log10(mgas[igal]))))
 
   print 'galaxy', igal, '\tmgas = 10^{0:.3}'.format(np.log10(mgas[igal])),
   print '\tmstars = 10^{0:.3}'.format(np.log10(mstars[igal]))
   fig = plt.figure(figsize=(8.268,11.69))
   subplot_idx = 0
-  for quantity in data_dict:
-      if len(data_dict[quantity].shape)<3 or quantity=='r':
+
+  if selected_quantities is None:
+      selected_quantities = data_dict.keys()
+  for quantity in selected_quantities:
+      if quantity in ('r','t'):
           continue
       subplot_idx += 1
       if subplot_idx > nrows*ncols:
@@ -244,22 +278,27 @@ if __name__ == "__main__"  :
     plt.rc( ('xtick','ytick'),labelsize=7)
     #plt.rc("font",size=5)
     plt.rc(("legend"),fontsize=6)
-    selected_quantities = ['Beq',
-                            'Bp',
-                            'Br',
-                            'Bzmod',
-                            'Omega',
-                            'Shear',
-                            'Uz',
-                            'alp',
-                            'alp_k',
-                            'alp_m',
-                            'delta_r',
-                            #'etat',
-                            'h',
-                            'l',
-                            'n',
-                            'tau']
+    selected_quantities = [
+                           'Omega',
+                           'Shear',
+                           'Uz',
+                           'alp',
+                           #'alp_k',
+                           #'alp_m',
+                           #'delta_r',
+                           #'etat',
+                           'h',
+                           'l',
+                           'n',
+                           #'tau',
+                           'Beq',
+                           'Bp',
+                           'Br',
+                           'Bzmod',
+                           'Btot',
+                           'Bfloor',
+                           'growth',
+                           ]
 
     generate_portfolio(input_filename,
                        selected_quantities,

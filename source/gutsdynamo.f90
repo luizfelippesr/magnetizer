@@ -83,7 +83,7 @@ module initial_conditions  !Set initial conditions
     subroutine init_seed(f)
       use global_input_parameters
       integer :: iseed,var
-      double precision, dimension(nx) :: Bseed
+      double precision, dimension(nx) :: Bseed, Ncells
       double precision, dimension(:,:), intent(inout) :: f
       double precision :: r1
       ! Initializes the seed field to a fraction of the equipartition field
@@ -109,6 +109,14 @@ module initial_conditions  !Set initial conditions
               f(iseed,var)=Bseed(iseed)*random_normal()
             enddo
           enddo
+        case('floor')
+          !Number of turbulent cells in the annular volume
+          Ncells= abs(3.d0*r*Delta_r*h/l**3/lambda**2)
+          !Small-scale magnetic field strength
+          Bseed= fmag*Beq
+          !Floor magnetic field
+          Bseed= Bseed*exp(-Delta_r/2/abs(r))/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
+          print *, Bseed
         case default
           print *, 'init_seed: Invalid option ',p_seed_choice
           stop
@@ -258,7 +266,7 @@ module equ  !Contains the partial differential equations to be solved
         !Small-scale magnetic field strength
         brms= fmag*Beq
         !Floor magnetic field
-        B_floor= exp(-Delta_r/2/r)*brms/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
+        B_floor= exp(-Delta_r/2./abs(r))*brms/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
         B_floor = B_floor * Bfloor_sign * C_floor
         !!Old version:
         !do i=nxghost+1,nx-nxghost
@@ -300,28 +308,28 @@ module equ  !Contains the partial differential equations to be solved
       if (.not.Damp) then
         ! CASE 1: FOSA (tau-->0 LIMIT)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY
         !            Vertical velocity terms
-        dfdt(:,1)= -C_U*Uz*Br/h                                                         &
+        dfdt(:,1)= -C_U*Uz*Br/h                                               &
                    ! alpha effect
-                   -2d0/pi/h*ctau*alp*Bp                                                &
+                   -2d0/pi/h*ctau*alp*Bp                                      &
                    ! Vertical diffusion
-                   -pi**2/4/h**2*(ctau+Rm_inv)*etat*Br                                  &
+                   -pi**2/4/h**2*(ctau+Rm_inv)*etat*Br                        &
                    ! Radial diffusion indep of dhdr
                    +(ctau+Rm_inv)*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2)
                    ! Following commented out for simplicity
                    !-lambda*Ur*Br/r -lambda*Ur*dBrdr
 
                    !Omega effect
-        dfdt(:,2)=  G*Br                                                                &
+        dfdt(:,2)=  G*Br                                                       &
                    !Vertical velocity terms
-                   -C_U*Uz*Bp/h                                                         &
+                   -C_U*Uz*Bp/h                                                &
                    !alpha^2 effect
-                   -2d0/pi/h*ctau*alp*Br                                                &
+                   -2d0/pi/h*ctau*alp*Br                                       &
                    !Vertical diffusion
-                   -pi**2/4/h**2*(ctau+Rm_inv)*etat*Bp                                  &
+                   -pi**2/4/h**2*(ctau+Rm_inv)*etat*Bp                         &
                    !Radial diffusion propto etat
-                   +(ctau+Rm_inv)*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2)           &
+                   +(ctau+Rm_inv)*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2)  &
                    !Radial diffusion propto detatdr
-                   +ctau*detatdr*lambda**2*( Bp/r +dBpdr)                               &
+                   +ctau*detatdr*lambda**2*( Bp/r +dBpdr)                      &
                    !Forcing function that enforces floor at B_floor
                    +Afloor*B_floor
                    ! Following commented out for simplicity
@@ -332,69 +340,69 @@ module equ  !Contains the partial differential equations to be solved
           dfdt(:,2)= dfdt(:,2) +2.d0/pi/h*ctau*alp*Br
         endif
         if (Dyn_quench) then
-          dfdt(:,3)= -2*(h0_kpc/l_kpc)**2*etat*(                                        &
+          dfdt(:,3)= -2*(h0_kpc/l_kpc)**2*etat*(                                       &
                      !Emf.B term 1 (alpha)
-                     ctau*alp*(Br**2+Bp**2+0d0*Bzmod**2)/Beq**2                         &
+                     ctau*alp*(Br**2+Bp**2+0d0*Bzmod**2)/Beq**2                        &
                      ! Emf.B term 2 (etat)
-                     +ctau*3*etat/pi**(3d0/2d0)/h*abs(Dyn_gen)**(1d0/2d0)*Br*Bp/Beq**2  &
+                     +ctau*3*etat/pi**(3d0/2d0)/h*abs(Dyn_gen)**(1d0/2d0)*Br*Bp/Beq**2 &
                      ! Ohmic dissipation
-                     +Rm_inv*alp_m)                                                     &
+                     +Rm_inv*alp_m)                                                    &
                      ! Vertical velocity terms
-                     -C_a*alp_m*Uz/h                                                    &
+                     -C_a*alp_m*Uz/h                                                   &
                      ! Vertical diffusion
-                     +R_kappa*etat*C_d/h**2*alp_m                                       &
+                     +R_kappa*etat*C_d/h**2*alp_m                                      &
                      ! Radial diffusion propto etat, indep of dhdr
-                     +R_kappa*etat*lambda**2*(d2alp_mdr2 +dalp_mdr/r)                   &
+                     +R_kappa*etat*lambda**2*(d2alp_mdr2 +dalp_mdr/r)                  &
                      ! Rad diff propto detatdr, indep of dhdr
                      +R_kappa*detatdr*lambda**2*dalp_mdr
         endif
       else
 !       CASE 2: MTA (FINITE tau)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY
                    !Curl of emf from equation 3
-        dfdt(:,1)=  Fr                                                                  &
+        dfdt(:,1)=  Fr                                      &
                    !Vertical velocity
-                   -C_U*Uz*Br/h                                                         &
+                   -C_U*Uz*Br/h                             &
                    !Ohmic vertical diffusion
-                   +Rm_inv*etat*(-pi**2/4/h**2*Br                                       &
+                   +Rm_inv*etat*(-pi**2/4/h**2*Br           &
                    !Ohmic radial diffusion
                    +lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2))                     
                    ! Following commented out for simplicity
                    !-lambda*Ur*Br/r -lambda*Ur*dBrdr
 !
                    !Curl of emf from equation 4
-        dfdt(:,2)=  Fp                                                                  &
+        dfdt(:,2)=  Fp                                      &
                    !Omega effect
-                   +G*Br                                                                &
+                   +G*Br                                    &
                    !Vertical velocity
-                   -C_U*Uz*Bp/h                                                         &
+                   -C_U*Uz*Bp/h                             &
                    !Ohmic vertical diffusion
-                   +Rm_inv*etat*(-pi**2/4/h**2*Bp                                       &
+                   +Rm_inv*etat*(-pi**2/4/h**2*Bp           &
                    !Ohmic radial diffusion
                    +lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2))                   
                    ! Following commented out for simplicity
                    !-lambda*dUrdr*Bp   -lambda*Ur*dBpdr
 !
-        dfdt(:,3)=  tau**(-1)*(                                                         &
+        dfdt(:,3)=  tau**(-1)*(                                      &
                    !alpha effect
-                   -2d0/pi/h*ctau*alp*Bp                                                &
+                   -2d0/pi/h*ctau*alp*Bp                             &
                    !Turbulent vertical diffusion
-                   -pi**2/4/h**2*ctau*etat*Br                                           &
+                   -pi**2/4/h**2*ctau*etat*Br                        &
                    !Turbulent radial diffusion
-                   +ctau*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2)                    &
+                   +ctau*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2) &
                    !Damping term
                    -Fr)                 
                    !Following commented out for now but may be useful later
                    !+ctau*( detatdz*dBrdz -detatdz*lambda*dBzdr)
 !
-        dfdt(:,4)=  tau**(-1)*(                                                         &
+        dfdt(:,4)=  tau**(-1)*(                                      &
                    !alpha^2 effect
-                   -2d0/pi/h*ctau*alp*Br                                                &
+                   -2d0/pi/h*ctau*alp*Br                             &
                    !Turbulent vertical diffusion
-                   -pi**2/4/h**2*ctau*etat*Bp                                           &
+                   -pi**2/4/h**2*ctau*etat*Bp                        &
                    !Turbulent radial diffusion propto etat
-                   +ctau*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2)                    &
+                   +ctau*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2) &
                    !Turbulent radial diffusion propto detatdr
-                   +ctau*detatdr*lambda**2*( Bp/r +dBpdr)                               &
+                   +ctau*detatdr*lambda**2*( Bp/r +dBpdr)            &
                    !Damping term
                    -Fp)
                    !Following commented out for now but may be useful later

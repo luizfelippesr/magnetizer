@@ -144,6 +144,8 @@ module global_input_parameters
   double precision :: C_floor = 1.0d0
   ! Width of the localization of the Eigenfunction (in kpc)
   double precision :: p_delta_r_kpc = 2d0
+  ! Stochastically changes the sign of the floor
+  logical :: p_time_varying_floor = .false.
 
 
   namelist /dynamo_parameters/ &
@@ -151,7 +153,7 @@ module global_input_parameters
     frac_seed, p_seed_choice, p_r_seed_decay, p_nn_seed, &
     Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif, &
     p_neumann_boundary_condition_rmax, C_alp, C_floor, &
-    p_delta_r_kpc
+    p_delta_r_kpc, p_time_varying_floor
 
 
   ! -------------------------------------------------------

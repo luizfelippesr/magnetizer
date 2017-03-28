@@ -65,16 +65,20 @@ module dynamo
       call set_calc_params
       ! Constructs galaxy model for the initial snapshot
       able_to_construct_profiles = construct_profiles()
+      print *, able_to_construct_profiles,l
       if (.not.able_to_construct_profiles) then
         call message('Could not construct profiles for this galaxy.', &
                      gal_id=gal_id, info=1)
         call write_and_finish(cpu_time_start, gal_id, this_t)
         return
       endif
-      ! Adds a seed field to the f-array (uses the profile info)
-      call init_seed(f)
-      ! Calculates |Bz| (uses profile info)
-      call estimate_Bzmod(f)
+
+      if (r_disk > p_rdisk_min .and.  Mgas_disk > Mgas_disk_min) then
+        ! Adds a seed field to the f-array (uses the profile info)
+        call init_seed(f)
+        ! Calculates |Bz| (uses profile info)
+        call estimate_Bzmod(f)
+      endif
 
       ! Loops through the SAM's snapshots
       do it=init_it,max_it
@@ -86,8 +90,10 @@ module dynamo
         !  making Mdisk=rdisk=0)
         if (r_disk < p_rdisk_min .or.  Mgas_disk < Mgas_disk_min) then
             elliptical = .true.
-            ! Resets the f array and adds a seed field
-            call init_seed(f)
+            ! Resets the f array
+            f = 0d0
+            !! Adds a seed field
+            !call init_seed(f)
         else
             ! If galaxy was an elliptical during previous snapshot,
             ! reconstruct the profiles

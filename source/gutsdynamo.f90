@@ -110,10 +110,10 @@ module initial_conditions  !Set initial conditions
             enddo
           enddo
         case('floor')
-          !Number of turbulent cells in the annular volume
-          Ncells= abs(3.d0*r*Delta_r*h/l**3/lambda**2)
           !Small-scale magnetic field strength
           Bseed= fmag*Beq
+          !Number of turbulent cells in the annular volume
+          Ncells= abs(3.d0*r*Delta_r*h/l**3/lambda**2)
           !Floor magnetic field
           Bseed= Bseed*exp(-Delta_r/2/abs(r))/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
         case default

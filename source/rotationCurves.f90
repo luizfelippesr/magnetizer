@@ -163,7 +163,10 @@ contains
     v = sqrt(abs(v2))
 
     dv2dy = A*(-B +  (1d0-c)/(1d0+c*y) +c**2*y/(1d0+c*y)**2 )/y
-    dvdr = dv2dy/2d0/v/r_halo
+
+    ! TODO FIX MEE!!!!!!
+    !dvdr = dv2dy/2d0/v/r_halo
+    dvdr = 0d0
 
     Omega = v/rx
     Shear = dvdr - Omega

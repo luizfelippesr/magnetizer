@@ -65,7 +65,7 @@ module dynamo
       call set_calc_params
       ! Constructs galaxy model for the initial snapshot
       able_to_construct_profiles = construct_profiles()
-      print *, able_to_construct_profiles,l
+
       if (.not.able_to_construct_profiles) then
         call message('Could not construct profiles for this galaxy.', &
                      gal_id=gal_id, info=1)

@@ -2,10 +2,8 @@
 Contains routines that compute auxiliary quantities.
 This shall be updated later to include more complex properties.
 """
-
 from numpy import pi, arctan, sqrt
 import numpy as np
-    
     
 def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                            select_r=slice(None,None,None),
@@ -21,7 +19,6 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
            select_z -> optional, index or mask for the redshift indices
     Returns: the computed extra quantity
     """
-    
     # Shorthands
     ig, ir, iz = select_gal, select_r, select_z
     unit = None
@@ -104,12 +101,40 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
             Btot0 = sqrt(f['Bp'][ig,ir,iz-1]**2 +
                          f['Br'][ig,ir,iz-1]**2 +
                          f['Bzmod'][ig,ir,iz-1]**2)
-          
+
             delta_logB = np.log(Btot1) - np.log(Btot0)
             delta_t = f['t'][iz] - f['t'][iz-1]
 
             quantity = delta_logB/delta_t
-            unit = r'Gyr^-1'
+        unit = r'Gyr^-1'
+    elif qname == r'Bmax':
+        if len(ig)==1:
+            quantity = sqrt(f['Bp'][ig,:,iz]**2 +
+                            f['Br'][ig,:,iz]**2 +
+                            f['Bzmod'][ig,:,iz]**2).max()
+        else:
+            quantity = sqrt(f['Bp'][ig,:,iz]**2 +
+                            f['Br'][ig,:,iz]**2 +
+                            f['Bzmod'][ig,:,iz]**2).max(axis=1)
+
+        unit = r'microgauss'
+    elif qname == r'rmax':
+        print 'asdasdasdsasd'
+        btot = sqrt(f['Bp'][ig,:,iz]**2 +
+                    f['Br'][ig,:,iz]**2 +
+                    f['Bzmod'][ig,:,iz]**2)
+        if len(ig)==1:
+            quantity = f['r'][ig,np.argmax(btot),iz]
+            print 'TEST'
+        else:
+            quantity = np.empty(btot.shape[0])
+            ok = np.argmax(btot,axis=1)
+            print btot.shape[0]
+            for i in range(btot.shape[0]):
+                quantity[i] = f['r'][i,ok[i],iz]
+
+                print 'test', f['Bp'][i,ok[i],iz]
+        unit = r'kpc'
     else:
         raise ValueError, qname + ' is unknown.'
 

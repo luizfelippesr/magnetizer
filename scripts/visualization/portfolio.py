@@ -36,7 +36,7 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'etat' : r'\eta_t',
                    'Bfloor' : r'B_{\rm floor}',
                    'Btot' : r'|\mathbf{{\overline{{B}}}}|',
-                   'growth' : r'\Gamma'
+                   'growth' : r'\gamma'
                    }
 
 

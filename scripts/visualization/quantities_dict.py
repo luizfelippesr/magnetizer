@@ -20,5 +20,10 @@ quantities_dict = {
   'Shear' : ( r'S', r'{\rm km}\,{\rm s}^{-1}{\rm kpc}^{-1}'),
   'Uz' : ( r'U_z', r'{\rm km}\,{\rm s}^{-1}'),
   'p' : ( r'p', r'{\rm deg}'),
+  'growth' : (r'\gamma', r'\rm Gyr^{{-1}}'),
+  'Mstars_disk' : (r'M_{\star,\rm disk}', r'\rm M_\odot'),
+  'Mstars_bulge' : (r'M_{\star,\rm bulge}', r'\rm M_\odot'),
+  'Mgas_disk' : (r'M_{\rm g, disk}', r'\rm M_\odot'),
+  'Bmax' : (r'\max(B)', r'\mu{\rm G}')
   }
 

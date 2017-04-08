@@ -28,9 +28,9 @@ plt.rcParams['lines.linewidth'] = 1.75
 
 def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
                 vmin=None, vmax=None, position=1.0, pdf_type='normal',
-                pos_type='relative', fig=None,
+                pos_type='relative', ax=None,
                 mass_bins=np.array([1e7,1e8,1e9,1e10,1e11,1e12]),
-                select_only='all', **args):
+                select_only='all', plot_histogram=False, **args):
     """
     Plots the Probability Distribution Function (PDF) of a given quantity for
     different galaxy mass bins at a given redshift.
@@ -50,13 +50,13 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
                        'normal' computes P(quantity). Default: 'normal'
            position -> 'position', in number of half-mass radii, for the
                        calculation of the PDF (for the radial dependent quantities). Default: 1.0
-           fig -> matplotlib figure which will contain the plot. TODO
+           ax -> matplotlib axis which will contain the plot.
 
     Returns: the matplotlib figure object.
     """
 
-    if fig is None:
-        fig = plt.figure()
+    if ax is None:
+        ax = plt.figure()
 
     if h5_input is None:
       h5_input = h5_output
@@ -64,9 +64,13 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
     params = Parameters(h5_output)
     # Selects mass-related dataset
     Mb = h5_input['Input']['Mstars_bulge']
-    Mg = h5_input['Input']['Mstars_disk']
-    Md = h5_input['Input']['Mgas_disk']
-
+    Md = h5_input['Input']['Mstars_disk']
+    Mg = h5_input['Input']['Mgas_disk']
+    M = Md  #+ Mg + Mb
+    if 'label' in args:
+        custom_label = True
+    else:
+        custom_label = False
     if 'central' in h5_input['Input']:
         central = h5_input['Input']['central']
 
@@ -74,7 +78,6 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
     zs = h5_input['Input']['z'][:]
     iz = np.argmin(abs(zs - redshift))
 
-    print redshift, iz, zs[iz]
     # Selects the dataset for the chosen quantity
     if quantity in h5_input['Input']:
         data = h5_input['Input'][quantity]
@@ -94,8 +97,8 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
     for mmin, mmax in zip(mass_bins[:-1], mass_bins[1:]):
         # Creates filter for the current bin
-        ok = Md[:,iz]>mmin
-        ok *= Md[:,iz]<mmax
+        ok = M[:,iz]>mmin
+        ok *= M[:,iz]<mmax
 
         if select_only=='satellite' or select_only=='satellites':
             ok *= ~ central[:,iz].astype(bool)
@@ -108,12 +111,21 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
         # Loads the values at the specified mass bin, radius and redshift
         if data is not None:
-            values = data[ok,i_target,iz]
+            if len(data.shape) == 3:
+                values = data[ok,i_target,iz]
+            else:
+                values = data[ok,iz]
             filter_invalid = values > -1000 
         else:
-            values = compute_extra_quantity(quantity,h5_output['Output'],
+            data_dict = {}
+            for x in (h5_output['Output'],h5_input['Input']):
+              for d in x:
+                data_dict[d] = x[d]
+
+            values = compute_extra_quantity(quantity,data_dict,
                                             ok,i_target,iz)
             filter_invalid = h5_output['Output']['n'][ok,i_target,iz] > 0
+            filter_invalid *= np.isfinite(values)
 
         # Removes invalid data
         values = values[filter_invalid]
@@ -134,6 +146,7 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
             raise ValueError
 
         # Ignores mass bin if not enough galaxies with valid values
+        values = values[np.isfinite(values)]
         if not len(values)>10:
             continue
 
@@ -148,10 +161,13 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
         if pdf_type == 'log':  x = 10**x
 
-        plt.plot(x,y,
-                 label=r'$10^{{ {0:.2f} }}<M/M_\odot<10^{{ {1:.2f} }}$, $N={2}$'.format(np.log10(mmin),np.log10(mmax), len(values)),
-                 **args)
-        plt.title(r'$z={0:.2f}$'.format(abs(zs[iz]))
+        if not custom_label:
+            args['label'] = r'$10^{{ {0:.2f} }}<M/M_\odot<10^{{ {1:.2f} }}$, $N={2}$'.format(np.log10(mmin),np.log10(mmax), len(values))
+
+        ax.plot(x,y, **args)
+        if plot_histogram:
+            ax.hist(values, normed=True)
+        ax.set_title(r'$z={0:.2f}$'.format(abs(zs[iz]))
                   )
 
     if quantity in quantities_dict:
@@ -160,22 +176,21 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
         name, units = quantity, None
 
     if pdf_type == 'normal':
-        plt.ylabel(r'$P({0})$'.format(name, units))
+        ax.set_ylabel(r'$P({0})$'.format(name, units))
     else:
-        plt.xscale('log')
+        ax.set_xscale('log')
         if units:
-            plt.ylabel(r'$P(\log({0}/{1}))$'.format(name, units))
+            ax.set_ylabel(r'$P(\log({0}/{1}))$'.format(name, units))
         else:
-            plt.ylabel(r'$P(\log({0}))$'.format(name))
+            ax.set_ylabel(r'$P(\log({0}))$'.format(name))
     if units:
-        plt.xlabel(r'${0}\,[{1}]$'.format(name, units))
+        ax.set_xlabel(r'${0}\,[{1}]$'.format(name, units))
     else:
-        plt.xlabel(r'${0}$'.format(name))
+        ax.set_xlabel(r'${0}$'.format(name))
 
-    plt.legend(frameon=False)
+    ax.legend(frameon=False)
 
-    return fig
-
+    return ax
 
 if __name__ == "__main__"  :
 

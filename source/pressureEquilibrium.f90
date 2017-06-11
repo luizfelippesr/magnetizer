@@ -37,7 +37,8 @@ contains
                                                       rho_d, h_d, &
                                                       Rm_out, &
                                                       Sigma_star_out, &
-                                                      Sigma_d_out)
+                                                      Sigma_d_out, &
+                                                      nghost)
     ! Computes the mid-plane density and scale height under the assumption of
     ! hydrostatic equilibrium
     ! Input:  r -> radii array (kpc)
@@ -53,6 +54,7 @@ contains
     use root_finder, only: FindRoot
     use messages, only: error_message
     double precision, dimension(:), intent(in) :: r, B, Om, G
+    integer, intent(in), optional :: nghost
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d
     double precision, dimension(size(r)), intent(out), optional ::    &
                                           Rm_out, Sigma_d_out, Sigma_star_out
@@ -63,9 +65,14 @@ contains
     real(fgsl_double) :: minimum_h, maximum_h, guess_h
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
     real(fgsl_double), target, dimension(7) :: parameters_array
-    integer :: i, i_rreg
+    integer :: i, i_rreg, nghost_actual
     type(c_ptr) :: params_ptr
 
+    if (present(nghost)) then
+      nghost_actual = nghost
+    else
+      nghost_actual = 0
+    endif
     ! Prepares constants
     rs = constDiskScaleToHalfMassRatio * r_disk ! kpc
     rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs ! kpc
@@ -88,8 +95,11 @@ contains
     maximum_h = 2d0*r_disk
 
     i_rreg = -1
+    h_d = -17d0
 
-    do i=1, size(r)
+    ! Loops through the radii, skipping ghost zone and centre if nghost
+    ! was specified
+    do i=nghost_actual+2, size(r)
       if (p_truncates_within_rreg .and. r(i) < p_rreg_to_rdisk*r_disk) then
         ! If truncation is requested, stores the index and skips
         i_rreg = i
@@ -137,11 +147,7 @@ contains
                              'Initial guess does NOT include a change of sign.'&
                              // ' Unable to find the root (i.e. h and rho).'   &
                              // ' Will using previous h value.', code='P')
-          if (i==1) then
-            h_d(i) = -1d0 ! Signals serious error!
-          else
-            h_d(i) = h_d(i-1)
-          endif
+          h_d(i) = -1d0 ! Signals serious error!
         endif
       endif
 
@@ -162,6 +168,20 @@ contains
         h_d(i) = density_to_scaleheight(rho_d(i), Sigma_d(i))
       endif
     end do
+
+    if (nghost_actual>0) then
+      do i=1, nghost_actual
+        h_d(i) = h_d(2*nghost_actual+2-i)
+      end do
+
+      ! Extrapolates linearly to get the middlepoint (to avoid r=0 problems)
+      h_d(nghost_actual+1) = h_d(nghost_actual+2) + (r(nghost_actual+1) -r(nghost_actual+2))&
+          *(h_d(nghost_actual+2)-h_d(nghost_actual+3))/(r(nghost_actual+2)-r(nghost_actual+3))
+
+      do i=1, nghost_actual+1
+        rho_d(i) = density_to_scaleheight(h_d(i), Sigma_d(i))
+      enddo
+    endif
 
     ! If truncation was requested, uses the same value as rreg for r<rreg
     if (i_rreg>1) then

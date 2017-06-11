@@ -121,7 +121,8 @@ contains
       call solve_hydrostatic_equilibrium_numerical(abs(r_kpc), B_actual, &
                                                    Om_kmskpc, G_kmskpc, &
                                                    rho_cgs, h_kpc, Rm, &
-                                                   Sigma_d_out=Sigma_d)
+                                                   Sigma_d_out=Sigma_d, &
+                                                   nghost=nxghost)
     else
         call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &
                             abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)

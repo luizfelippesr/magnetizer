@@ -1,6 +1,4 @@
-default=mpi
-# IO options: IO_hdf5, IO_simple
-# IO=IO_simple
+default=prod
 IO=IO_hdf5
 FC=h5pfc
 FC_nonMPI=h5fc
@@ -15,15 +13,16 @@ ifeq ($(HOSTNAME),topsy-login-1-0.local)
 	FCFLAGS_special= -fintrinsic-modules-path /share/apps/fgsl/fgsl-1.0.0/include/fgsl -I/share/apps/fgsl/fgsl-1.0.0/include/fgsl
 endif
 
-FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -g -Wall -Wuninitialized
+FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
+
+FCFLAGS_TEST=-g -Wall -Wuninitialized -Og
+FCFLAGS_PROD=-Ofast
 
 # Builds parallel version
-mpi: $(OBJ) ${builddir}/mpicalldynamo.o
-	$(FC) $^ $(FCFLAGS) -o magnetize_galform.exe
-
-# Builds serial version (currently not working!)
-serial: $(OBJ) ${builddir}/calldynamo.o
-	$(FC_nonMPI) $^ $(FCFLAGS) -o magnetize_galform_serial.exe
+test: $(OBJ) ${builddir}/mpicalldynamo.o
+	$(FC) $^ $(FCFLAGS) $(FCFLAGS_TEST) -o magnetize_galform.exe
+prod: $(OBJ) ${builddir}/mpicalldynamo.o
+	$(FC) $^ $(FCFLAGS) $(FCFLAGS_PROD) -o magnetize_galform.exe
 
 # Test programs
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o

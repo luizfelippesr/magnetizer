@@ -30,12 +30,13 @@ def weighted_percentile(data, weights, percentiles=[15,50,85]):
       # Interpolates the requested percentiles
       return np.interp(percentiles, P, sorted_data)
 
-all_z = True
+all_z = False
 plot_type = 'log'
 quantity = 'Bp'
 
 # Opens Magnetizer output file
-f = h5py.File('/home/nlfsr/magnetizer_runs/GON3_40000_out.hdf5','r')
+f = h5py.File('/data/nlfsr/magnetizer-runs/GON2_25e4_1e5_out.hdf5','r')
+fi = h5py.File('/data/nlfsr/magnetizer-runs/GON2_25e4_1e5.hdf5','r')
 params = Parameters(f)
 
 rmax_rdisc = params.grid['P_RMAX_OVER_RDISK']
@@ -64,11 +65,11 @@ plt.figure(figsize=(6.5, 4.8), dpi=300) # Square
 for i, (M_min, M_max) in enumerate(zip(M_bins[:-1],M_bins[1:])):
     #plt.figure()
     for iz in range(nzs-1,-1, -1):
-        print 'Working on z', f['Input']['z'][iz]
+        print 'Working on z', fi['Input']['z'][iz]
 
         if (iz == nzs-1) or all_z:
             # Loads to RAM the relevant part(s) of the HDF5 file (slow!)
-            Mstars = f['Input']['Mstars_disk'][:,iz] + f['Input']['Mstars_bulge'][:,iz]
+            Mstars = fi['Input']['Mstars_disk'][:,iz] + fi['Input']['Mstars_bulge'][:,iz]
 
             select_mass  = Mstars > M_min
             select_mass *= Mstars < M_max
@@ -90,7 +91,7 @@ for i, (M_min, M_max) in enumerate(zip(M_bins[:-1],M_bins[1:])):
 
     plt.subplot(2,2,i+1) # grid
 
-    zs= f['Input']['z'][:]
+    zs= fi['Input']['z'][:]
 
     plt.xlabel('z')
 
@@ -129,6 +130,6 @@ plt.subplots_adjust(left=0.07,
                     top=0.98)
 
 if all_z:
-  plt.savefig('/tmp/zevol_halfmass.pdf')
+  plt.savefig('/home/nlfsr/zevol_halfmass.pdf')
 else:
-  plt.savefig('/tmp/zevol_halfmass_z0.pdf')
+  plt.savefig('/home/nlfsr/zevol_halfmass_z0.pdf')

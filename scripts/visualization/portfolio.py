@@ -79,7 +79,7 @@ def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
 
         if len(r[ok])==0:
             continue
-        ax.set_xlim([0.0, r[ok].max()/2.0])
+        ax.set_xlim([0.0, r[ok].max()])
 
         # Formating gymnastics...
         if quantity in quantities_dict:
@@ -130,6 +130,7 @@ def generate_portfolio(input_filename, selected_quantities, pdf_filename,
                 'r' : foutput['r']}
     global units_dict
     units_dict = {}
+
     for k in selected_quantities:
         if k in foutput:
             if 'Units' in foutput[k].attrs.keys():
@@ -286,9 +287,9 @@ if __name__ == "__main__"  :
                            #'alp_k',
                            #'alp_m',
                            #'delta_r',
-                           #'etat',
+                           'etat',
                            'h',
-                           'l',
+                           #'l',
                            'n',
                            #'tau',
                            'Beq',
@@ -296,8 +297,10 @@ if __name__ == "__main__"  :
                            'Br',
                            'Bzmod',
                            'Btot',
-                           'Bfloor',
+                           #'Bfloor',
                            'growth',
+                           #'Dcrit',
+                           'D_Dc',
                            ]
 
     generate_portfolio(input_filename,

@@ -41,7 +41,7 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
         quantity = - (pi/2.)**5 * (1. + 4./pi**2 *Cu * Ru)**2
 
     elif qname == 'R_u':
-        quantity = f['Uz'][ig,ir,iz] * (h/1e3) / f['etat'][ig,ir,iz]
+        quantity = f['Uz'][ig,ir,iz] * ( f['h'][ig,ir,iz]/1e3) / f['etat'][ig,ir,iz]
 
     elif qname == '|Bp|':
         quantity = np.abs(f['Bp'][ig,ir,iz])
@@ -78,6 +78,19 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                     f['Br'][ig,ir,iz]**2 +
                     f['Bzmod'][ig,ir,iz]**2)
         unit = r'microgauss'
+
+    elif qname == r'B_Beq':
+        quantity = sqrt(f['Bp'][ig,ir,iz]**2 +
+                    f['Br'][ig,ir,iz]**2 +
+                    f['Bzmod'][ig,ir,iz]**2)
+        quantity /= f['Beq'][ig,ir,iz]
+        unit = r'microgauss'
+
+    elif qname == r'D_Dc':
+
+        D = compute_extra_quantity('D', f, ig,ir,iz)
+        Dc = compute_extra_quantity('Dcrit', f, ig,ir,iz)
+        quantity = D/Dc
 
     elif qname == r'Bfloor':
         h = f['h'][ig,ir,iz]/1e3

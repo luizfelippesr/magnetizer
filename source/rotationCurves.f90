@@ -24,7 +24,8 @@ contains
     double precision, intent(in) :: r_disk, v_disk, rmin
     double precision, dimension(:), intent(in)  :: r
     double precision, dimension(size(r)) :: A
-    double precision, dimension(size(r)),intent(out) :: Omega, Shear
+    double precision, dimension(size(r)),intent(out) :: Omega
+    double precision, dimension(size(r)),intent(out), optional :: Shear
     double precision, parameter :: TOO_SMALL=2e-7 ! chosen empirically
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
     double precision, dimension(size(r)) :: y
@@ -38,7 +39,9 @@ contains
 
     ! Traps disks of negligible size
     if (r_disk < rmin) then
-      Shear = 0
+      if (present(Shear)) then
+        Shear = 0
+      endif
       Omega = 0
       return
     end if
@@ -61,14 +64,16 @@ contains
     end do
     Omega = A*v_disk/r_disk
 
-    do i=1,size(r)
-      Shear(i) =    I1(y(i)) * K0(y(i))                       &
-                  - I0(y(i)) * K1(y(i))                       &
-                  -0.5d0 * K1(y(i)) *( I0(y(i)) + I2(y(i)) )  &
-                  +0.5d0 * I1(y(i)) *( K0(y(i)) + K2(y(i)) )
-    end do
+    if (present(Shear)) then
+      do i=1,size(r)
+        Shear(i) =    I1(y(i)) * K0(y(i))                       &
+                    - I0(y(i)) * K1(y(i))                       &
+                    -0.5d0 * K1(y(i)) *( I0(y(i)) + I2(y(i)) )  &
+                    +0.5d0 * I1(y(i)) *( K0(y(i)) + K2(y(i)) )
+      end do
 
-    Shear = Shear/A/2d0*v_disk/r_disk
+      Shear = Shear/A/2d0*v_disk/r_disk
+    endif
     return
   end subroutine disk_rotation_curve
 
@@ -86,7 +91,8 @@ contains
     double precision, intent(in) :: r_bulge, v_bulge
     double precision, dimension(:), intent(in)  :: r
     double precision, dimension(size(r)) :: v, dvdr
-    double precision, dimension(size(r)),intent(out) :: Omega, Shear
+    double precision, dimension(size(r)),intent(out) :: Omega
+    double precision, dimension(size(r)),intent(out), optional :: Shear
     double precision, parameter :: a_to_r50 = (sqrt(2.0d0)-1.0d0)
     double precision, dimension(size(r)) :: y, a
     double precision :: Constant, y50
@@ -111,15 +117,14 @@ contains
 
     Omega = v/abs(r)
 
-    dvdr = Constant/r_bulge * ( 0.5d0/sqrt(y)/(y+1d0) - sqrt(y)/(y+1d0)**2 )
-!     dvdr = Constant/2d0/((y+1d0)*sqrt(y)) - Constant*sqrt(y)/(1d0+y)**2
-
-    Shear = dvdr - Omega
-
+    if (present(Shear)) then
+      dvdr = Constant/r_bulge * ( 0.5d0/sqrt(y)/(y+1d0) - sqrt(y)/(y+1d0)**2 )
+      Shear = dvdr - Omega
+    endif
   end subroutine bulge_rotation_curve
 
 
-  subroutine halo_rotation_curve(rx, r_halo, v_halo, nfw_cs1, Omega, Shear)
+  subroutine halo_rotation_curve(rx, r_halo, v_halo, nfw_cs1, Omega)
     ! Computes the rotation curve associated with an NFW halo
     ! Warning: This ignores effects of adiabatic contraction!
     !          It need to be accounted for later
@@ -138,7 +143,7 @@ contains
     implicit none
     double precision, intent(in) :: r_halo, v_halo, nfw_cs1
     double precision, dimension(:), intent(in)  :: rx
-    double precision, dimension(size(rx)), intent(out) :: Omega, Shear
+    double precision, dimension(size(r)),intent(out) :: Omega
     double precision, dimension(size(rx)) :: v, dvdr, dv2dy
     double precision, dimension(size(rx)) :: y, B, v2
     double precision :: A, c
@@ -160,16 +165,8 @@ contains
       stop
     endif
 
-    v = sqrt(abs(v2))
+    Omega = sqrt(abs(v2))/rx
 
-    dv2dy = A*(-B +  (1d0-c)/(1d0+c*y) +c**2*y/(1d0+c*y)**2 )/y
-
-    ! TODO FIX MEE!!!!!!
-    !dvdr = dv2dy/2d0/v/r_halo
-    dvdr = 0d0
-
-    Omega = v/rx
-    Shear = dvdr - Omega
   end subroutine halo_rotation_curve
 
 end module rotationCurves

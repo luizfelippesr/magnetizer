@@ -34,7 +34,6 @@ contains
     double precision, dimension(nx) :: etat_cm2s, etat_kmskpc
     double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms
     double precision, dimension(nx) :: Om_d, Om_b, Om_h, Beq_mkG
-    double precision, dimension(nx) :: G_d, G_b, G_h
     double precision, dimension(nx) :: B_actual, tau_Gyr, tau_s
     double precision, dimension(nx) :: rho_cgs
     double precision, dimension(nx) :: Sigma_d, Rm
@@ -60,17 +59,16 @@ contains
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component
-    call disk_rotation_curve(r_kpc, r_disk, r_disk_min, v_disk, Om_d, G_d)
-    call bulge_rotation_curve(r_kpc, r_bulge, v_bulge, Om_b, G_b)
-    call halo_rotation_curve(r_kpc, r_halo, v_halo, nfw_cs1, Om_h, G_h)
+    call disk_rotation_curve(r_kpc, r_disk, r_disk_min, v_disk, Om_d)
+    call bulge_rotation_curve(r_kpc, r_bulge, v_bulge, Om_b)
+    call halo_rotation_curve(r_kpc, r_halo, v_halo, nfw_cs1, Om_h)
 
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
-    G_kmskpc = (Om_d*G_d + Om_b*G_b + Om_h*G_h)/Om_kmskpc
 
     ! Regularises
     rreg = r_kpc(minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1))
-    call regularize(abs(r_kpc), rreg, Om_kmskpc, G_kmskpc)
+    call regularize(abs(r_kpc), rreg, Om_kmskpc)
     G_kmskpc = xder(Om_kmskpc)*x
 
     ! If required, avoid bumps in the shear
@@ -236,7 +234,8 @@ contains
     !
     double precision, dimension(:), intent(in)  :: rx
     double precision, intent(in)  :: r_xi
-    double precision, dimension(size(rx)), intent(inout) :: Omega, Shear
+    double precision, dimension(size(rx)), intent(inout) :: Omega
+    double precision, dimension(size(rx)), intent(inout), optional :: Shear
     double precision, dimension(size(rx)) :: exp_minus_rxi_over_r
 !     double precision, dimension(size(rx)) :: exp_things
     double precision, dimension(size(rx)) :: rxi_over_r_2
@@ -253,9 +252,15 @@ contains
     elsewhere
       exp_minus_rxi_over_r = 0.0
       Omega = 0.0
-      Shear = 0.0
+
       rxi_over_r_2 = 0.0
     endwhere
+
+    if (present(Shear)) then
+      where (rx <= small_factor*r_xi)
+        Shear = 0.0
+      endwhere
+    endif
 
     ! Explicitly avoids underflows too
     where (rxi_over_r_2 < 1e12)
@@ -265,7 +270,9 @@ contains
     endwhere
 
     ! Regularises Shear
-    Shear = exp_minus_rxi_over_r*(2.0*rxi_over_r_2*(Omega-Omega_xi)+Shear)
+    if (present(Shear)) then
+      Shear = exp_minus_rxi_over_r*(2.0*rxi_over_r_2*(Omega-Omega_xi)+Shear)
+    endif
     ! Regularises Omega
     Omega = exp_minus_rxi_over_r*(Omega-Omega_xi)+Omega_xi
 

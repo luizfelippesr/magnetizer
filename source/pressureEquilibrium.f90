@@ -505,9 +505,9 @@ contains
       i_hd_to_rb = h_d/rb
       i_R_to_Rb = r/rb
       ! Numerically integrates and computes result
-      I_bulge = Integrate(1d-15, 0d0, integrand_bulge, integrandFunction,  &
+      I_bulge = Integrate(small, 7d0, integrand_bulge, integrandFunction,  &
                           integrationWorkspace, toleranceRelative=rel_TOL, &
-                          toInfinity=.true., reset=integrationReset)
+                          toInfinity=.false., reset=integrationReset)
       Pbulge = preFactor * 2d0 * rho_b_SI * (h_d*kpc_SI) * I_bulge
     else
       Pbulge = 0d0
@@ -518,9 +518,13 @@ contains
       i_hd_to_Rsdm = h_d/rs_DM
       i_R_to_Rsdm = r/rs_DM
       ! Numerically integrates and computes result
-      I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
+!       I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
+!                        integrationWorkspace, toleranceRelative=rel_TOL, &
+!                        toInfinity=.true., reset=integrationReset)
+
+      I_dm = Integrate(small, 7d0, integrand_dm, integrandFunction,     &
                        integrationWorkspace, toleranceRelative=rel_TOL, &
-                       toInfinity=.true., reset=integrationReset)
+                       toInfinity=.false., reset=integrationReset)
       Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
     else
       Pdm = 0d0

@@ -22,6 +22,9 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, allocatable, dimension(:,:),public :: ts_Bzmod
   double precision, allocatable, dimension(:,:),public :: ts_h
   double precision, allocatable, dimension(:,:),public :: ts_om
+  double precision, allocatable, dimension(:,:),public :: ts_om_b
+  double precision, allocatable, dimension(:,:),public :: ts_om_d
+  double precision, allocatable, dimension(:,:),public :: ts_om_h
   double precision, allocatable, dimension(:,:),public :: ts_G
   double precision, allocatable, dimension(:,:),public :: ts_l
   double precision, allocatable, dimension(:,:),public :: ts_v
@@ -36,34 +39,21 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, allocatable, dimension(:,:),public :: ts_rkpc
 
 contains
-  subroutine make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau, &
-                            alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
+  subroutine make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
     ! N.B. If the grid was extended (i.e. if the galaxy grew in this snapshot)
     ! result will be interpolated into the standard (coarser) grid
     use interpolation
+    use profiles
     use messages, only: status_code
     implicit none
     integer, intent(in) :: it
     double precision, intent(in) :: this_t
     double precision, intent(in) :: rmax
-    double precision, intent(in) :: delta_r
     double precision, dimension(:,:), intent(in) :: f
     double precision, dimension(:), intent(in) :: Bzmod
-    double precision, dimension(:), intent(in) :: h
-    double precision, dimension(:), intent(in) :: om
-    double precision, dimension(:), intent(in) :: G
-    double precision, dimension(:), intent(in) :: l
-    double precision, dimension(:), intent(in) :: v
-    double precision, dimension(:), intent(in) :: etat
-    double precision, dimension(:), intent(in) :: tau
-    double precision, dimension(:), intent(in) :: alp_k
     double precision, dimension(:), intent(in) :: alp
-    double precision, dimension(:), intent(in) :: Uz
-    double precision, dimension(:), intent(in) :: Ur
-    double precision, dimension(:), intent(in) :: n
-    double precision, dimension(:), intent(in) :: Beq
 
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
@@ -86,7 +76,15 @@ contains
       endif
     endif
     call rescale_array(h(nxghost+1:nx-nxghost), ts_h(it,:))
-    call rescale_array(om(nxghost+1:nx-nxghost), ts_om(it,:))
+    call rescale_array(Om(nxghost+1:nx-nxghost), ts_om(it,:))
+
+    if (p_extra_rotation_curve_outputs) then
+      print *, Om_h
+      call rescale_array(Om_h(nxghost+1:nx-nxghost), ts_Om_h(it,:))
+      call rescale_array(Om_b(nxghost+1:nx-nxghost), ts_Om_b(it,:))
+      call rescale_array(Om_d(nxghost+1:nx-nxghost), ts_Om_d(it,:))
+    endif
+
     call rescale_array(G(nxghost+1:nx-nxghost), ts_G(it,:))
     call rescale_array(l(nxghost+1:nx-nxghost), ts_l(it,:))
     call rescale_array(v(nxghost+1:nx-nxghost), ts_v(it,:))
@@ -148,6 +146,16 @@ contains
     ts_h = INVALID
     allocate(ts_om(max_outputs,p_nx_ref))
     ts_om = INVALID
+
+    if (p_extra_rotation_curve_outputs) then
+      allocate(ts_om_h(max_outputs,p_nx_ref))
+      ts_om_h = INVALID
+      allocate(ts_om_d(max_outputs,p_nx_ref))
+      ts_om_d = INVALID
+      allocate(ts_om_b(max_outputs,p_nx_ref))
+      ts_om_b = INVALID
+    endif
+
     allocate(ts_G(max_outputs,p_nx_ref))
     ts_G = INVALID
     allocate(ts_l(max_outputs,p_nx_ref))
@@ -192,6 +200,13 @@ contains
       deallocate(ts_alp_m)
       deallocate(ts_h)
       deallocate(ts_om)
+
+      if (p_extra_rotation_curve_outputs) then
+        deallocate(ts_om_h)
+        deallocate(ts_om_d)
+        deallocate(ts_om_b)
+      endif
+
       deallocate(ts_G)
       deallocate(ts_l)
       deallocate(ts_v)

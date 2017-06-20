@@ -1,4 +1,6 @@
 module rotationCurves
+  use, intrinsic :: iso_c_binding
+  use fgsl
   implicit none
   private
 
@@ -100,7 +102,7 @@ contains
     ! Traps and deals with bulge-less galaxies
     if (v_bulge<1e-3) then
       Omega = 0d0
-      Shear = 0d0
+      if (present(Shear)) Shear = 0d0
       return
     endif
 
@@ -123,11 +125,11 @@ contains
     endif
   end subroutine bulge_rotation_curve
 
-
-  subroutine halo_rotation_curve(rx, r_halo, v_halo, nfw_cs1, Omega)
+  subroutine halo_rotation_curve(r, baryon_fraction, r_halo, v_halo, nfw_cs1, &
+                        r_bulge, v_bulge, r_disk, v_disk, rmin, Omega, contract)
     ! Computes the rotation curve associated with an NFW halo
     ! Warning: This ignores effects of adiabatic contraction!
-    !          It need to be accounted for later
+    !          It needs to be accounted for later
     ! Input: r -> the radii where the rotation curve will be computed
     !        r_halo -> the virial radius of the halo (r_200)
     !        v_halo -> the circular velocity at r_halo (V_200)
@@ -138,35 +140,173 @@ contains
     ! Info:  V^2 = V_200^2 * {ln(1+cy) - cy/(1+cy)} /
     !                    {ln(1+c) - 1/(1+c)} / y
     ! Ref: NFW profile
-    use deriv
     use messages
     implicit none
-    double precision, intent(in) :: r_halo, v_halo, nfw_cs1
-    double precision, dimension(:), intent(in)  :: rx
+    double precision, intent(in) :: baryon_fraction, r_halo, v_halo, nfw_cs1
+    double precision, intent(in) :: r_bulge, v_bulge, r_disk, v_disk, rmin
+    double precision, dimension(:), intent(in)  :: r
+    double precision, dimension(size(r)) :: v
     double precision, dimension(size(r)),intent(out) :: Omega
-    double precision, dimension(size(rx)) :: v, dvdr, dv2dy
-    double precision, dimension(size(rx)) :: y, B, v2
-    double precision :: A, c
+    logical, intent(in), optional :: contract
+    logical :: contract_actual
+    integer :: i
+
+    if (present(contract)) then
+      contract_actual = contract
+      print *, 'contract',contract
+    else
+      contract_actual = .false.
+    endif
+
+    if (.not.contract_actual) then
+      do i=1,size(r)
+        v(i) = sqrt(1d0-baryon_fraction)*halo_velocity(r(i), r_halo, v_halo, nfw_cs1)
+      end do
+    else
+      do i=1,size(r)
+        v(i) = halo_velocity_contracted(abs(r(i)), baryon_fraction, r_halo, v_halo,&
+                              nfw_cs1, r_bulge, v_bulge, r_disk, v_disk, rmin)
+      end do
+    endif
+
+    Omega = v/r
+
+  end subroutine halo_rotation_curve
+
+
+
+  pure function halo_velocity(r, r_halo, v_halo, nfw_cs1) result(V)
+    ! Computes the rotation curve associated with an NFW halo
+    ! Warning: This ignores effects of adiabatic contraction!
+    !          It needs to be accounted for later
+    ! Input: r -> the radii where the rotation curve will be computed
+    !        r_halo -> the virial radius of the halo (r_200)
+    !        v_halo -> the circular velocity at r_halo (V_200)
+    !        nfw_cs1 -> 1/c_s -> inverse of the NFW concentration parameter
+    !                        i.e. (NFW scale radius)/(virial radius)
+    !        baryon_fraction -> fraction of the mass of the halo in barions
+    ! Output: velocity at r
+    ! Info:  V^2 = V_200^2 * {ln(1+cy) - cy/(1+cy)} /
+    !                    {ln(1+c) - 1/(1+c)} / y
+    ! Ref: NFW profile
+    use messages
+    implicit none
+    double precision, intent(in) :: r, r_halo, v_halo, nfw_cs1
+    double precision :: V, y, A, B, v2, c
     double precision, parameter :: v2_tol = -1d0 ! (km/s)^2
 
-    y = abs(rx) / r_halo
+    y = abs(r) / r_halo
     c = 1d0/nfw_cs1
 
     A = v_halo**2 / (log(1d0+c)-c/(1d0+c))
     B = (log(1d0+c*y) - c*y/(1d0+c*y))/y
     v2 = A*B
 
-    if (any(v2<v2_tol)) then
-      ! This tolerance was introduced to deal with (otherwise harmless)
-      ! numerical errors in the centre of the halo.
-      call message('halo_rotation_curve: error, halo properties lead to' &
-                   //' invalid rotation velocities! v2min=', minval(v2), &
-                   info=0)
-      stop
+!     if (any(v2<v2_tol)) then
+!       ! This tolerance was introduced to deal with (otherwise harmless)
+!       ! numerical errors in the centre of the halo.
+!       call message('halo_rotation_curve: error, halo properties lead to' &
+!                    //' invalid rotation velocities! v2min=', minval(v2), &
+!                    info=0)
+!     endif
+
+    V = sqrt(abs(v2))
+
+  end function halo_velocity
+
+  function halo_velocity_contracted(r, baryon_fraction,r_halo,v_halo,nfw_cs1, &
+                              r_bulge, v_bulge, r_disk, v_disk, rmin) result(V)
+    ! Computes the rotation curve associated with an NFW halo accounting for
+    ! adiabatic contraction
+    !          It needs to be accounted for later
+    ! Input: r -> the radii where the rotation curve will be computed
+    !        r_halo -> the virial radius of the halo (r_200)
+    !        v_halo -> the circular velocity at r_halo (V_200)
+    !        nfw_cs1 -> 1/c_s -> inverse of the NFW concentration parameter
+    !                        i.e. (NFW scale radius)/(virial radius)
+    ! Output: Omega -> angular velocity profile
+    !         Shear  -> shear profile
+    ! Info:  V^2 = V_200^2 * {ln(1+cy) - cy/(1+cy)} /
+    !                    {ln(1+c) - 1/(1+c)} / y
+    ! Ref: NFW profile
+    use messages
+    use root_finder, only: FindRoot
+    implicit none
+    double precision, intent(in) :: r_halo, v_halo, nfw_cs1, baryon_fraction
+    double precision, intent(in) :: r_bulge, v_bulge, r_disk, v_disk, rmin
+    double precision, intent(in)  :: r
+    double precision :: v, y, B, v2, A, c, r0
+    real(fgsl_double), target, dimension(10) :: parameters_array
+    double precision, parameter :: v2_tol = -1d0 ! (km/s)^2
+    double precision :: fun_min
+    type(c_ptr) :: params_ptr
+    integer, parameter :: MAX_INTERVAL_DOUBLING=20
+    integer :: i
+
+    ! Interfacing gymnastics...
+    parameters_array(1)  = r_halo
+    parameters_array(2)  = v_halo
+    parameters_array(3)  = nfw_cs1
+    parameters_array(4)  = r_bulge
+    parameters_array(5)  = v_bulge
+    parameters_array(6)  = r_disk
+    parameters_array(7)  = v_disk
+    parameters_array(8)  = rmin
+    parameters_array(9)  = baryon_fraction
+    parameters_array(10) = r
+    ! Prepares a pointer to parameters_array
+    params_ptr = c_loc(parameters_array)
+
+    fun_min = halo_velocity_contracted_fun(r, params_ptr)
+    if (fun_min>0d0) then
+      ! Avoids shell crossing!
+      V = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
+
+    else
+      do i=1,MAX_INTERVAL_DOUBLING
+        ! Tries to find an interval which contains a root
+        if (halo_velocity_contracted_fun(r*2d0**i, params_ptr)/fun_min <0) exit
+      enddo
+
+      r0 = FindRoot(halo_velocity_contracted_fun, params_ptr, [r, r*2d0**i])
+      V = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
     endif
+  end function halo_velocity_contracted
 
-    Omega = sqrt(abs(v2))/rx
+  function halo_velocity_contracted_fun(r0, params) bind(c)
+    ! f(x) = r0^2*Vh^2(r0) - r^2(f_b*Vh^2(r)*(r0/r)+Vd^2(r)+Vb^2(r))
+    ! root finder GSL routine
+    real(c_double), value :: r0
+    type(c_ptr), value :: params
+    real(c_double) :: halo_velocity_contracted_fun
+    real(fgsl_double) :: r, r_halo, v_halo, nfw_cs1, rmin
+    real(fgsl_double) :: r_bulge, v_bulge, r_disk, v_disk, f_b
+    real(fgsl_double) :: V0, Vr, Vd2, Vb2
+    real(fgsl_double), dimension(1) :: Omega_tmp
+!     real(fgsl_double), target, dimension(10) :: p
+    real(fgsl_double), pointer, dimension(:) :: p
 
-  end subroutine halo_rotation_curve
+    call c_f_pointer(params, p, [10])
+    r_halo = p(1)
+    v_halo = p(2)
+    nfw_cs1 = p(3)
+    r_bulge = p(4)
+    v_bulge = p(5)
+    r_disk = p(6)
+    v_disk = p(7)
+    rmin = p(8)
+    f_b = p(9)
+    r = p(10)
+
+    V0 = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
+    Vr = halo_velocity(r, r_halo, v_halo, nfw_cs1)
+    call bulge_rotation_curve([r], r_bulge, v_bulge, Omega_tmp)
+    Vb2 = (Omega_tmp(1)*r)**2
+    call disk_rotation_curve([r], r_disk, rmin, v_disk, Omega_tmp)
+    Vd2 = (Omega_tmp(1)*r)**2
+!     print *, 'fun' ,r0**2*V0**2 - r**2*((1d0-f_b)*Vr**2*(r0/r)+Vd2+Vb2), r0, r
+    halo_velocity_contracted_fun = r0**2*V0**2 - r**2*((1d0-f_b)*Vr**2*(r0/r)+Vd2+Vb2)
+
+  end function halo_velocity_contracted_fun
 
 end module rotationCurves

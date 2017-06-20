@@ -122,6 +122,23 @@ contains
                           ts_rkpc,                                  &
                           units='kpc',                              &
                           description='Radius')
+    if (p_extra_rotation_curve_outputs) then
+      call IO_write_dataset('Omega_h', gal_id,                         &
+                            ts_Om_h,                                   &
+                            units='km/s/kpc',                          &
+                            description='Angular velocity of the halo' &
+                            // ' (no regularization).')
+      call IO_write_dataset('Omega_b', gal_id,                         &
+                            ts_Om_b,                                   &
+                            units='km/s/kpc',                          &
+                            description='Angular velocity of the bulge' &
+                            // ' (no regularization).')
+      call IO_write_dataset('Omega_d', gal_id,                         &
+                            ts_Om_d,                                   &
+                            units='km/s/kpc',                          &
+                            description='Angular velocity of the disc' &
+                            // ' (no regularization).')
+    endif
 
     call IO_finish_galaxy(gal_id)
     

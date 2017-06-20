@@ -15,7 +15,7 @@ endif
 
 FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
-FCFLAGS_TEST=-g -Wall -Wuninitialized -Og
+FCFLAGS_TEST=-g -Wall -Wuninitialized
 FCFLAGS_PROD=-Ofast
 
 # Builds parallel version

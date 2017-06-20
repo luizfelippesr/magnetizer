@@ -4,6 +4,7 @@ This shall be updated later to include more complex properties.
 """
 from numpy import pi, arctan, sqrt
 import numpy as np
+import re
     
 def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                            select_r=slice(None,None,None),
@@ -26,7 +27,9 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
     if qname == 'V':
         quantity = f['Omega'][ig,ir,iz]*f['r'][ig,ir,iz]
         unit = r'km/s'
-
+    elif qname[:2] == 'V_':
+        quantity = f['Omega_'+qname[2]][ig,ir,iz]*f['r'][ig,ir,iz]
+        unit = r'km/s'
     elif qname == 'D':
         S = f['Shear'][ig,ir,iz]
         eta_t= f['etat'][ig,ir,iz]

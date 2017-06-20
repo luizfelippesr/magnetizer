@@ -66,7 +66,7 @@ contains
     integer, optional :: max_it
     real(fgsl_double), parameter :: ABS_TOL = 0_fgsl_double
     real(fgsl_double), parameter :: REL_TOL = 1.0e-7_fgsl_double
-    integer(fgsl_int) :: itmax = 20
+    integer(fgsl_int) :: itmax = 40
     real(fgsl_double) :: root, xlo, xhi
     character(kind=fgsl_char,len=fgsl_strmax) :: name
     integer :: i

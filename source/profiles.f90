@@ -8,6 +8,7 @@ module profiles
   double precision, dimension(:), allocatable :: etat, tau, Beq, alp_k
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
+  double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h
   double precision :: delta_r
   private :: prepare_profiles_module_public_variables
 contains
@@ -33,13 +34,13 @@ contains
     double precision, dimension(nx) :: Om_kmskpc, G_kmskpc
     double precision, dimension(nx) :: etat_cm2s, etat_kmskpc
     double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms
-    double precision, dimension(nx) :: Om_d, Om_b, Om_h, Beq_mkG
+    double precision, dimension(nx) :: Beq_mkG
     double precision, dimension(nx) :: B_actual, tau_Gyr, tau_s
     double precision, dimension(nx) :: rho_cgs
     double precision, dimension(nx) :: Sigma_d, Rm
     double precision, parameter :: P_TOL=1e-10
     double precision :: rreg
-    double precision :: r_disk_min
+    double precision :: r_disk_min, baryon_fraction
     integer :: i_halfmass
 
     call prepare_profiles_module_public_variables()
@@ -61,7 +62,10 @@ contains
     ! Computes the profile associated with each component
     call disk_rotation_curve(r_kpc, r_disk, r_disk_min, v_disk, Om_d)
     call bulge_rotation_curve(r_kpc, r_bulge, v_bulge, Om_b)
-    call halo_rotation_curve(r_kpc, r_halo, v_halo, nfw_cs1, Om_h)
+    baryon_fraction = (Mstars_disk+Mstars_bulge+Mgas_disk)/Mhalo
+    call halo_rotation_curve(r_kpc, baryon_fraction, r_halo, v_halo, nfw_cs1, &
+                        r_bulge, v_bulge, r_disk, v_disk, r_disk_min, Om_h, &
+                        contract=p_halo_contraction )
 
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
@@ -295,6 +299,9 @@ contains
     call check_allocate(Ur)
     call check_allocate(dUrdr)
     call check_allocate(Om)
+    call check_allocate(Om_b)
+    call check_allocate(Om_d)
+    call check_allocate(Om_h)
     call check_allocate(G)
   end subroutine prepare_profiles_module_public_variables
 end module profiles

@@ -269,7 +269,9 @@ contains
       enddo
 
       r0 = FindRoot(halo_velocity_contracted_fun, params_ptr, [r, r*1.5d0**i])
-      V = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
+
+      V = sqrt(r0/r) * halo_velocity(r0, r_halo, v_halo, nfw_cs1)
+
     endif
   end function halo_velocity_contracted
 
@@ -281,7 +283,7 @@ contains
     real(c_double) :: halo_velocity_contracted_fun
     real(fgsl_double) :: r, r_halo, v_halo, nfw_cs1, rmin
     real(fgsl_double) :: r_bulge, v_bulge, r_disk, v_disk, f_b
-    real(fgsl_double) :: V0, Vr, Vd2, Vb2
+    real(fgsl_double) :: V02, Vr, Vd2, Vb2
     real(fgsl_double), dimension(1) :: Omega_tmp
 !     real(fgsl_double), target, dimension(10) :: p
     real(fgsl_double), pointer, dimension(:) :: p
@@ -298,14 +300,13 @@ contains
     f_b = p(9)
     r = p(10)
 
-    V0 = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
-    Vr = halo_velocity(r,  r_halo, v_halo, nfw_cs1)
+    V02 = (halo_velocity(r0, r_halo, v_halo, nfw_cs1))**2
     call bulge_rotation_curve([r], r_bulge, v_bulge, Omega_tmp)
     Vb2 = (Omega_tmp(1)*r)**2
     call disk_rotation_curve([r], r_disk, rmin, v_disk, Omega_tmp)
     Vd2 = (Omega_tmp(1)*r)**2
 
-    halo_velocity_contracted_fun = r0**2*V0**2 - r**2*((1d0-f_b)*Vr**2+Vd2+Vb2)
+    halo_velocity_contracted_fun = r0**2*V02 - r**2*(Vd2 + Vb2 + (1d0-f_b)*V02*(r0/r))
 
   end function halo_velocity_contracted_fun
 

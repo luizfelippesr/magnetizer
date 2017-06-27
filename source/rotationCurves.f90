@@ -240,7 +240,7 @@ contains
     double precision, parameter :: v2_tol = -1d0 ! (km/s)^2
     double precision :: fun_min
     type(c_ptr) :: params_ptr
-    integer, parameter :: MAX_INTERVAL_DOUBLING=20
+    integer, parameter :: MAX_INTERVAL_EXPONENT=8
     integer :: i
 
     ! Interfacing gymnastics...
@@ -263,12 +263,12 @@ contains
       V = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
 
     else
-      do i=1,MAX_INTERVAL_DOUBLING
+      do i=1,MAX_INTERVAL_EXPONENT
         ! Tries to find an interval which contains a root
-        if (halo_velocity_contracted_fun(r*2d0**i, params_ptr)/fun_min <0) exit
+        if (halo_velocity_contracted_fun(r*1.5d0**i, params_ptr)/fun_min <0) exit
       enddo
 
-      r0 = FindRoot(halo_velocity_contracted_fun, params_ptr, [r, r*2d0**i])
+      r0 = FindRoot(halo_velocity_contracted_fun, params_ptr, [r, r*1.5d0**i])
       V = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
     endif
   end function halo_velocity_contracted
@@ -299,13 +299,13 @@ contains
     r = p(10)
 
     V0 = halo_velocity(r0, r_halo, v_halo, nfw_cs1)
-    Vr = halo_velocity(r, r_halo, v_halo, nfw_cs1)
+    Vr = halo_velocity(r,  r_halo, v_halo, nfw_cs1)
     call bulge_rotation_curve([r], r_bulge, v_bulge, Omega_tmp)
     Vb2 = (Omega_tmp(1)*r)**2
     call disk_rotation_curve([r], r_disk, rmin, v_disk, Omega_tmp)
     Vd2 = (Omega_tmp(1)*r)**2
-!     print *, 'fun' ,r0**2*V0**2 - r**2*((1d0-f_b)*Vr**2*(r0/r)+Vd2+Vb2), r0, r
-    halo_velocity_contracted_fun = r0**2*V0**2 - r**2*((1d0-f_b)*Vr**2*(r0/r)+Vd2+Vb2)
+
+    halo_velocity_contracted_fun = r0**2*V0**2 - r**2*((1d0-f_b)*Vr**2+Vd2+Vb2)
 
   end function halo_velocity_contracted_fun
 

@@ -18,7 +18,7 @@ module grid
   ! x and r have actually the exact same meaning
   ! one of them can be removed later
   double precision, dimension(:), pointer, protected :: r
-  double precision, dimension(:), allocatable, protected :: r_kpc
+  double precision, dimension(:), allocatable, protected :: r_kpc, r_kpc_extra
 
   double precision, protected :: dr_kpc
   double precision, protected :: r_max_kpc
@@ -53,9 +53,10 @@ module grid
     else
       r_max_kpc = p_rmax_over_rdisk*r_disk
     endif
-    ! Save the dimensional r grid
+    ! Saves the dimensional r grid
     r_kpc = r*r_max_kpc
     dr_kpc = dx*r_max_kpc
+
   endsubroutine construct_grid
 
   subroutine check_allocate(v, nv)
@@ -271,4 +272,18 @@ module grid
 
   end subroutine adjust_grid
 
+  subroutine set_outer_grid()
+    ! Prepares the outer grid (for pressure calculations)
+    ! It will start at the final value of the regular grid
+    ! and extend to 3 times that value.
+    ! The number of grid points is nx
+    double precision :: dextra
+    integer :: i
+
+    call check_allocate(r_kpc_extra, nx)
+
+    if (.not.r_kpc_extra(1) == r_kpc(nx)) then
+      r_kpc_extra = 2.*r_kpc(nx-nxghost)*(x+dx*nxghost)+r_kpc(nx-2*nxghost)
+    endif
+  end subroutine set_outer_grid
 end module grid

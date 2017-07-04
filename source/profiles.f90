@@ -8,7 +8,7 @@ module profiles
   double precision, dimension(:), allocatable :: etat, tau, Beq, alp_k
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
-  double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h
+  double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h, Om_h_extra
   double precision :: delta_r
   private :: prepare_profiles_module_public_variables
 contains
@@ -64,8 +64,13 @@ contains
     call bulge_rotation_curve(r_kpc, r_bulge, v_bulge, Om_b)
     baryon_fraction = (Mstars_disk+Mstars_bulge+Mgas_disk)/Mhalo
     call halo_rotation_curve(r_kpc, baryon_fraction, r_halo, v_halo, nfw_cs1, &
-                        r_bulge, v_bulge, r_disk, v_disk, r_disk_min, Om_h, &
-                        contract=p_halo_contraction )
+                             r_bulge, v_bulge, r_disk, v_disk, r_disk_min, &
+                             Om_h, contract=p_halo_contraction)
+    ! Extends the halo profile for the pressure calculation
+    call set_outer_grid()
+    call halo_rotation_curve(r_kpc_extra, baryon_fraction, r_halo, v_halo, &
+                             nfw_cs1, r_bulge, v_bulge, r_disk, v_disk, &
+                             r_disk_min, Om_h_extra, contract=p_halo_contraction)
 
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
@@ -73,6 +78,8 @@ contains
     ! Regularises
     rreg = r_kpc(minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1))
     call regularize(abs(r_kpc), rreg, Om_kmskpc)
+
+    ! Computes the shear profile
     G_kmskpc = xder(Om_kmskpc)*x
 
     ! If required, avoid bumps in the shear

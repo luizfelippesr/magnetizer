@@ -5,7 +5,8 @@ module pressureEquilibrium
   use math_constants
   use fgsl
   use global_input_parameters
-  use input_params, only: r_bulge , r_halo, r_disk, Mhalo, Mstars_disk, Mstars_bulge, Mgas_disk, nfw_cs1
+  use input_params, only: r_bulge , r_halo, r_disk, Mhalo, Mstars_disk, &
+                          Mstars_bulge, Mgas_disk, nfw_cs1
   use, intrinsic :: iso_c_binding
   implicit none
   private

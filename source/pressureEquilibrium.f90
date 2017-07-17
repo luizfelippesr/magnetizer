@@ -7,6 +7,7 @@ module pressureEquilibrium
   use global_input_parameters
   use input_params, only: r_bulge , r_halo, r_disk, Mhalo, Mstars_disk, &
                           Mstars_bulge, Mgas_disk, nfw_cs1
+  use grid, only: r_kpc, nxghost
   use, intrinsic :: iso_c_binding
   implicit none
   private
@@ -23,10 +24,13 @@ module pressureEquilibrium
   double precision, parameter :: density_SI_to_cgs = 1d-3
   double precision, parameter :: convertPressureSItoGaussian=10
 
+
   ! Global variables used in the integration
   double precision :: i_R_to_Rsdm, i_hd_to_RsDM
   double precision :: i_R_to_Rb,   i_hd_to_Rb
   double precision :: i_hd_to_hm, i_hd_to_hstar
+  double precision, dimension(:), pointer :: pOm_h, pG_h
+  !double precision, dimension(:), pointer :: pOm_h_e, pG_h_e
 
   type            (fgsl_function             ) :: integrandFunction
   type            (fgsl_integration_workspace) :: integrationWorkspace
@@ -35,6 +39,8 @@ module pressureEquilibrium
 contains
   subroutine solve_hydrostatic_equilibrium_numerical( r, B, &
                                                       Om, G, &
+                                                      Om_h, G_h, &
+                                                      !Om_h_e, G_h_e, &
                                                       rho_d, h_d, &
                                                       Rm_out, &
                                                       Sigma_star_out, &
@@ -55,6 +61,8 @@ contains
     use root_finder, only: FindRoot
     use messages, only: error_message
     double precision, dimension(:), intent(in) :: r, B, Om, G
+    double precision, dimension(:), target, intent(in) :: Om_h, G_h
+    !double precision, dimension(:), target, intent(in) :: Om_h_e, G_h_e
     integer, intent(in), optional :: nghost
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d
     double precision, dimension(size(r)), intent(out), optional ::    &
@@ -95,6 +103,13 @@ contains
     minimum_h = 1d-3*r_disk
     maximum_h = 2d0*r_disk
 
+    ! Sets global pointers to acess Omega and Shear profiles
+    pOm_h => Om_h
+    !pOm_h_e => Om_h_e
+    pG_h => G_h
+    !pG_h_e => G_h_e
+
+    ! Trapping possible errors
     i_rreg = -1
     h_d = -17d0
 
@@ -432,8 +447,8 @@ contains
   end function midplane_pressure_Elmegreen
 
 
-  function computes_midplane_ISM_pressure_P1(   &
-                                    r, Sigma_d, Sigma_star, R_m, h_d) result(P)
+  function computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, &
+                                              h_d) result(P)
     ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
     ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
     !        Sigma_stars -> Surface density profile of stars (Msun/kpc^2)
@@ -442,7 +457,7 @@ contains
     ! Output: array containing the pressure in Gaussian units
     use input_constants
     use Integration
-    double precision, intent(in) :: r, Sigma_d, Sigma_star, h_d, R_m
+    double precision, intent(in) :: r, Sigma_d, Sigma_star, R_m, h_d
     double precision :: P, Pm, Pstars, Pdm, Pbulge, Pd
     double precision :: Sigma_d_SI, Sigma_star_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
@@ -453,6 +468,9 @@ contains
     double precision, parameter :: small = 1d-12
     double precision, parameter :: rb_to_r50 = (sqrt(2.0d0)-1.0d0)
     double precision, parameter :: Mstars_bulge_min = 1d3 ! Msun
+    double precision, parameter :: km_SI = 1d3
+    double precision :: z_tmp, tmp, Ih1, Ih2, Pdm_old
+    integer :: i, i_start, j
 
     ! Computes missing scale heights (in kpc)
     h_star = r_disk * rs_to_r50 * p_stellarHeightToRadiusScale
@@ -513,24 +531,48 @@ contains
     else
       Pbulge = 0d0
     endif
+
     ! Halo dark matter halo
     if (p_use_Pdm) then
-      ! Prepares global variables
-      i_hd_to_Rsdm = h_d/rs_DM
-      i_R_to_Rsdm = r/rs_DM
-      ! Numerically integrates and computes result
-!       I_dm = Integrate(small, 0d0, integrand_dm, integrandFunction,     &
-!                        integrationWorkspace, toleranceRelative=rel_TOL, &
-!                        toInfinity=.true., reset=integrationReset)
+      if (p_test_DM_old) then
+        ! Numerically integrates and computes result
+        ! NB this does NOT account for halo contraction!
+        ! Prepares global variables
+        i_hd_to_Rsdm = h_d/rs_DM
+        i_R_to_Rsdm = r/rs_DM
 
-      I_dm = Integrate(small, 7d0, integrand_dm, integrandFunction,     &
-                       integrationWorkspace, toleranceRelative=rel_TOL, &
-                       toInfinity=.false., reset=integrationReset)
-      Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
-    else
-      Pdm = 0d0
+        I_dm = Integrate(0d0, 100d0, integrand_dm, integrandFunction,     &
+                        integrationWorkspace, toleranceRelative=rel_TOL, &
+                        toInfinity=.true., reset=integrationReset)
+        Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
+
+      else
+        ! NB this does account for halo contraction but involves
+        ! major approximations
+        i = minloc(abs(r_kpc - r), 1)
+        tmp = pOm_h(i)*(1.5d0*pOm_h(i)+pG_h(i))
+
+        Pdm =  tmp* (km_SI/kpc_SI)**2
+        Pdm = Pdm * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
+!         ! Finishes Simpson's integration
+!         Ih1 = Ih1*(r_kpc(i_start+1) - r_kpc(i_start))
+!         print *, 'Ih1 S', Ih1
+!
+!         ! 2) Outer part (r_max, 3*r_max)
+!         Ih2 = 0
+!
+!         Pdm_old = Pdm
+!         ! ---- TODO ----
+!         ! Finishes trapezoidal integration
+!         Pdm = Sigma_d/2d0 *(Ih1+Ih2)
+!         ! Adjusts units
+!         Pdm = Pdm * km_SI**2 * Msun_SI / kpc_SI**3 * convertPressureSItoGaussian
+!         print *, 'conversion', km_SI**2 * Msun_SI / kpc_SI**3 * convertPressureSItoGaussian
+!
+!         print *, 'Pdm_new',Pdm
+!         print *, 'Pdm_new/Pdm_old',Pdm/Pdm_old
+      endif
     endif
-
     ! Finishes calculation
     P = Pd + Pm + Pstars + Pbulge + Pdm
 

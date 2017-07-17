@@ -153,7 +153,6 @@ contains
 
     if (present(contract)) then
       contract_actual = contract
-      print *, 'contract',contract
     else
       contract_actual = .false.
     endif

@@ -234,7 +234,7 @@ contains
     real(fgsl_double) :: P1, P2, Pgas
     real(fgsl_double), pointer, dimension(:) :: p
 
-    call c_f_pointer(params, p, [7])
+    call c_f_pointer(params, p, [9])
 
     ! Converts argument and array of parameters into small "0-arrays"
     ! (this allows using the previous routines...)
@@ -450,7 +450,9 @@ contains
 
 
   function computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, &
-                                              h_d, Om_h, G_h) result(P)
+                                             h_d, Om_h, G_h, Pd_out, Pm_out, &
+                                             Pstars_out, Pbulge_out, Pdm_out &
+                                              ) result(P)
     ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
     ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
     !        Sigma_stars -> Surface density profile of stars (Msun/kpc^2)
@@ -460,6 +462,7 @@ contains
     use input_constants
     use Integration
     double precision, intent(in) :: r, Sigma_d, Sigma_star, R_m, h_d, Om_h, G_h
+    double precision,intent(out),optional :: Pd_out,Pm_out,Pstars_out,Pbulge_out,Pdm_out
     double precision :: P, Pm, Pstars, Pdm, Pbulge, Pd
     double precision :: Sigma_d_SI, Sigma_star_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
@@ -557,6 +560,13 @@ contains
     endif
     ! Finishes calculation
     P = Pd + Pm + Pstars + Pbulge + Pdm
+
+    ! Returns extra optional outputs
+    if (present(Pd_out)) Pd_out = Pd
+    if (present(Pm_out)) Pm_out = Pm
+    if (present(Pstars_out)) Pstars_out = Pstars
+    if (present(Pbulge_out)) Pbulge_out = Pbulge
+    if (present(Pdm_out)) Pdm_out = Pdm
 
     return
   end function computes_midplane_ISM_pressure_P1

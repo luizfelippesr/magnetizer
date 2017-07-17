@@ -16,7 +16,7 @@ module IO
   integer :: gals_number, grid_points
 
   ! Parameter setting the maximum possible number of datasets
-  integer, parameter :: max_number_of_datasets=40
+  integer, parameter :: max_number_of_datasets=50
   
   integer(hid_t) :: file_id          ! hdf5 file identifier
   integer(hid_t) :: file_id_out      ! hdf5 file identifier

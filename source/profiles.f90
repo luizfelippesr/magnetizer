@@ -9,6 +9,7 @@ module profiles
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
   double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h, G_h
+  double precision, dimension(:), allocatable :: P, Pd, Pm, Pstars, Pbulge, Pdm
   double precision :: delta_r
   private :: prepare_profiles_module_public_variables
 contains
@@ -38,11 +39,11 @@ contains
     double precision, dimension(nx) :: Beq_mkG
     double precision, dimension(nx) :: B_actual, tau_Gyr, tau_s
     double precision, dimension(nx) :: rho_cgs
-    double precision, dimension(nx) :: Sigma_d, Rm
+    double precision, dimension(nx) :: Sigma_d,Sigma_star, Rm
     double precision, parameter :: P_TOL=1e-10
     double precision :: rreg
     double precision :: r_disk_min, baryon_fraction
-    integer :: i_halfmass
+    integer :: i_halfmass, i
 
     call prepare_profiles_module_public_variables()
 
@@ -135,7 +136,9 @@ contains
                                                    Om_kmskpc, G_kmskpc, &
                                                    Om_h, G_h, &
                                                    !Om_h_extra, G_h_extra, &
-                                                   rho_cgs, h_kpc, Rm, &
+                                                   rho_cgs, h_kpc, &
+                                                   Rm_out=Rm, &
+                                                   Sigma_star_out=Sigma_star, &
                                                    Sigma_d_out=Sigma_d, &
                                                    nghost=nxghost)
     else
@@ -155,6 +158,16 @@ contains
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
 !       construct_profiles = .false.
+    endif
+
+    if (p_extra_pressure_outputs) then
+      do i=1,size(r_kpc)
+        P(i) = computes_midplane_ISM_pressure_P1(r_kpc(i), Sigma_d(i),      &
+                                                 Sigma_star(i), Rm(i),      &
+                                                 h_kpc(i), Om_h(i), G_h(i), &
+                                                 Pd(i), Pm(i), Pstars(i),   &
+                                                 Pbulge(i), Pdm(i))
+      enddo
     endif
 
     ! NUMBER DENSITY PROFILE
@@ -316,5 +329,15 @@ contains
     call check_allocate(Om_d)
     call check_allocate(Om_h)
     call check_allocate(G)
+
+    if (p_extra_pressure_outputs) then
+      call check_allocate(P)
+      call check_allocate(Pd)
+      call check_allocate(Pm)
+      call check_allocate(Pstars)
+      call check_allocate(Pbulge)
+      call check_allocate(Pdm)
+    endif
+
   end subroutine prepare_profiles_module_public_variables
 end module profiles

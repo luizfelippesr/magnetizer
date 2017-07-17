@@ -233,7 +233,7 @@ module global_input_parameters
   logical :: p_use_Pbulge = .true.
   logical :: p_halo_contraction = .false.
   logical :: p_extra_rotation_curve_outputs = .false.
-
+  logical :: p_extra_pressure_outputs = .false.
   logical :: p_test_DM_old = .true.
 
   namelist /ISM_and_disk_parameters/ &
@@ -248,7 +248,7 @@ module global_input_parameters
     p_use_legacy_cubic_solver, p_enable_P2, p_truncates_within_rreg, &
     p_minimum_density, p_sech2_profile, p_use_Pdm, p_use_Pbulge, &
     p_halo_contraction, p_extra_rotation_curve_outputs, &
-    p_test_DM_old
+    p_extra_pressure_outputs, p_test_DM_old
 
 
   ! -------------------------------------------------------

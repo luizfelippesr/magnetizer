@@ -38,6 +38,10 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, allocatable, dimension(:,:),public :: ts_Beq
   double precision, allocatable, dimension(:,:),public :: ts_rkpc
 
+  double precision, allocatable, dimension(:,:),public :: ts_P, ts_Pd
+  double precision, allocatable, dimension(:,:),public :: ts_Pm, ts_Pstars
+  double precision, allocatable, dimension(:,:),public :: ts_Pbulge, ts_Pdm
+
 contains
   subroutine make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
     ! Saves the results of simulation (obtained for a particular snapshot it)
@@ -78,11 +82,6 @@ contains
     call rescale_array(h(nxghost+1:nx-nxghost), ts_h(it,:))
     call rescale_array(Om(nxghost+1:nx-nxghost), ts_om(it,:))
 
-    if (p_extra_rotation_curve_outputs) then
-      call rescale_array(Om_h(nxghost+1:nx-nxghost), ts_Om_h(it,:))
-      call rescale_array(Om_b(nxghost+1:nx-nxghost), ts_Om_b(it,:))
-      call rescale_array(Om_d(nxghost+1:nx-nxghost), ts_Om_d(it,:))
-    endif
 
     call rescale_array(G(nxghost+1:nx-nxghost), ts_G(it,:))
     call rescale_array(l(nxghost+1:nx-nxghost), ts_l(it,:))
@@ -96,6 +95,22 @@ contains
     call rescale_array(Beq(nxghost+1:nx-nxghost), ts_Beq(it,:))
     call rescale_array(r_kpc(nxghost+1:nx-nxghost), ts_rkpc(it,:))
     call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
+
+    if (p_extra_rotation_curve_outputs) then
+      call rescale_array(Om_h(nxghost+1:nx-nxghost), ts_Om_h(it,:))
+      call rescale_array(Om_b(nxghost+1:nx-nxghost), ts_Om_b(it,:))
+      call rescale_array(Om_d(nxghost+1:nx-nxghost), ts_Om_d(it,:))
+    endif
+
+    if (p_extra_pressure_outputs) then
+      call rescale_array(P(nxghost+1:nx-nxghost), ts_P(it,:))
+      call rescale_array(Pd(nxghost+1:nx-nxghost), ts_Pd(it,:))
+      call rescale_array(Pm(nxghost+1:nx-nxghost), ts_Pm(it,:))
+      call rescale_array(Pstars(nxghost+1:nx-nxghost), ts_Pstars(it,:))
+      call rescale_array(Pbulge(nxghost+1:nx-nxghost), ts_Pbulge(it,:))
+      call rescale_array(Pdm(nxghost+1:nx-nxghost), ts_Pdm(it,:))
+    endif
+
 
     ! alp is computed in the gutsdynamo module (annoyingly differently from
     ! anything else). Therefore, one needs to be careful. This is a good
@@ -146,15 +161,6 @@ contains
     allocate(ts_om(max_outputs,p_nx_ref))
     ts_om = INVALID
 
-    if (p_extra_rotation_curve_outputs) then
-      allocate(ts_om_h(max_outputs,p_nx_ref))
-      ts_om_h = INVALID
-      allocate(ts_om_d(max_outputs,p_nx_ref))
-      ts_om_d = INVALID
-      allocate(ts_om_b(max_outputs,p_nx_ref))
-      ts_om_b = INVALID
-    endif
-
     allocate(ts_G(max_outputs,p_nx_ref))
     ts_G = INVALID
     allocate(ts_l(max_outputs,p_nx_ref))
@@ -182,6 +188,32 @@ contains
     allocate(ts_rkpc(max_outputs,p_nx_ref))
     ts_rkpc = INVALID
 
+    if (p_extra_rotation_curve_outputs) then
+      allocate(ts_om_h(max_outputs,p_nx_ref))
+      ts_om_h = INVALID
+      allocate(ts_om_d(max_outputs,p_nx_ref))
+      ts_om_d = INVALID
+      allocate(ts_om_b(max_outputs,p_nx_ref))
+      ts_om_b = INVALID
+    endif
+
+    if (p_extra_pressure_outputs) then
+      allocate(ts_P(max_outputs,p_nx_ref))
+      ts_P = INVALID
+      allocate(ts_Pd(max_outputs,p_nx_ref))
+      ts_Pd = INVALID
+      allocate(ts_Pm(max_outputs,p_nx_ref))
+      ts_Pm = INVALID
+      allocate(ts_Pstars(max_outputs,p_nx_ref))
+      ts_Pstars = INVALID
+      allocate(ts_Pbulge(max_outputs,p_nx_ref))
+      ts_Pbulge = INVALID
+      allocate(ts_Pdm(max_outputs,p_nx_ref))
+      ts_Pdm = INVALID
+    endif
+
+
+
   end subroutine allocate_ts_arrays
 
   subroutine reset_ts_arrays()
@@ -204,6 +236,16 @@ contains
         deallocate(ts_om_h)
         deallocate(ts_om_d)
         deallocate(ts_om_b)
+      endif
+
+
+      if (p_extra_pressure_outputs) then
+        deallocate(ts_P)
+        deallocate(ts_Pd)
+        deallocate(ts_Pm)
+        deallocate(ts_Pstars)
+        deallocate(ts_Pbulge)
+        deallocate(ts_Pdm)
       endif
 
       deallocate(ts_G)

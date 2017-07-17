@@ -73,7 +73,7 @@ contains
     !
     real(fgsl_double) :: minimum_h, maximum_h, guess_h
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
-    real(fgsl_double), target, dimension(7) :: parameters_array
+    real(fgsl_double), target, dimension(9) :: parameters_array
     integer :: i, i_rreg, nghost_actual
     type(c_ptr) :: params_ptr
 
@@ -104,9 +104,9 @@ contains
     maximum_h = 2d0*r_disk
 
     ! Sets global pointers to acess Omega and Shear profiles
-    pOm_h => Om_h
+    !pOm_h => Om_h
     !pOm_h_e => Om_h_e
-    pG_h => G_h
+    !pG_h => G_h
     !pG_h_e => G_h_e
 
     ! Trapping possible errors
@@ -134,7 +134,9 @@ contains
         parameters_array(5) = 0d0
         parameters_array(6) = 0d0
       endif
-      parameters_array(7) = B(i)
+      parameters_array(7) = Om_h(i)
+      parameters_array(8) = G_h(i)
+      parameters_array(9) = B(i)
 
       ! Initially tests whether the interval contains a root
       ! (this assumes that is an odd number of roots in the interval,
@@ -228,27 +230,27 @@ contains
     type(c_ptr), value :: params
     real(c_double) :: pressure_equation
     real(fgsl_double) :: r, Sigma_d, Sigma_star, R_m
-    real(fgsl_double) :: B, Om, G, rho_cgs
+    real(fgsl_double) :: B, Om, G, rho_cgs, Om_h, G_h
     real(fgsl_double) :: P1, P2, Pgas
     real(fgsl_double), pointer, dimension(:) :: p
 
     call c_f_pointer(params, p, [7])
-
-
-
 
     ! Converts argument and array of parameters into small "0-arrays"
     ! (this allows using the previous routines...)
     r          = p(1)
     Sigma_d    = p(2)
     Sigma_star = p(3)
-    R_m         = p(4)
+    R_m        = p(4)
     Om         = p(5)
     G          = p(6)
-    B          = p(7)
+    Om_h       = p(7)
+    G_h        = p(8)
+    B          = p(9)
 
     ! Computes the midplane pressure, from gravity (without radial part)
-    P1 = computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, h)
+    P1 = computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, h, &
+                                            Om_h, G_h)
     ! Computes the midplane pressure, from gravity (the radial part)
     P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om, G, h)
 
@@ -448,7 +450,7 @@ contains
 
 
   function computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, &
-                                              h_d) result(P)
+                                              h_d, Om_h, G_h) result(P)
     ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
     ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
     !        Sigma_stars -> Surface density profile of stars (Msun/kpc^2)
@@ -457,7 +459,7 @@ contains
     ! Output: array containing the pressure in Gaussian units
     use input_constants
     use Integration
-    double precision, intent(in) :: r, Sigma_d, Sigma_star, R_m, h_d
+    double precision, intent(in) :: r, Sigma_d, Sigma_star, R_m, h_d, Om_h, G_h
     double precision :: P, Pm, Pstars, Pdm, Pbulge, Pd
     double precision :: Sigma_d_SI, Sigma_star_SI
     double precision, parameter :: rs_to_r50=constDiskScaleToHalfMassRatio
@@ -469,7 +471,6 @@ contains
     double precision, parameter :: rb_to_r50 = (sqrt(2.0d0)-1.0d0)
     double precision, parameter :: Mstars_bulge_min = 1d3 ! Msun
     double precision, parameter :: km_SI = 1d3
-    double precision :: z_tmp, tmp, Ih1, Ih2, Pdm_old
     integer :: i, i_start, j
 
     ! Computes missing scale heights (in kpc)
@@ -549,28 +550,9 @@ contains
       else
         ! NB this does account for halo contraction but involves
         ! major approximations
-        i = minloc(abs(r_kpc - r), 1)
-        tmp = pOm_h(i)*(1.5d0*pOm_h(i)+pG_h(i))
-
-        Pdm =  tmp* (km_SI/kpc_SI)**2
+        Pdm =  Om_h*(1.5d0*Om_h+G_h) * (km_SI/kpc_SI)**2
         Pdm = Pdm * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
-!         ! Finishes Simpson's integration
-!         Ih1 = Ih1*(r_kpc(i_start+1) - r_kpc(i_start))
-!         print *, 'Ih1 S', Ih1
-!
-!         ! 2) Outer part (r_max, 3*r_max)
-!         Ih2 = 0
-!
-!         Pdm_old = Pdm
-!         ! ---- TODO ----
-!         ! Finishes trapezoidal integration
-!         Pdm = Sigma_d/2d0 *(Ih1+Ih2)
-!         ! Adjusts units
-!         Pdm = Pdm * km_SI**2 * Msun_SI / kpc_SI**3 * convertPressureSItoGaussian
-!         print *, 'conversion', km_SI**2 * Msun_SI / kpc_SI**3 * convertPressureSItoGaussian
-!
-!         print *, 'Pdm_new',Pdm
-!         print *, 'Pdm_new/Pdm_old',Pdm/Pdm_old
+
       endif
     endif
     ! Finishes calculation

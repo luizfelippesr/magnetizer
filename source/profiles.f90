@@ -8,7 +8,7 @@ module profiles
   double precision, dimension(:), allocatable :: etat, tau, Beq, alp_k
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
-  double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h, Om_h_extra
+  double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h, G_h
   double precision :: delta_r
   private :: prepare_profiles_module_public_variables
 contains
@@ -32,6 +32,7 @@ contains
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: d2Urdr2, Ur_kms, Uz_kms
     double precision, dimension(nx) :: Om_kmskpc, G_kmskpc
+    !double precision, dimension(nx) :: Om_h_extra, G_h_extra
     double precision, dimension(nx) :: etat_cm2s, etat_kmskpc
     double precision, dimension(nx) :: h_kpc, n_cm3, v_kms, alp_k_kms
     double precision, dimension(nx) :: Beq_mkG
@@ -67,10 +68,10 @@ contains
                              r_bulge, v_bulge, r_disk, v_disk, r_disk_min, &
                              Om_h, contract=p_halo_contraction)
     ! Extends the halo profile for the pressure calculation
-    call set_outer_grid()
-    call halo_rotation_curve(r_kpc_extra, baryon_fraction, r_halo, v_halo, &
-                             nfw_cs1, r_bulge, v_bulge, r_disk, v_disk, &
-                             r_disk_min, Om_h_extra, contract=p_halo_contraction)
+!     call set_outer_grid()
+!     call halo_rotation_curve(r_kpc_extra, baryon_fraction, r_halo, v_halo, &
+!                              nfw_cs1, r_bulge, v_bulge, r_disk, v_disk, &
+!                              r_disk_min, Om_h_extra, contract=p_halo_contraction)
 
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
@@ -78,9 +79,12 @@ contains
     ! Regularises
     rreg = r_kpc(minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1))
     call regularize(abs(r_kpc), rreg, Om_kmskpc)
+    call regularize(abs(r_kpc), rreg, Om_h)
 
     ! Computes the shear profile
     G_kmskpc = xder(Om_kmskpc)*x
+    G_h = xder(Om_h)*x
+!     G_h_extra = xder(Om_h_extra)*x
 
     ! If required, avoid bumps in the shear
     if (.not.p_allow_positive_shears) then
@@ -129,6 +133,8 @@ contains
       ! Computes h and rho solving for hydrostatic equilibrium
       call solve_hydrostatic_equilibrium_numerical(abs(r_kpc), B_actual, &
                                                    Om_kmskpc, G_kmskpc, &
+                                                   Om_h, G_h, &
+                                                   !Om_h_extra, G_h_extra, &
                                                    rho_cgs, h_kpc, Rm, &
                                                    Sigma_d_out=Sigma_d, &
                                                    nghost=nxghost)

@@ -79,7 +79,6 @@ contains
     call rescale_array(Om(nxghost+1:nx-nxghost), ts_om(it,:))
 
     if (p_extra_rotation_curve_outputs) then
-      print *, Om_h
       call rescale_array(Om_h(nxghost+1:nx-nxghost), ts_Om_h(it,:))
       call rescale_array(Om_b(nxghost+1:nx-nxghost), ts_Om_b(it,:))
       call rescale_array(Om_d(nxghost+1:nx-nxghost), ts_Om_d(it,:))

@@ -143,21 +143,21 @@ contains
     if (p_extra_pressure_outputs) then
       call IO_write_dataset('P', gal_id, ts_P, units='erg cm^-3', &
                             description='Pressure in the midplane.')
-      call IO_write_dataset('Pd', gal_id, ts_Pd, units='erg cm^-3',   &
-                            description='Contribution of the diffuse' &
-                            // ' gas to the pressure in the midplane')
-      call IO_write_dataset('Pm', gal_id, ts_Pm, units='erg cm^-3',     &
-                            description='Contribution of the molecular' &
-                            // ' gas to the pressure in the midplane')
-      call IO_write_dataset('Pstars', gal_id, ts_Pstars, units='erg cm^-3',&
-                            description='Contribution of the stars '       &
-                            // 'to the pressure in the midplane')
-      call IO_write_dataset('Pbulge', gal_id, ts_Pbulge, units='erg cm^-3',&
-                            description='Contribution of the stellar'      &
-                            // 'bulge to the pressure in the midplane')
-      call IO_write_dataset('Pdm', gal_id, ts_Pdm, units='erg cm^-3',  &
-                            description='Contribution of the dark matter' &
-                            // 'halo to the pressure in the midplane')
+      call IO_write_dataset('Pd', gal_id, ts_Pd, units='erg cm^-3',           &
+                            description='Contribution of the gravity of the ' &
+                            // 'diffuse gas to the pressure in the midplane')
+      call IO_write_dataset('Pm', gal_id, ts_Pm, units='erg cm^-3',           &
+                            description='Contribution of the gravity of the ' &
+                            // 'molecular gas to the pressure in the midplane')
+      call IO_write_dataset('Pstars', gal_id, ts_Pstars, units='erg cm^-3',   &
+                            description='Contribution of the gravity of the ' &
+                            // 'stars to the pressure in the midplane')
+      call IO_write_dataset('Pbulge', gal_id, ts_Pbulge, units='erg cm^-3',   &
+                            description='Contribution of the gravity of the ' &
+                            // 'stellar bulge to the pressure in the midplane')
+      call IO_write_dataset('Pdm', gal_id, ts_Pdm, units='erg cm^-3',            &
+                            description='Contribution of the gravity of the '    &
+                            // 'dark matter halo to the pressure in the midplane')
     endif
 
     call IO_finish_galaxy(gal_id)

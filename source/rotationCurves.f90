@@ -172,8 +172,6 @@ contains
 
   end subroutine halo_rotation_curve
 
-
-
   pure function halo_velocity(r, r_halo, v_halo, nfw_cs1) result(V)
     ! Computes the rotation curve associated with an NFW halo
     ! Warning: This ignores effects of adiabatic contraction!
@@ -200,14 +198,6 @@ contains
     A = v_halo**2 / (log(1d0+c)-c/(1d0+c))
     B = (log(1d0+c*y) - c*y/(1d0+c*y))/y
     v2 = A*B
-
-!     if (any(v2<v2_tol)) then
-!       ! This tolerance was introduced to deal with (otherwise harmless)
-!       ! numerical errors in the centre of the halo.
-!       call message('halo_rotation_curve: error, halo properties lead to' &
-!                    //' invalid rotation velocities! v2min=', minval(v2), &
-!                    info=0)
-!     endif
 
     V = sqrt(abs(v2))
 
@@ -284,7 +274,6 @@ contains
     real(fgsl_double) :: r_bulge, v_bulge, r_disk, v_disk, f_b
     real(fgsl_double) :: V02, Vr, Vd2, Vb2
     real(fgsl_double), dimension(1) :: Omega_tmp
-!     real(fgsl_double), target, dimension(10) :: p
     real(fgsl_double), pointer, dimension(:) :: p
 
     call c_f_pointer(params, p, [10])

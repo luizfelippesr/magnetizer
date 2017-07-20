@@ -9,7 +9,7 @@ module profiles
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
   double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h, G_h
-  double precision, dimension(:), allocatable :: P, Pd, Pm, Pstars, Pbulge, Pdm
+  double precision, dimension(:), allocatable :: P, Pd, Pm, Pstars, Pbulge, Pdm, P2
   double precision :: delta_r
   private :: prepare_profiles_module_public_variables
 contains
@@ -41,7 +41,7 @@ contains
     double precision, dimension(nx) :: rho_cgs
     double precision, dimension(nx) :: Sigma_d,Sigma_star, Rm
     double precision, parameter :: P_TOL=1e-10
-    double precision :: rreg
+    integer :: ireg
     double precision :: r_disk_min, baryon_fraction
     integer :: i_halfmass, i
 
@@ -68,24 +68,18 @@ contains
     call halo_rotation_curve(r_kpc, baryon_fraction, r_halo, v_halo, nfw_cs1, &
                              r_bulge, v_bulge, r_disk, v_disk, r_disk_min, &
                              Om_h, contract=p_halo_contraction)
-    ! Extends the halo profile for the pressure calculation
-!     call set_outer_grid()
-!     call halo_rotation_curve(r_kpc_extra, baryon_fraction, r_halo, v_halo, &
-!                              nfw_cs1, r_bulge, v_bulge, r_disk, v_disk, &
-!                              r_disk_min, Om_h_extra, contract=p_halo_contraction)
 
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
 
-    ! Regularises
-    rreg = r_kpc(minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1))
-    call regularize(abs(r_kpc), rreg, Om_kmskpc)
-    call regularize(abs(r_kpc), rreg, Om_h)
+    ! Regularises (Both total angular velocity profile and the halo's)
+    ireg = minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1)
+    call regularize(abs(r_kpc), ireg, Om_kmskpc)
+    call regularize(abs(r_kpc), ireg, Om_h)
 
     ! Computes the shear profile
     G_kmskpc = xder(Om_kmskpc)*x
     G_h = xder(Om_h)*x
-!     G_h_extra = xder(Om_h_extra)*x
 
     ! If required, avoid bumps in the shear
     if (.not.p_allow_positive_shears) then
@@ -157,7 +151,6 @@ contains
     if (h_kpc(i_halfmass)>r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
-!       construct_profiles = .false.
     endif
 
     if (p_extra_pressure_outputs) then
@@ -168,6 +161,7 @@ contains
                                                  Pd(i), Pm(i), Pstars(i),   &
                                                  Pbulge(i), Pdm(i))
       enddo
+      P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om_kmskpc, G_kmskpc, h_kpc)
     endif
 
     ! NUMBER DENSITY PROFILE
@@ -251,39 +245,40 @@ contains
   end function construct_profiles
 
 
-  subroutine regularize(rx, r_xi, Omega, Shear)
+  subroutine regularize(rx, i_xi, Omega, Shear)
     ! Regularizes the angular velocity and shear, making the centre of the
     ! galaxy behave as a rotating solid body (with constant angular velocity
     ! Omega = Omega(r_xi)).
     !
     ! Input: rx -> the radii where the rotation curve will be computed
-    ! Inout: Omega -> angular velocity profile
-    !        Shear  -> shear profile
+    !        i_xi -> index of the regularization radius
+    !        Omega -> angular velocity profile
+    !        Shear  -> shear profile (optional)
     ! Info:  \Omega(r) = exp(-r_\xi/r) [\tilde\Omega(r) -\Omega(r_\xi)]
     !                    + \Omega(r_\xi)
     !
     double precision, dimension(:), intent(in)  :: rx
-    double precision, intent(in)  :: r_xi
+    integer, intent(in)  :: i_xi
+    double precision :: r_xi
     double precision, dimension(size(rx)), intent(inout) :: Omega
     double precision, dimension(size(rx)), intent(inout), optional :: Shear
     double precision, dimension(size(rx)) :: exp_minus_rxi_over_r
-!     double precision, dimension(size(rx)) :: exp_things
-    double precision, dimension(size(rx)) :: rxi_over_r_2
+    double precision, dimension(size(rx)) :: rxi_over_r_k
     double precision :: Omega_xi
     double precision, parameter :: small_factor=1e-15
-    double precision, parameter :: s=1d0
+    double precision, parameter :: k=1d0
     ! Finds the index of r=r_xi and sets Omega_xi
-    Omega_xi = 1.5d0*Omega( minloc(abs(rx-r_xi),1) )
+    r_xi = rx(i_xi)
+    Omega_xi = Omega(i_xi)
 
     ! Be cautious about very small radii
     ! (to avoid NaNs still keeping Omega -> Omega_xi for r->0)
     where (rx > small_factor*r_xi)
-      rxi_over_r_2 = (r_xi/rx)**2
+      rxi_over_r_k = (r_xi/rx)**k
     elsewhere
       exp_minus_rxi_over_r = 0.0
       Omega = 0.0
-
-      rxi_over_r_2 = 0.0
+      rxi_over_r_k = 0.0
     endwhere
 
     if (present(Shear)) then
@@ -293,15 +288,15 @@ contains
     endif
 
     ! Explicitly avoids underflows too
-    where (rxi_over_r_2 < 1e12)
-      exp_minus_rxi_over_r = exp( -rxi_over_r_2 )
+    where (rxi_over_r_k < 1e12)
+      exp_minus_rxi_over_r = exp( -rxi_over_r_k )
     elsewhere
       exp_minus_rxi_over_r =0
     endwhere
 
     ! Regularises Shear
     if (present(Shear)) then
-      Shear = exp_minus_rxi_over_r*(2.0*rxi_over_r_2*(Omega-Omega_xi)+Shear)
+      Shear = exp_minus_rxi_over_r*(k*rxi_over_r_k*(Omega-Omega_xi)+Shear)
     endif
     ! Regularises Omega
     Omega = exp_minus_rxi_over_r*(Omega-Omega_xi)+Omega_xi

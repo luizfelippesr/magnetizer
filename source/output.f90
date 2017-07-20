@@ -122,6 +122,7 @@ contains
                           ts_rkpc,                                  &
                           units='kpc',                              &
                           description='Radius')
+
     if (p_extra_rotation_curve_outputs) then
       call IO_write_dataset('Omega_h', gal_id,                         &
                             ts_Om_h,                                   &
@@ -158,6 +159,10 @@ contains
       call IO_write_dataset('Pdm', gal_id, ts_Pdm, units='erg cm^-3',            &
                             description='Contribution of the gravity of the '    &
                             // 'dark matter halo to the pressure in the midplane')
+      call IO_write_dataset('P2', gal_id, ts_P2, units='erg cm^-3',  &
+                            description='Correction to the pressure ' &
+                            // ' contribution associated with the fact that ' &
+                            // 'the disc is not perfectly thin')
     endif
 
     call IO_finish_galaxy(gal_id)

@@ -41,6 +41,15 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   double precision, allocatable, dimension(:,:),public :: ts_P, ts_Pd
   double precision, allocatable, dimension(:,:),public :: ts_Pm, ts_Pstars
   double precision, allocatable, dimension(:,:),public :: ts_Pbulge, ts_Pdm
+  double precision, allocatable, dimension(:,:),public :: ts_P2
+
+  ! The following would be much better than this multitude of public arrays:
+  type ts_array
+    character(len=10) :: name
+    double precision, allocatable, dimension(:,:) :: value
+  end type
+
+  type(ts_array), dimension(:), allocatable, public :: ts_data
 
 contains
   subroutine make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
@@ -58,6 +67,8 @@ contains
     double precision, dimension(:,:), intent(in) :: f
     double precision, dimension(:), intent(in) :: Bzmod
     double precision, dimension(:), intent(in) :: alp
+
+
 
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
     if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
@@ -109,6 +120,7 @@ contains
       call rescale_array(Pstars(nxghost+1:nx-nxghost), ts_Pstars(it,:))
       call rescale_array(Pbulge(nxghost+1:nx-nxghost), ts_Pbulge(it,:))
       call rescale_array(Pdm(nxghost+1:nx-nxghost), ts_Pdm(it,:))
+      call rescale_array(P2(nxghost+1:nx-nxghost), ts_P2(it,:))
     endif
 
 
@@ -210,6 +222,8 @@ contains
       ts_Pbulge = INVALID
       allocate(ts_Pdm(max_outputs,p_nx_ref))
       ts_Pdm = INVALID
+      allocate(ts_P2(max_outputs,p_nx_ref))
+      ts_P2 = INVALID
     endif
 
 
@@ -246,6 +260,7 @@ contains
         deallocate(ts_Pstars)
         deallocate(ts_Pbulge)
         deallocate(ts_Pdm)
+        deallocate(ts_P2)
       endif
 
       deallocate(ts_G)

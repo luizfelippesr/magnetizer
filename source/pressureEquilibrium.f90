@@ -73,9 +73,9 @@ contains
     !
     real(fgsl_double) :: minimum_h, maximum_h, guess_h
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
-    real(fgsl_double), target, dimension(9) :: parameters_array
+    real(fgsl_double), target, dimension(9) :: parameters_array, parameters_array_alt
     integer :: i, i_rreg, nghost_actual
-    type(c_ptr) :: params_ptr
+    type(c_ptr) :: params_ptr, params_ptr_alt
 
     if (present(nghost)) then
       nghost_actual = nghost
@@ -98,6 +98,7 @@ contains
 
     ! Prepares a pointer to parameters_array
     params_ptr = c_loc(parameters_array)
+    params_ptr_alt = c_loc(parameters_array_alt)
 
     ! Sets up a guessed initial search interval for r=0
     minimum_h = 1d-3*r_disk
@@ -138,16 +139,24 @@ contains
       parameters_array(8) = G_h(i)
       parameters_array(9) = B(i)
 
+      parameters_array_alt = parameters_array
+      parameters_array_alt(5) = 0d0
+      parameters_array_alt(6) = 0d0
+
       ! Initially tests whether the interval contains a root
       ! (this assumes that is an odd number of roots in the interval,
       ! hopefully only one root!)
-      pressure_equation_min = pressure_equation(minimum_h, params_ptr)
-      pressure_equation_max = pressure_equation(maximum_h, params_ptr)
+      pressure_equation_min = pressure_equation(minimum_h, params_ptr_alt)
+      pressure_equation_max = pressure_equation(maximum_h, params_ptr_alt)
 
       if (sign(1d0,pressure_equation_min) /= sign(1d0,pressure_equation_max)) then
         ! If there is a change in sign, finds the root
-        h_d(i) = FindRoot(pressure_equation, params_ptr, &
+        h_d(i) = FindRoot(pressure_equation, params_ptr_alt, &
                           [minimum_h, maximum_h])
+        if (p_enable_P2) then
+            h_d(i) = FindRoot(pressure_equation, params_ptr, &
+                              [h_d(i)*0.5, h_d(i)*1.5])
+        endif
       else
         ! Otherwise, tries again with a larger interval (i.e. a second chance)
         minimum_h = minimum_h/2d0
@@ -253,12 +262,13 @@ contains
                                             Om_h, G_h)
     ! Computes the midplane pressure, from gravity (the radial part)
     P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om, G, h)
+    if (P2>0) P2 = 0
 
     ! Computes the midplane pressure, from the density
     rho_cgs = density_to_scaleheight(h, Sigma_d)
     Pgas = computes_midplane_ISM_pressure_from_B_and_rho(B, rho_cgs)
 
-    pressure_equation = P1 - Pgas + P2
+    pressure_equation = P1 + P2 - Pgas
 
   end function pressure_equation
 
@@ -555,7 +565,6 @@ contains
         ! major approximations
         Pdm =  Om_h*(1.5d0*Om_h+G_h) * (km_SI/kpc_SI)**2
         Pdm = Pdm * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
-
       endif
     endif
     ! Finishes calculation
@@ -600,11 +609,10 @@ contains
     ! Output: array containing the pressure in Gaussian units
 
     Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
-    Om_SI = Om * km_SI/kpc_SI
-    S_SI  = S  * km_SI/kpc_SI
-    h_d_SI = h_d * kpc_SI
 
-    P = - Om_SI*(Om_SI + S_SI)*h_d_SI*Sigma_d_SI*convertPressureSItoGaussian
+    P = Om *(Om + S) * (km_SI/kpc_SI)**2
+    P = P * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
+
   end function computes_midplane_ISM_pressure_P2
 
   pure function integrand_stars(x)

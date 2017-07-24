@@ -76,6 +76,7 @@ contains
     ireg = minloc(abs(r_kpc - p_rreg_to_rdisk*r_disk),1)
     call regularize(abs(r_kpc), ireg, Om_kmskpc)
     call regularize(abs(r_kpc), ireg, Om_h)
+    call regularize(abs(r_kpc), ireg, Om_b)
 
     ! Computes the shear profile
     G_kmskpc = xder(Om_kmskpc)*x

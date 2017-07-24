@@ -40,7 +40,7 @@ contains
   subroutine solve_hydrostatic_equilibrium_numerical( r, B, &
                                                       Om, G, &
                                                       Om_h, G_h, &
-                                                      !Om_h_e, G_h_e, &
+                                                      Om_b, G_b, &
                                                       rho_d, h_d, &
                                                       Rm_out, &
                                                       Sigma_star_out, &
@@ -62,7 +62,7 @@ contains
     use messages, only: error_message
     double precision, dimension(:), intent(in) :: r, B, Om, G
     double precision, dimension(:), target, intent(in) :: Om_h, G_h
-    !double precision, dimension(:), target, intent(in) :: Om_h_e, G_h_e
+    double precision, dimension(:), target, intent(in) :: Om_b, G_b
     integer, intent(in), optional :: nghost
     double precision, dimension(size(r)), intent(out) :: rho_d, h_d
     double precision, dimension(size(r)), intent(out), optional ::    &
@@ -71,9 +71,9 @@ contains
     double precision, dimension(size(r)) :: Rm
     double precision :: rs, rs_g
     !
-    real(fgsl_double) :: minimum_h, maximum_h, guess_h
+    real(fgsl_double) :: minimum_h, maximum_h, guess_h, tmp
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
-    real(fgsl_double), target, dimension(9) :: parameters_array, parameters_array_alt
+    real(fgsl_double), target, dimension(11) :: parameters_array, parameters_array_alt
     integer :: i, i_rreg, nghost_actual
     type(c_ptr) :: params_ptr, params_ptr_alt
 
@@ -137,7 +137,9 @@ contains
       endif
       parameters_array(7) = Om_h(i)
       parameters_array(8) = G_h(i)
-      parameters_array(9) = B(i)
+      parameters_array(9) = Om_b(i)
+      parameters_array(10) = G_b(i)
+      parameters_array(11) = B(i)
 
       parameters_array_alt = parameters_array
       parameters_array_alt(5) = 0d0
@@ -146,17 +148,13 @@ contains
       ! Initially tests whether the interval contains a root
       ! (this assumes that is an odd number of roots in the interval,
       ! hopefully only one root!)
-      pressure_equation_min = pressure_equation(minimum_h, params_ptr_alt)
-      pressure_equation_max = pressure_equation(maximum_h, params_ptr_alt)
+      pressure_equation_min = pressure_equation(minimum_h, params_ptr)
+      pressure_equation_max = pressure_equation(maximum_h, params_ptr)
 
       if (sign(1d0,pressure_equation_min) /= sign(1d0,pressure_equation_max)) then
         ! If there is a change in sign, finds the root
-        h_d(i) = FindRoot(pressure_equation, params_ptr_alt, &
+        h_d(i) = FindRoot(pressure_equation, params_ptr, &
                           [minimum_h, maximum_h])
-        if (p_enable_P2) then
-            h_d(i) = FindRoot(pressure_equation, params_ptr, &
-                              [h_d(i)*0.5, h_d(i)*1.5])
-        endif
       else
         ! Otherwise, tries again with a larger interval (i.e. a second chance)
         minimum_h = minimum_h/2d0
@@ -177,13 +175,25 @@ contains
           h_d(i) = -1d0 ! Signals serious error!
         endif
       endif
-
       rho_d(i) = density_to_scaleheight(h_d(i), Sigma_d(i))
+
+
+      ! emergency fix --------------
+      !if (i> nghost_actual+2 .and. h_d(i)<0) then
+      !  h_d(i) = guess_h
+      !  stop
+      !endif
+      ! end emergency fix --------------
 
       ! Uses previous h value to set up search interval for the next one.
       ! The guess assumes an exponentially increasing scaleheight
       if (i/=size(r)) then
-        guess_h = h_d(i)*exp( (r(i+1)-r(i))/rs )
+!         if (h_d(i)>0) then
+            guess_h = h_d(i)*exp( (r(i+1)-r(i))/rs )
+!         else
+!             ! If previous calculation was an error, apply a patch
+!             guess_h = h_d(i-1)*exp( (r(i+1)-r(i-1))/rs )
+!         endif
         maximum_h = guess_h*1.2d0 ! assumes the root will be within \pm 20%
         minimum_h = guess_h*0.8d0 ! assumes the root will be within \pm 20%
       end if
@@ -239,11 +249,12 @@ contains
     type(c_ptr), value :: params
     real(c_double) :: pressure_equation
     real(fgsl_double) :: r, Sigma_d, Sigma_star, R_m
-    real(fgsl_double) :: B, Om, G, rho_cgs, Om_h, G_h
+    real(fgsl_double) :: B, Om, G, rho_cgs
+    real(fgsl_double) :: Om_h, G_h, Om_b, G_b
     real(fgsl_double) :: P1, P2, Pgas
     real(fgsl_double), pointer, dimension(:) :: p
 
-    call c_f_pointer(params, p, [9])
+    call c_f_pointer(params, p, [11])
 
     ! Converts argument and array of parameters into small "0-arrays"
     ! (this allows using the previous routines...)
@@ -255,11 +266,13 @@ contains
     G          = p(6)
     Om_h       = p(7)
     G_h        = p(8)
-    B          = p(9)
+    Om_b       = p(9)
+    G_b        = p(10)
+    B          = p(11)
 
     ! Computes the midplane pressure, from gravity (without radial part)
     P1 = computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, h, &
-                                            Om_h, G_h)
+                                            Om_h, G_h, Om_b, G_b)
     ! Computes the midplane pressure, from gravity (the radial part)
     P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om, G, h)
     if (P2>0) P2 = 0
@@ -460,9 +473,9 @@ contains
 
 
   function computes_midplane_ISM_pressure_P1(r, Sigma_d, Sigma_star, R_m, &
-                                             h_d, Om_h, G_h, Pd_out, Pm_out, &
-                                             Pstars_out, Pbulge_out, Pdm_out &
-                                              ) result(P)
+                                             h_d, Om_h, G_h, Om_b, G_b,   &
+                                             Pd_out, Pm_out, Pstars_out,  &
+                                             Pbulge_out, Pdm_out) result(P)
     ! Computes the pressure in the midplane using Sigma_g, Sigma_star and h_d
     ! Input: Sigma_g -> Surface density profile of (total) gas (Msun/kpc^2)
     !        Sigma_stars -> Surface density profile of stars (Msun/kpc^2)
@@ -471,7 +484,8 @@ contains
     ! Output: array containing the pressure in Gaussian units
     use input_constants
     use Integration
-    double precision, intent(in) :: r, Sigma_d, Sigma_star, R_m, h_d, Om_h, G_h
+    double precision, intent(in) :: r, Sigma_d, Sigma_star, R_m, h_d
+    double precision, intent(in) :: Om_h, G_h, Om_b, G_b
     double precision,intent(out),optional :: Pd_out,Pm_out,Pstars_out,Pbulge_out,Pdm_out
     double precision :: P, Pm, Pstars, Pdm, Pbulge, Pd
     double precision :: Sigma_d_SI, Sigma_star_SI
@@ -532,16 +546,21 @@ contains
 
     ! Galaxy stellar bulge
     if (p_use_Pbulge .and. Mstars_bulge>Mstars_bulge_min) then
-      ! Prepares global variables
-      rb = r_bulge * rb_to_r50
-      rho_b_SI = Mstars_bulge*Msun_SI/(2d0*pi)*(rb*kpc_SI)**(-3)
-      i_hd_to_rb = h_d/rb
-      i_R_to_Rb = r/rb
-      ! Numerically integrates and computes result
-      I_bulge = Integrate(small, 7d0, integrand_bulge, integrandFunction,  &
-                          integrationWorkspace, toleranceRelative=rel_TOL, &
-                          toInfinity=.false., reset=integrationReset)
-      Pbulge = preFactor * 2d0 * rho_b_SI * (h_d*kpc_SI) * I_bulge
+      if (p_test_bulge_old) then
+        ! Prepares global variables
+        rb = r_bulge * rb_to_r50
+        rho_b_SI = Mstars_bulge*Msun_SI/(2d0*pi)*(rb*kpc_SI)**(-3)
+        i_hd_to_rb = h_d/rb
+        i_R_to_Rb = r/rb
+        ! Numerically integrates and computes result
+        I_bulge = Integrate(small, 7d0, integrand_bulge, integrandFunction,  &
+                            integrationWorkspace, toleranceRelative=rel_TOL, &
+                            toInfinity=.false., reset=integrationReset)
+        Pbulge = preFactor * 2d0 * rho_b_SI * (h_d*kpc_SI) * I_bulge
+      else
+        Pbulge =  Om_b*(1.5d0*Om_b+G_b) * (km_SI/kpc_SI)**2
+        Pbulge = Pbulge * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
+      endif
     else
       Pbulge = 0d0
     endif

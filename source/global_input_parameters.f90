@@ -234,7 +234,8 @@ module global_input_parameters
   logical :: p_halo_contraction = .false.
   logical :: p_extra_rotation_curve_outputs = .false.
   logical :: p_extra_pressure_outputs = .false.
-  logical :: p_test_DM_old = .true.
+  logical :: p_test_DM_old = .false. ! TO BE REMOVED
+  logical :: p_test_bulge_old = .false. ! TO BE REMOVED
 
   namelist /ISM_and_disk_parameters/ &
     p_ISM_sound_speed_km_s, p_ISM_kappa, p_ISM_xi, p_ISM_gamma, &
@@ -248,7 +249,7 @@ module global_input_parameters
     p_use_legacy_cubic_solver, p_enable_P2, p_truncates_within_rreg, &
     p_minimum_density, p_sech2_profile, p_use_Pdm, p_use_Pbulge, &
     p_halo_contraction, p_extra_rotation_curve_outputs, &
-    p_extra_pressure_outputs, p_test_DM_old
+    p_extra_pressure_outputs, p_test_DM_old, p_test_bulge_old
 
 
   ! -------------------------------------------------------

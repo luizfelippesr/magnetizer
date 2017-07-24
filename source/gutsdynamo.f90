@@ -377,7 +377,7 @@ module equ  !Contains the partial differential equations to be solved
                    !Ohmic vertical diffusion
                    +Rm_inv*etat*(-pi**2/4/h**2*Bp           &
                    !Ohmic radial diffusion
-                   +lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2))                   
+                   +lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2))
                    ! Following commented out for simplicity
                    !-lambda*dUrdr*Bp   -lambda*Ur*dBpdr
 !
@@ -406,6 +406,9 @@ module equ  !Contains the partial differential equations to be solved
                    -Fp)
                    !Following commented out for now but may be useful later
                    !+ctau*detatdz*dBpdz
+!                    #############
+!                    FLOOR?????
+!                    #############
 !
         if (.not.Alp_squared) then
           !Remove alpha^2 effect if turned off

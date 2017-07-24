@@ -8,7 +8,7 @@ module profiles
   double precision, dimension(:), allocatable :: etat, tau, Beq, alp_k
   double precision, dimension(:), allocatable :: Uz, Ur, dUrdr
   double precision, dimension(:), allocatable :: Om, G
-  double precision, dimension(:), allocatable :: Om_d, Om_b, Om_h, G_h
+  double precision, dimension(:), allocatable :: Om_d, Om_b, G_b, Om_h, G_h
   double precision, dimension(:), allocatable :: P, Pd, Pm, Pstars, Pbulge, Pdm, P2
   double precision :: delta_r
   private :: prepare_profiles_module_public_variables
@@ -80,6 +80,7 @@ contains
     ! Computes the shear profile
     G_kmskpc = xder(Om_kmskpc)*x
     G_h = xder(Om_h)*x
+    G_b = xder(Om_b)*x
 
     ! If required, avoid bumps in the shear
     if (.not.p_allow_positive_shears) then
@@ -129,7 +130,7 @@ contains
       call solve_hydrostatic_equilibrium_numerical(abs(r_kpc), B_actual, &
                                                    Om_kmskpc, G_kmskpc, &
                                                    Om_h, G_h, &
-                                                   !Om_h_extra, G_h_extra, &
+                                                   Om_b, G_b, &
                                                    rho_cgs, h_kpc, &
                                                    Rm_out=Rm, &
                                                    Sigma_star_out=Sigma_star, &
@@ -162,6 +163,9 @@ contains
                                                  Pbulge(i), Pdm(i))
       enddo
       P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om_kmskpc, G_kmskpc, h_kpc)
+      where (P2>0)
+        P2 = 0
+      endwhere
     endif
 
     ! NUMBER DENSITY PROFILE
@@ -266,7 +270,7 @@ contains
     double precision, dimension(size(rx)) :: rxi_over_r_k
     double precision :: Omega_xi
     double precision, parameter :: small_factor=1e-15
-    double precision, parameter :: k=1d0
+    double precision, parameter :: k=2d0
     ! Finds the index of r=r_xi and sets Omega_xi
     r_xi = rx(i_xi)
     Omega_xi = Omega(i_xi)

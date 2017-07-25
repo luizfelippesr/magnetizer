@@ -116,6 +116,8 @@ module initial_conditions  !Set initial conditions
           Ncells= abs(3.d0*r*Delta_r*h/l**3/lambda**2)
           !Floor magnetic field
           Bseed= Bseed*exp(-Delta_r/2/abs(r))/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
+          f(:,1)=-Bseed
+          f(:,2)= Bseed
         case default
           print *, 'init_seed: Invalid option ',p_seed_choice
           stop

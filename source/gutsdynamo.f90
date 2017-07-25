@@ -267,46 +267,30 @@ module equ  !Contains the partial differential equations to be solved
         !Floor magnetic field
         B_floor= exp(-Delta_r/2./abs(r))*brms/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
         B_floor = B_floor * Bfloor_sign * C_floor
-        !!Old version:
-        !do i=nxghost+1,nx-nxghost
-        !  if (abs(Bp(i))==maxval(abs(Bp))) then
-        !    rmax=r(i)  !radius at max of Bp(r)
-        !    delta_r= 2*dsqrt(abs(Bp(i)/d2Bpdr2(i)))  !width of Gaussian approx
-        !                                             ! to Bp(r)
-        !    hmax=h(i)  !scale height at max of Bp(r)
-        !    lmax=l(i)  !turbulent scale at max of Bp(r)
-        !  endif
-        !enddo
-        !Ncells= 3.d0*rmax*delta_r*hmax/lmax**3/lambda**2
-        !brms= fmag*Beq
-        !B_floor= brms/dsqrt(Ncells)*lmax/delta_r*lambda/3 !brms/dsqrt(Ncells)*lmax/delta_r*lambda
-        !B_floor=B_floor*abs(r/rmax)**(1.d0/2)*exp(-(r-rmax)**2/2/(delta_r/2)**2)  !multiply by r^(1/2)*(renormalized Gaussian of width delta_r/2)
-!mark2
-        !alp= alp*(1.d0 +B_floor**2/Bsqtot)  !Formula for simple alpha quenching
       else
         Afloor= 0d0
         B_floor= 0d0
       endif
 
-!     LIST OF VARIABLE NAMES FOR f ARRAY
-!
-!     UNDER FOSA          UNDER TAU APPROXIMATION
-!     f(:,1)=Br           f(:,1)=Br
-!     f(:,2)=Bp           f(:,2)=Bp
-!     f(:,3)=alp_m        f(:,3)=Fr
-!                         f(:,4)=Fp
-!                         f(:,5)=Er
-!                         f(:,6)=Ep
-!                         f(:,7)=alp_m
-!
-!     METHOD: ALL ARRAYS ARE 2-DIMENSIONAL
+      !     LIST OF VARIABLE NAMES FOR f ARRAY
+      !
+      !     UNDER FOSA          UNDER TAU APPROXIMATION
+      !     f(:,1)=Br           f(:,1)=Br
+      !     f(:,2)=Bp           f(:,2)=Bp
+      !     f(:,3)=alp_m        f(:,3)=Fr
+      !                         f(:,4)=Fp
+      !                         f(:,5)=Er
+      !                         f(:,6)=Ep
+      !                         f(:,7)=alp_m
+      !
+      !     METHOD: ALL ARRAYS ARE 2-DIMENSIONAL
 
-!       r(nxghost+1)=0.000001d0  ! LFSR: this seems to be spurious
+      !r(nxghost+1)=0.000001d0  ! LFSR: this seems to be spurious
       dalp_mdr(nxghost+1)=0.d0
-!
+
       if (.not.Damp) then
         ! CASE 1: FOSA (tau-->0 LIMIT)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY
-        !            Vertical velocity terms
+        ! dBr/dt    Vertical velocity terms
         dfdt(:,1)= -C_U*Uz*Br/h                                               &
                    ! alpha effect
                    -2d0/pi/h*ctau*alp*Bp                                      &
@@ -317,7 +301,7 @@ module equ  !Contains the partial differential equations to be solved
                    ! Following commented out for simplicity
                    !-lambda*Ur*Br/r -lambda*Ur*dBrdr
 
-                   !Omega effect
+        ! dBp/dt    Omega effect
         dfdt(:,2)=  G*Br                                                       &
                    !Vertical velocity terms
                    -C_U*Uz*Bp/h                                                &
@@ -335,10 +319,11 @@ module equ  !Contains the partial differential equations to be solved
                    !   -lambda*dUrdr*Bp -lambda*Ur*dBpdr
 
         if (.not.Alp_squared) then
-          ! Remove alpha^2 effect if turned off
+          ! dBp/dt   Remove alpha^2 effect if turned off
           dfdt(:,2)= dfdt(:,2) +2.d0/pi/h*ctau*alp*Br
         endif
         if (Dyn_quench) then
+          ! dalp_m/dt
           dfdt(:,3)= -2*(h0_kpc/l_kpc)**2*etat*(                                       &
                      !Emf.B term 1 (alpha)
                      ctau*alp*(Br**2+Bp**2+0d0*Bzmod**2)/Beq**2                        &
@@ -357,7 +342,7 @@ module equ  !Contains the partial differential equations to be solved
         endif
       else
 !       CASE 2: MTA (FINITE tau)--NOTE: dfdt BLOWS UP AT ORIGIN BUT SET IT TO 0 ANYWAY
-                   !Curl of emf from equation 3
+        ! dBr/dt    Curl of emf from equation 3
         dfdt(:,1)=  Fr                                      &
                    !Vertical velocity
                    -C_U*Uz*Br/h                             &
@@ -367,8 +352,8 @@ module equ  !Contains the partial differential equations to be solved
                    +lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2))                     
                    ! Following commented out for simplicity
                    !-lambda*Ur*Br/r -lambda*Ur*dBrdr
-!
-                   !Curl of emf from equation 4
+
+        ! dBp/dt    Curl of emf from equation 4
         dfdt(:,2)=  Fp                                      &
                    !Omega effect
                    +G*Br                                    &
@@ -380,7 +365,8 @@ module equ  !Contains the partial differential equations to be solved
                    +lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2))
                    ! Following commented out for simplicity
                    !-lambda*dUrdr*Bp   -lambda*Ur*dBpdr
-!
+
+        ! dFr/dt
         dfdt(:,3)=  tau**(-1)*(                                      &
                    !alpha effect
                    -2d0/pi/h*ctau*alp*Bp                             &
@@ -392,7 +378,8 @@ module equ  !Contains the partial differential equations to be solved
                    -Fr)                 
                    !Following commented out for now but may be useful later
                    !+ctau*( detatdz*dBrdz -detatdz*lambda*dBzdr)
-!
+
+        ! dFp/dt
         dfdt(:,4)=  tau**(-1)*(                                      &
                    !alpha^2 effect
                    -2d0/pi/h*ctau*alp*Br                             &
@@ -409,39 +396,41 @@ module equ  !Contains the partial differential equations to be solved
 !                    #############
 !                    FLOOR?????
 !                    #############
-!
         if (.not.Alp_squared) then
-          !Remove alpha^2 effect if turned off
+          ! dFp/dt   Remove alpha^2 effect if turned off
           dfdt(:,4)= dfdt(:,4) +tau**(-1)*2d0/pi/h*ctau*alp*Br           
         endif
         if (Dyn_quench) then
-          dfdt(:,5)=  tau**(-1)*(                                                       &
+          ! dEr/dt
+          dfdt(:,5)=  tau**(-1)*(                                    &
                      !alpha part of E.B (r-component)
-                      ctau*alp*Br                                                       &
+                      ctau*alp*Br                                    &
                      !etat part of E.B (r-component)
-                     -ctau*etat*pi/2/h*Bp                                               &
+                     -ctau*etat*pi/2/h*Bp                            &
                      !Damping term
                      -Er)
-!
-          dfdt(:,6)=  tau**(-1)*(                                                       &
+
+          ! dEp/dt
+          dfdt(:,6)=  tau**(-1)*(                                    &
                      !alpha part of Emf.B (phi-component)
-                      ctau*alp*Bp                                                       &
+                      ctau*alp*Bp                                    &
                      !etat part of Emf.B (phi-component)
                      +ctau*etat*pi/2/h*Br*(1d0 +1d0/2/pi**(3d0/2)*abs(Dyn_gen)**(1d0/2)) & 
                      !Damping term
                      -Ep)
-!
-          dfdt(:,7)= -2*(h0_kpc/l_kpc)**2*etat*(                                         &
+
+          ! dalp_m/dt
+          dfdt(:,7)= -2*(h0_kpc/l_kpc)**2*etat*(                     &
                      !Emf.B
-                     (Er*Br +Ep*Bp)/Beq**2                                               & 
+                     (Er*Br +Ep*Bp)/Beq**2                           &
                      !Ohmic dissipation
-                     +Rm_inv*alp_m)                                                      &
+                     +Rm_inv*alp_m)                                  &
                      !Vertical velocity
-                     -C_a*alp_m*Uz/h                                                     &
+                     -C_a*alp_m*Uz/h                                 &
                      !Turbulent vertical diffusion
-                     +R_kappa*etat*(C_d/h**2*alp_m                                       &
+                     +R_kappa*etat*(C_d/h**2*alp_m                   &
                      !Turbulent radial diffusion propto etat
-                     +lambda**2*(d2alp_mdr2 +dalp_mdr/r))                                &
+                     +lambda**2*(d2alp_mdr2 +dalp_mdr/r))            &
                      !Turbulent radial diffusion propto detatdr
                      +R_kappa*detatdr*lambda**2*dalp_mdr
                      ! Following commented out for simplicity

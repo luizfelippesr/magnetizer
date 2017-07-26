@@ -146,6 +146,7 @@ contains
     if (any(h_kpc<0)) then
       call error_message('construct_profiles', 'Negative scaleheight detected.',&
                          code='H')
+      rho_cgs = 0d0
       construct_profiles = .false.
     endif
 

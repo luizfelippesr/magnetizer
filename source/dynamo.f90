@@ -102,7 +102,9 @@ module dynamo
               call init_seed(f)
               call estimate_Bzmod(f)
             endif
-            elliptical = .false.
+            if (able_to_construct_profiles) then
+              elliptical = .false.
+            endif
         endif
 
         next_output = .false.

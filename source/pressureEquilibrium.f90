@@ -177,7 +177,7 @@ contains
                               'Initial guess does NOT include a change of sign.'&
                               // ' Unable to find the root (i.e. h and rho).'   &
                               // ' Will continue using previous h value.', code='P')
-            h_d(i-1) = h_d(i)
+            h_d(i) = h_d(i-1)
             error_count = error_count + 1
           else
             ! Otherwise signals serious error!

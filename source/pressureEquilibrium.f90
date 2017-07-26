@@ -74,7 +74,7 @@ contains
     real(fgsl_double) :: minimum_h, maximum_h, guess_h, tmp
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
     real(fgsl_double), target, dimension(11) :: parameters_array, parameters_array_alt
-    integer :: i, i_rreg, nghost_actual
+    integer :: i, i_rreg, nghost_actual, error_count
     type(c_ptr) :: params_ptr, params_ptr_alt
 
     if (present(nghost)) then
@@ -82,6 +82,9 @@ contains
     else
       nghost_actual = 0
     endif
+
+    error_count = 0
+
     ! Prepares constants
     rs = constDiskScaleToHalfMassRatio * r_disk ! kpc
     rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs ! kpc
@@ -168,15 +171,23 @@ contains
                         [minimum_h, maximum_h])
         else
           ! If the second chance fails, reports the error
-          call error_message('solve_hydrostatic_equilibrium_numerical',        &
-                             'Initial guess does NOT include a change of sign.'&
-                             // ' Unable to find the root (i.e. h and rho).'   &
-                             // ' Will using previous h value.', code='P')
-          h_d(i) = -1d0 ! Signals serious error!
+          if (error_count<3) then
+            ! If it only happened a few times, apply a rough patch
+            call error_message('solve_hydrostatic_equilibrium_numerical',        &
+                              'Initial guess does NOT include a change of sign.'&
+                              // ' Unable to find the root (i.e. h and rho).'   &
+                              // ' Will continue using previous h value.', code='P')
+            h_d(i-1) = h_d(i)
+            error_count = error_count + 1
+          else
+            ! Otherwise signals serious error!
+            h_d = -1
+            rho_d = 0d0
+            return
+          endif
         endif
       endif
       rho_d(i) = density_to_scaleheight(h_d(i), Sigma_d(i))
-
 
       ! emergency fix --------------
       !if (i> nghost_actual+2 .and. h_d(i)<0) then

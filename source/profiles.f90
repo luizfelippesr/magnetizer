@@ -142,20 +142,20 @@ contains
                             abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
     endif
 
-    ! Traps possible aberrant values for the scale height
+    ! Traps possible errors in the calculation of the scale height
     if (any(h_kpc<0)) then
       call error_message('construct_profiles', 'Negative scaleheight detected.',&
                          code='H')
       construct_profiles = .false.
     endif
 
-    ! Stricter(ish) trap: h/r<1.5 at a half mass radius
+    ! Stricter trap: h/r at a half mass radius
     if (h_kpc(i_halfmass)>r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')
     endif
 
-    if (p_extra_pressure_outputs) then
+    if (p_extra_pressure_outputs .and. construct_profiles) then
       do i=1,size(r_kpc)
         P(i) = computes_midplane_ISM_pressure_P1(r_kpc(i), Sigma_d(i),      &
                                                  Sigma_star(i), Rm(i),      &

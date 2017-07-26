@@ -326,12 +326,15 @@ contains
     call check_allocate(dUrdr)
     call check_allocate(Om)
     call check_allocate(Om_b)
+    call check_allocate(G_b)
     call check_allocate(Om_d)
     call check_allocate(Om_h)
     call check_allocate(G)
+    call check_allocate(G_h)
 
     if (p_extra_pressure_outputs) then
       call check_allocate(P)
+      call check_allocate(P2)
       call check_allocate(Pd)
       call check_allocate(Pm)
       call check_allocate(Pstars)

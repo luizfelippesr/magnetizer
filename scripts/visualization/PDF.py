@@ -56,11 +56,13 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
     """
 
     if ax is None:
-        ax = plt.figure()
+        ax = plt.subplot(1,1,1)
 
     if h5_input is None:
       h5_input = h5_output
 
+    i_target = 0 
+    
     params = Parameters(h5_output)
     # Selects mass-related dataset
     Mb = h5_input['Input']['Mstars_bulge']
@@ -115,7 +117,6 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
                 values = data[ok,i_target,iz]
             else:
                 values = data[ok,iz]
-            filter_invalid = values > -1000 
         else:
             data_dict = {}
             for x in (h5_output['Output'],h5_input['Input']):
@@ -124,10 +125,10 @@ def prepare_PDF(quantity, h5_output, h5_input=None, redshift=0,
 
             values = compute_extra_quantity(quantity,data_dict,
                                             ok,i_target,iz)
-            filter_invalid = h5_output['Output']['n'][ok,i_target,iz] > 0
-            filter_invalid *= np.isfinite(values)
-
+            
         # Removes invalid data
+        filter_invalid = h5_output['Output']['n'][ok,i_target,iz] > 0
+        filter_invalid *= np.isfinite(values)
         values = values[filter_invalid]
 
         # Sets maximum and minimum values

@@ -212,7 +212,7 @@ contains
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
     ! TURBULENT DIFFUSIVITY PROFILE
-    etat = 1.d0/3*l*v  !Formula for etat from mixing length theory
+    etat = 1d0/3d0*l*v  !Formula for etat from mixing length theory
     etat_cm2s = etat*h0_cm**2/h0**2/t0_s*t0
     etat_kmskpc = etat*h0_km*h0_kpc/h0**2/t0_s*t0
 

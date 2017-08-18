@@ -14,6 +14,7 @@ module grid
                                              ! NB the max radius of disk is 1.0 in code units
                                              ! Should we make this zero?
   double precision, protected :: dx
+  double precision, protected :: lambda
   double precision, dimension(:), allocatable, target, protected :: x
   ! x and r have actually the exact same meaning
   ! one of them can be removed later
@@ -56,6 +57,9 @@ module grid
     ! Saves the dimensional r grid
     r_kpc = r*r_max_kpc
     dr_kpc = dx*r_max_kpc
+
+    ! Defines the disc aspect ratio
+    lambda = h0_kpc/r_max_kpc
 
   endsubroutine construct_grid
 
@@ -122,7 +126,7 @@ module grid
   subroutine adjust_grid(f, r_disk)
     ! Rescales the grid acording to the global input parameters
     ! The grid can be extended, keeping the resolution dr_kpc or the grid
-    ! can be kept, and the r_kpc changed to accomodate the new disk size.
+    ! can be kept, and the dr_kpc changed to accomodate the new disk size.
     ! The f-array is updated accordingly.
     use messages
     use interpolation
@@ -269,6 +273,9 @@ module grid
         stop
       endif
     endif
+
+    ! Adjusts the disc aspect ratio accordingly
+    lambda = h0_kpc/r_max_kpc
 
   end subroutine adjust_grid
 

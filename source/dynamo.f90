@@ -61,8 +61,6 @@ module dynamo
       call check_allocate(alp); alp = 0.0
       call check_allocate(Bzmod); Bzmod = 0.0
 
-      ! Sets other necessary parameters
-      call set_calc_params
       ! Constructs galaxy model for the initial snapshot
       able_to_construct_profiles = construct_profiles()
 

@@ -35,8 +35,6 @@ module input_params
   double precision, protected :: r_halo, v_halo, nfw_cs1
   double precision, protected :: Mstars_disk, Mgas_disk, SFR
   double precision, protected :: Mhalo, Mstars_bulge
-  ! other
-  double precision :: lambda
 
   ! Maximum number of columns in the galaxy input files
   integer, private, parameter :: number_of_columns=13
@@ -258,14 +256,7 @@ module calc_params
   double precision :: etat_sol,etat_sol_kmskpc,etat_sol_cm2s,td_sol,td_sol_kpcskm,td_sol_Gyr,td_sol_s,om0_kmskpc, &
                       Ur_sol_kms,r_sol,n_sol,r_n,h_sol,r_h,l_sol,r_l,v_sol,r_v,Uz_sol,r_Uz, &
                       Ur_sol,om0,r_om,r1
-  contains
-    subroutine set_calc_params
-!     DIMENSIONLESS PARAMETERS THAT CAN BE CALCULATED OR THAT ARE NOT NORMALLY VARIED:
-!     NUMERICAL
-      lambda=h0_kpc/r_max_kpc  !Typical aspect ratio of disk
 
-
-  endsubroutine set_calc_params
 end module calc_params
 
 

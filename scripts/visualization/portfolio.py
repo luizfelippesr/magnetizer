@@ -40,6 +40,8 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'D_Dc': r'D/D_c'
                    }
 
+log_quantities = ('Beq','n','h')
+
 
 def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
                   ax=plt.figure().add_subplot(111),ts=None, **args):
@@ -74,6 +76,9 @@ def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
         r = data_dict['r'][igal,:,it]
         ok = data_dict['Omega'][igal,:,it] > 0
 
+        if quantity in log_quantities:
+            ok *= data[:,it] > 0
+
         ax.plot(r[ok], data[:,it][ok],color=color, rasterized=True, **args)
 
         ax.set_xlabel(r'$r\,[\rm kpc]$')
@@ -103,7 +108,7 @@ def plot_quantity(igal, quantity, data_dict, cmap=plt.cm.YlGnBu,
         ax.grid(alpha=0.2)
         #if quantity=='alp_m' or quantity=='alp':
           #ax.set_ylim([-6,6])
-        if quantity in ('Beq','n','h'):
+        if quantity in log_quantities:
           ax.set_yscale('log')
 
 

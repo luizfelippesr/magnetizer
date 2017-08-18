@@ -73,9 +73,6 @@ module input_constants  ! Contains physical, model-dependent, constants
   double precision, parameter :: Rm_inv = 0.d0
    !Relevant only if module Alp_ceiling=1; Limits maximum value of alpha to ceiling*v_kms
   double precision, parameter :: alpceil = 1d0 !0.5d0
-  ! RANDOM MAGNETIC FIELD
-  !Strength of the rms random magnetic field brms in units of Beq
-  double precision, parameter :: fmag = 0.5d0
   ! Exponential disk properties
   ! Ratio between the scale radius and the half mass radius
   double precision, parameter :: constDiskScaleToHalfMassRatio = 1d0/1.678346990d0

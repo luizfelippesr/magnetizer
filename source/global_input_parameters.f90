@@ -147,13 +147,16 @@ module global_input_parameters
   ! Stochastically changes the sign of the floor
   logical :: p_time_varying_floor = .false.
 
+  ! RANDOM MAGNETIC FIELD
+  !Strength of the rms random magnetic field brms in units of Beq
+  double precision :: fmag = 0.5d0
 
   namelist /dynamo_parameters/ &
     Dyn_quench, Alg_quench, lFloor, Damp, &
     frac_seed, p_seed_choice, p_r_seed_decay, p_nn_seed, &
     Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif, &
     p_neumann_boundary_condition_rmax, C_alp, C_floor, &
-    p_delta_r_kpc, p_time_varying_floor
+    p_delta_r_kpc, p_time_varying_floor, fmag
 
 
   ! -------------------------------------------------------

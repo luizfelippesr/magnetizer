@@ -140,13 +140,19 @@ module global_input_parameters
   ! ALPHA EFFECT
   !Factor determining strength of alpha effect
   double precision :: C_alp = 1.0d0
-  !Factor determining strength of alpha effect
-  double precision :: C_floor = 1.0d0
-  ! Width of the localization of the Eigenfunction (in kpc)
-  double precision :: p_delta_r_kpc = 2d0
-  ! Stochastically changes the sign of the floor
-  logical :: p_time_varying_floor = .false.
 
+  !Factor determining strength of the floor
+  double precision :: C_floor = 1.0d0
+  ! Floor localization (Delta r = p_floor_kappa * p_ISM_turbulent_length)
+  ! NB: if using p_use_fixed_turbulent_to_scaleheight_ratio,
+  !     this gets inconsistent!
+  double precision :: p_floor_kappa = 10d0
+  ! Stochastically changes the sign of the floor every Delta r
+  logical :: p_space_varying_floor = .true.
+  ! Stochastically changes the sign of the floor every
+  ! Delta t = p_floor_kappa * tau, where
+  !   tau = p_ISM_turbulent_length/(p_ISM_sound_speed_km_s*sqrt(p_ISM_kappa))
+  logical :: p_time_varying_floor = .true.
   ! RANDOM MAGNETIC FIELD
   !Strength of the rms random magnetic field brms in units of Beq
   double precision :: fmag = 0.5d0
@@ -156,7 +162,8 @@ module global_input_parameters
     frac_seed, p_seed_choice, p_r_seed_decay, p_nn_seed, &
     Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif, &
     p_neumann_boundary_condition_rmax, C_alp, C_floor, &
-    p_delta_r_kpc, p_time_varying_floor, fmag
+    p_floor_kappa, p_space_varying_floor, p_time_varying_floor, &
+    fmag
 
 
   ! -------------------------------------------------------

@@ -58,7 +58,7 @@ contains
     ! Sets the minimum radius to be followed (for the disk rotation curve)
     r_disk_min = r_max_kpc*rmin_over_rmax
     ! Adjust units of delta_r (which is used to get the seed field)
-    delta_r = p_delta_r_kpc/r_max_kpc
+    delta_r = p_floor_kappa*p_ISM_turbulent_length/r_max_kpc
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component
@@ -217,9 +217,9 @@ contains
     etat_kmskpc = etat*h0_km*h0_kpc/h0**2/t0_s*t0
 
     ! TURBULENT CORRELATION TIME PROFILE
-    tau=          ctau*l/v  !Formula for tau from mixing length theory
-    tau_Gyr=      ctau*tau*t0_Gyr/t0
-    tau_s=        ctau*tau*t0_s/t0
+    tau = ctau*l/v  !Formula for tau from mixing length theory
+    tau_Gyr = ctau*tau*t0_Gyr/t0
+    tau_s = ctau*tau*t0_s/t0
 
     ! KINETIC ALPHA PROFILE
     if (.not.Krause) then

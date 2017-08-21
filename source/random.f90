@@ -43,6 +43,9 @@ contains
       ! Just substitute it for anything else...
       seed = p_random_seed**igal
     end where
+
+    ! Changes the seed!
+    call random_seed(put=seed)
   end subroutine set_random_seed
 
 

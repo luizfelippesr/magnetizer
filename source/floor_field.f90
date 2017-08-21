@@ -11,14 +11,17 @@ module floor_field
 
   double precision, public, protected :: Bfloor_sign
   double precision :: t_last_sign_choice
+  double precision, allocatable, dimension(:) :: sign_array
+  logical :: refresh_sign_array
 contains
   function compute_floor_target_field(r,l,h,Beq,Delta_r) result (B_floor)
-    use grid, only: lambda
+    use grid, only: lambda, check_allocate
     ! Computes the target floor field
     double precision, intent(in), dimension(:) :: r, l, h, Beq
     double precision, intent(in) :: Delta_r
     double precision, dimension(size(r)) :: B_floor
     double precision, dimension(size(r)) :: Ncells, brms
+    double precision :: next_layer, sign_value
     integer :: i
 
     !Number of turbulent cells in the annular volume
@@ -29,6 +32,37 @@ contains
     B_floor = exp(-Delta_r/2./abs(r))*brms/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
     B_floor = B_floor * Bfloor_sign * C_floor
 
+    if (p_space_varying_floor) then
+      ! If called for the first time and/or the grid was extended, refreshes
+      if (.not.allocated(sign_array)) then
+        refresh_sign_array = .true.
+      else if (size(sign_array) /= size(B_floor)) then
+        refresh_sign_array = .true.
+      endif
+
+      ! If marked to refresh (usually done by update_floor_sign)
+      if (refresh_sign_array) then
+        ! First, check whether the sign array has the correct shape
+        call check_allocate(sign_array, size(B_floor))
+        ! Initializes with Bfloor_sign
+        sign_array = Bfloor_sign
+        ! Go through the layers of width Delta_r, switching the signs on each
+        ! layer
+        next_layer = Delta_r
+        do i=1, size(r)
+          if (r(i) > next_layer) then
+            next_layer = next_layer + Delta_r ! increments layer
+            call random_number(sign_value) ! flips a coin
+            sign_value = sign(1d0,sign_value-0.5d0) ! gets sign
+            sign_array(1:i-1) = sign_array(1:i-1) * sign_value ! saves
+          endif
+        enddo
+        ! No need to refresh in the next call
+        refresh_sign_array = .false.
+      endif
+
+      B_floor = B_floor * sign_array
+    endif
   end function compute_floor_target_field
 
   function compute_floor_source_coefficient(h,etat,Uz,Dyn_gen) result (A_floor)
@@ -38,7 +72,7 @@ contains
     double precision, intent(in), dimension(:) ::  h, etat, Uz, Dyn_gen
     double precision, dimension(size(h)) :: A_floor
     double precision, dimension(size(h)) :: R_U, Dyn_crit
-    integer :: i
+      integer :: i
 
     !Dimensionless outflow parameter
     R_U = Uz*h/etat
@@ -61,15 +95,19 @@ contains
       call random_number(Bfloor_sign)
       Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
       t_last_sign_choice = time
+      ! Sets the sign array (for spatially varying floor) to refresh mode
+      refresh_sign_array = .true.
     endif
   end subroutine
 
   subroutine initialize_floor_sign()
     ! Initializes the magnetic field floor sign
-      t_last_sign_choice = 0d0
-      ! Initializes the floor sign randomly
-      call random_number(Bfloor_sign)
-      Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
+    t_last_sign_choice = 0d0
+    ! Initializes the floor sign randomly
+    call random_number(Bfloor_sign)
+    Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
+    ! Sets the sign array (for spatially varying floor) to refresh mode
+    refresh_sign_array = .true.
   end subroutine initialize_floor_sign
 
 end module floor_field

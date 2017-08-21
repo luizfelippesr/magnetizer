@@ -135,7 +135,7 @@ module equ  !Contains the partial differential equations to be solved
       double precision, dimension(nx) :: detatdr
       double precision, dimension(nx) :: Bsqtot, Dyn_gen
       double precision, dimension(nx) :: Dyn_crit, Dtilde, R_U
-      double precision, dimension(nx) :: brms, B_floor
+      double precision, dimension(nx) :: brms, Bfloor
       double precision, dimension(nx) :: Afloor, Ncells
       ! Other
       double precision, dimension(nx), target :: zeros_array
@@ -196,26 +196,12 @@ module equ  !Contains the partial differential equations to be solved
       ! IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT
       ! FLUCTUATING MAGNETIC FIELD
       if (lFloor) then
+        Bfloor = compute_floor_target_field(r,l,h,Beq,Delta_r_floor)
 
-        !Dimensionless outflow parameter
-        R_U= Uz*h/etat
-        !Estimate of critical dynamo number
-        Dyn_crit= -(pi/2)**5*(1.d0 +4*C_U*R_U/pi**2)**2
-        !Ratio of Dynamo number to critical dynamo number
-        Dtilde= Dyn_gen/Dyn_crit
-        !Coefficient of Bfloor for source term to get Bp=Bfloor
-        Afloor= (pi/2)**2*etat/h**2*(1.d0+4*C_U*R_U/pi**2)*(1.d0-Dtilde)
-!         Afloor=1d0
-        !Number of turbulent cells in the annular volume
-        Ncells= abs(3.d0*r*delta_r_floor*h/l**3/lambda**2)
-        !Small-scale magnetic field strength
-        brms= fmag*Beq
-        !Floor magnetic field
-        B_floor= exp(-delta_r_floor/2./abs(r))*brms/Ncells**(1d0/2d0)*l/delta_r_floor*lambda/3
-        B_floor = B_floor * Bfloor_sign * C_floor
+        Afloor = compute_floor_source_coefficient(h,etat,Uz,Dyn_gen)
       else
-        Afloor= 0d0
-        B_floor= 0d0
+        Afloor = 0d0
+        Bfloor = 0d0
       endif
 
       !     LIST OF VARIABLE NAMES FOR f ARRAY
@@ -259,8 +245,8 @@ module equ  !Contains the partial differential equations to be solved
                    +(ctau+Rm_inv)*etat*lambda**2*(-Bp/r**2 +dBpdr/r +d2Bpdr2)  &
                    !Radial diffusion propto detatdr
                    +ctau*detatdr*lambda**2*( Bp/r +dBpdr)                      &
-                   !Forcing function that enforces floor at B_floor
-                   +Afloor*B_floor
+                   !Forcing function that enforces floor at Bfloor
+                   +Afloor*Bfloor
                    ! Following commented out for simplicity
                    !   -lambda*dUrdr*Bp -lambda*Ur*dBpdr
 

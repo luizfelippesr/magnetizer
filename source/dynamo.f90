@@ -6,7 +6,7 @@ module dynamo
   use ts_arrays
   use timestep
   use output
-  use initial_conditions
+  use seed_field
   use messages
   use random
   implicit none 
@@ -21,6 +21,7 @@ module dynamo
   contains
     subroutine dynamo_run(gal_id, test_run, rank)
       use interpolation
+      use floor_field
       double precision :: cpu_time_start
       integer, intent(in) :: gal_id
       integer, intent(in), optional :: rank
@@ -34,10 +35,7 @@ module dynamo
 
       call set_random_seed(gal_id, p_random_seed)
 
-      t_last_sign_choice = 0d0
-      ! Initializes the floor sign randomly
-      call random_number(Bfloor_sign)
-      Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
+      call initialize_floor_sign()
 
       if (present(rank)) then
           rank_actual = rank
@@ -76,9 +74,10 @@ module dynamo
 
       if (r_disk > p_rdisk_min .and.  Mgas_disk > Mgas_disk_min) then
         ! Adds a seed field to the f-array (uses the profile info)
-        call init_seed(f)
+        call init_seed_field(f)
         ! Calculates |Bz| (uses profile info)
         call estimate_Bzmod(f)
+        call impose_bc(f)
       endif
 
       ! Loops through the SAM's snapshots
@@ -94,14 +93,15 @@ module dynamo
             ! Resets the f array
             f = 0d0
             !! Adds a seed field
-            !call init_seed(f)
+            !call init_seed_field(f)
         else
             ! If galaxy was an elliptical during previous snapshot,
             ! reconstruct the profiles
             if (elliptical) then
               able_to_construct_profiles = construct_profiles()
-              call init_seed(f)
+              call init_seed_field(f)
               call estimate_Bzmod(f)
+              call impose_bc(f)
             endif
             if (able_to_construct_profiles) then
               elliptical = .false.
@@ -183,13 +183,9 @@ module dynamo
               endif
             endif
 
-            ! Alternate floor
+            ! Updates the sign of the floor
             if (p_time_varying_floor) then
-              if (this_t-t_last_sign_choice > minval(tau)*t0_Gyr) then
-                call random_number(Bfloor_sign)
-                Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
-                t_last_sign_choice = this_t
-              endif
+              call update_floor_sign(this_t, tau*t0_Gyr)
             endif
 
             ! Runs Runge-Kutta time-stepping routine
@@ -249,7 +245,7 @@ module dynamo
           last_output = .true.
           ! Resets the f array and adds a seed field
           f = 0.0
-          call init_seed(f)
+          call init_seed_field(f)
         endif
         ! Impose boundary conditions to the final result
         call impose_bc(f)

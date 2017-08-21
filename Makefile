@@ -5,7 +5,7 @@ FC_nonMPI=h5fc
 srcdir=source
 builddir=build
 
-_OBJ= bessel_functions.o root_finder.o constants.o grid.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o
+_OBJ= bessel_functions.o root_finder.o constants.o grid.o floor_field.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o $(IO).o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o seed_field.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 # Special configurations
@@ -48,14 +48,16 @@ $(srcdir)/outflow.f90: ${builddir}/input_parameters.o
 $(srcdir)/grid.f90: ${builddir}/constants.o ${builddir}/global_input_parameters.o ${builddir}/messages.o ${builddir}/interpolation.o
 $(srcdir)/deriv.f90: ${builddir}/grid.o
 $(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/$(IO).o
-$(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o
+$(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o ${builddir}/floor_field.o ${builddir}/seed_field.o
 $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o ${builddir}/interpolation.o
-$(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o ${builddir}/ts_arrays.o ${builddir}/interpolation.o
+$(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o ${builddir}/ts_arrays.o ${builddir}/interpolation.o ${builddir}/floor_field.o
 $(srcdir)/output.f90: ${builddir}/$(IO).o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o
 $(srcdir)/$(IO).f90: ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o ${builddir}/grid.o
 $(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
+$(srcdir)/floor_field.f90: ${builddir}/grid.o ${builddir}/global_input_parameters.o
+$(srcdir)/seed_field.f90: ${builddir}/grid.o ${builddir}/profiles.o ${builddir}/global_input_parameters.o
 
 # Tides up
 clean:

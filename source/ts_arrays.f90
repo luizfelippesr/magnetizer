@@ -15,7 +15,6 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   character, allocatable, dimension(:),public :: ts_status_code
   double precision, allocatable, dimension(:),public :: ts_Dt
   double precision, allocatable, dimension(:),public :: ts_rmax
-  double precision, allocatable, dimension(:),public :: ts_delta_r
   double precision, allocatable, dimension(:,:),public :: ts_Br
   double precision, allocatable, dimension(:,:),public :: ts_Bp
   double precision, allocatable, dimension(:,:),public :: ts_alp_m
@@ -78,7 +77,6 @@ contains
 
     ts_Dt(it) = t*t0_Gyr
     ts_rmax(it) = rmax
-    ts_delta_r(it) = delta_r
 
     call rescale_array(f(nxghost+1:nx-nxghost,1), ts_Br(it,:))
     call rescale_array(f(nxghost+1:nx-nxghost,2), ts_Bp(it,:))
@@ -160,8 +158,6 @@ contains
     ts_Dt = INVALID
     allocate(ts_rmax(max_outputs))
     ts_rmax = INVALID
-    allocate(ts_delta_r(max_outputs))
-    ts_delta_r = INVALID
     allocate(ts_Br(max_outputs,p_nx_ref))
     ts_Br = INVALID
     allocate(ts_Bp(max_outputs,p_nx_ref))
@@ -239,7 +235,6 @@ contains
       deallocate(ts_status_code)
       deallocate(ts_Dt)
       deallocate(ts_rmax)
-      deallocate(ts_delta_r)
       deallocate(ts_Br)
       deallocate(ts_Bp)
       deallocate(ts_alp_m)
@@ -337,7 +332,6 @@ contains
 
     call extend_array_sca(ts_Dt)
     call extend_array_sca(ts_rmax)
-    call extend_array_sca(ts_delta_r)
     ! Vectors
     call extend_array_vec(ts_Br)
     call extend_array_vec(ts_Bp)

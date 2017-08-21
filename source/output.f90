@@ -111,8 +111,6 @@ contains
                           units='kpc',                              &
                           description='Radius of maximum B_phi')
 
-    call IO_write_dataset('delta_r', gal_id,ts_delta_r)
-
     call IO_write_dataset('alp', gal_id,                            &
                           ts_alp(:,:)*h0_km/h0/t0_s*t0 ,            &
                           units='km/s')

@@ -10,7 +10,7 @@ module profiles
   double precision, dimension(:), allocatable :: Om, G
   double precision, dimension(:), allocatable :: Om_d, Om_b, G_b, Om_h, G_h
   double precision, dimension(:), allocatable :: P, Pd, Pm, Pstars, Pbulge, Pdm, P2
-  double precision :: delta_r
+  double precision :: delta_r_floor
   private :: prepare_profiles_module_public_variables
 contains
   logical function construct_profiles(B)
@@ -57,8 +57,8 @@ contains
 
     ! Sets the minimum radius to be followed (for the disk rotation curve)
     r_disk_min = r_max_kpc*rmin_over_rmax
-    ! Adjust units of delta_r (which is used to get the seed field)
-    delta_r = p_floor_kappa*p_ISM_turbulent_length/r_max_kpc
+    ! Adjust units of delta_r_floor (which is used to get the seed field)
+    delta_r_floor = p_floor_kappa*p_ISM_turbulent_length/r_max_kpc
 
     ! ROTATION CURVE
     ! Computes the profile associated with each component

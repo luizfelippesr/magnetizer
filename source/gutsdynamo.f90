@@ -69,63 +69,6 @@ module boundary_conditions  !Specify and implement boundary conditions at r=0, r
     end subroutine impose_bc
 end module boundary_conditions
 !*****************************************************
-module initial_conditions  !Set initial conditions
-  use calc_params
-  use grid
-  use var
-  use boundary_conditions
-  use random
-  use profiles
-!
-  implicit none
-!
-  contains
-    subroutine init_seed(f)
-      use global_input_parameters
-      integer :: iseed,var
-      double precision, dimension(nx) :: Bseed, Ncells
-      double precision, dimension(:,:), intent(inout) :: f
-      double precision :: r1
-      ! Initializes the seed field to a fraction of the equipartition field
-      Bseed=frac_seed*Beq
-      ! Initializes f
-      f(:,:)=0.d0
-
-      select case (trim(p_seed_choice))
-        case('fraction')
-          ! The field is a fixed fraction of the equipartition field
-          f(:,1)=-Bseed
-          f(:,2)= Bseed
-        case('decaying')
-          ! The field
-          r1 = p_r_seed_decay/r_max_kpc
-          f(:,1)=-Bseed*r*(1.d0-r)**p_nn_seed*dexp(-r/r1)
-          f(:,2)= Bseed*r*(1.d0-r)**p_nn_seed*dexp(-r/r1)
-        case('random')
-          ! The field at each point (and component) is a Gaussian drawing from
-          ! a distribution with variance Bseed
-          do var=1,2 !Seed r and phi components of B
-            do iseed=1,nx
-              f(iseed,var)=Bseed(iseed)*random_normal()
-            enddo
-          enddo
-        case('floor')
-          !Small-scale magnetic field strength
-          Bseed= fmag*Beq
-          !Number of turbulent cells in the annular volume
-          Ncells= abs(3.d0*r*Delta_r*h/l**3/lambda**2)
-          !Floor magnetic field
-          Bseed= Bseed*exp(-Delta_r/2/abs(r))/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
-          f(:,1)=-Bseed
-          f(:,2)= Bseed
-        case default
-          print *, 'init_seed: Invalid option ',p_seed_choice
-          stop
-      end select
-      call impose_bc(f)
-    end subroutine init_seed
-end module initial_conditions
-!*****************************************************
 module bzcalc  !Calculates |Bz| using Div B=0 in the no-z approximation
   use math_constants
   use calc_params
@@ -164,11 +107,11 @@ module equ  !Contains the partial differential equations to be solved
 
   implicit none
   double precision, dimension(:), allocatable :: alp_m, alp
-  double precision :: Bfloor_sign
   double precision :: rmax, hmax, lmax!, Ncells
 
   contains
     subroutine pde(f,dfdt)
+      use floor_field
       !     LIST OF VARIABLE NAMES FOR f ARRAY
       !
       !     UNDER FOSA          UNDER TAU APPROXIMATION
@@ -253,6 +196,7 @@ module equ  !Contains the partial differential equations to be solved
       ! IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT
       ! FLUCTUATING MAGNETIC FIELD
       if (lFloor) then
+
         !Dimensionless outflow parameter
         R_U= Uz*h/etat
         !Estimate of critical dynamo number
@@ -263,11 +207,11 @@ module equ  !Contains the partial differential equations to be solved
         Afloor= (pi/2)**2*etat/h**2*(1.d0+4*C_U*R_U/pi**2)*(1.d0-Dtilde)
 !         Afloor=1d0
         !Number of turbulent cells in the annular volume
-        Ncells= abs(3.d0*r*Delta_r*h/l**3/lambda**2)
+        Ncells= abs(3.d0*r*delta_r_floor*h/l**3/lambda**2)
         !Small-scale magnetic field strength
         brms= fmag*Beq
         !Floor magnetic field
-        B_floor= exp(-Delta_r/2./abs(r))*brms/Ncells**(1d0/2d0)*l/Delta_r*lambda/3
+        B_floor= exp(-delta_r_floor/2./abs(r))*brms/Ncells**(1d0/2d0)*l/delta_r_floor*lambda/3
         B_floor = B_floor * Bfloor_sign * C_floor
       else
         Afloor= 0d0

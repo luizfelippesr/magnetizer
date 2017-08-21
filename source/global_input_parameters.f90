@@ -49,11 +49,12 @@ module global_input_parameters
   logical :: p_oneSnaphotDebugMode = .false.
   ! Runs without solving the dynamo equations
   logical :: p_no_magnetic_fields_test_run = .false.
+  integer :: p_random_seed = 17
 
   namelist /run_parameters/ &
     model_name, info, nsteps_0, p_courant_v, p_courant_eta, &
     p_variable_timesteps, p_nsteps_max, p_oneSnaphotDebugMode, &
-    p_no_magnetic_fields_test_run, p_MAX_FAILS
+    p_no_magnetic_fields_test_run, p_MAX_FAILS, p_random_seed
 
   ! -------------------------------------------------------
   ! Grid settings
@@ -98,10 +99,6 @@ module global_input_parameters
   ! Works with dyn_quench=F; Set to T for algebraic alpha quenching; F for no quenching
   logical :: Alg_quench = .false.
 
-  ! RANDOM MAGNETIC FIELD
-  ! Strength of the rms random magnetic field brms in units of Beq
-  logical :: lFloor = .true.
-
   ! CLOSURE APPROXIMATION
   ! Set to T for FOSA, F for minimal tau approximation
   logical :: Damp = .false.
@@ -140,7 +137,9 @@ module global_input_parameters
   ! ALPHA EFFECT
   !Factor determining strength of alpha effect
   double precision :: C_alp = 1.0d0
-
+  ! FLOOR
+  ! Uses a source term to achieve an effective floor for the magnetic field
+  logical :: lFloor = .true.
   !Factor determining strength of the floor
   double precision :: C_floor = 1.0d0
   ! Floor localization (Delta r = p_floor_kappa * p_ISM_turbulent_length)

@@ -1,12 +1,53 @@
-MODULE random
-! A module for random number generation from the following distributions:
-!     Normal (Gaussian)               random_normal
+module random
+! Subroutines and functions related to random number generation
   implicit none
+  private
 
-  contains
+  public :: initialize_seed, random_normal
+
+contains
+
+  subroutine initialize_seed(igal, p_random_seed, use_array)
+    ! Initializes the random seed based on igal and p_random_seed
+    ! (actually, any two integers!)
+    ! The optional argument use_array uses a more complex seed
+    ! (possibly making the random sequence more random) but
+    ! a the cost of making the RNG platform dependent.
+    integer, intent(in) :: igal, p_random_seed
+    logical, optional, intent(in) :: use_array
+    integer, allocatable, dimension(:) :: seed
+    integer :: i, n
+    double precision :: p
+
+    ! Discovers the size of the seed array and allocates it
+    call random_seed(size = n)
+    allocate(seed(n))
+
+    ! Does *arbitrary* calculation to combine p_random_seed parameter and igal
+    seed = p_random_seed**2 - igal**3
+
+    ! Ideally, the seed should be an array. *However*, n may vary from
+    ! platform to platform! Thus, this is inactive by _default_.
+    if (present(use_array)) then
+      if (use_array) then
+        do i=1, n
+          ! Arbitrary calculation with array index
+          seed(i) = seed(i) + i*igal - i*p_random_seed
+        enddo
+      endif
+    endif
+
+    ! Zeros values for the seed lead to poor random number generation
+    ! (according to gfortran documentation)
+    where (seed==0)
+      ! Just substitute it for anything else...
+      seed = p_random_seed**igal
+    end where
+  end subroutine
+
 
   double precision function random_normal()
-    ! Adaptade from the code by Alan Miller (alan @ mel.dms.csiro.au) obtained
+    ! Adapted from the code by Alan Miller (alan @ mel.dms.csiro.au) obtained
     ! at http://wp.csiro.au/alanmiller/random.html
     !
     ! His code was itself based on the Fortran 77 code

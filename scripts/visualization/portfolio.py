@@ -37,7 +37,9 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'Bfloor' : r'B_{\rm floor}',
                    'Btot' : r'|\mathbf{{\overline{{B}}}}|',
                    'growth' : r'\gamma',
-                   'D_Dc': r'D/D_c'
+                   'D_Dc': r'D/D_c',
+                   '|Bp|'   : r'|\overline{{B}}_\phi|',
+                   'Bpmod'   : r'|\overline{{B}}_\phi|',
                    }
 
 log_quantities = ('Beq','n','h')

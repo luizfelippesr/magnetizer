@@ -8,6 +8,7 @@ module dynamo
   use output
   use initial_conditions
   use messages
+  use random
   implicit none 
   private 
   
@@ -30,6 +31,8 @@ module dynamo
       double precision, dimension(nx) :: Btmp
       double precision :: this_t, t_last_sign_choice
       elliptical = .false. ;  ok = .true.
+
+      call set_random_seed(gal_id, p_random_seed)
 
       t_last_sign_choice = 0d0
       ! Initializes the floor sign randomly

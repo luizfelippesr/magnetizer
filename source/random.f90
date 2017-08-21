@@ -3,11 +3,11 @@ module random
   implicit none
   private
 
-  public :: initialize_seed, random_normal
+  public :: set_random_seed, random_normal
 
 contains
 
-  subroutine initialize_seed(igal, p_random_seed, use_array)
+  subroutine set_random_seed(igal, p_random_seed, use_array)
     ! Initializes the random seed based on igal and p_random_seed
     ! (actually, any two integers!)
     ! The optional argument use_array uses a more complex seed
@@ -43,7 +43,7 @@ contains
       ! Just substitute it for anything else...
       seed = p_random_seed**igal
     end where
-  end subroutine
+  end subroutine set_random_seed
 
 
   double precision function random_normal()

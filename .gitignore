@@ -1,0 +1,10 @@
+*.o
+*.mod
+*.pyc
+*.aux
+*.dvi
+*.bbl
+*.log
+*.blg
+*.out
+*.exe

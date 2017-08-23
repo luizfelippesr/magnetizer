@@ -34,7 +34,7 @@ contains
     double precision :: constant, rs, beta
     character(len=*), optional, intent(in) :: outflow_type
     character(len=35) :: outflow_type_actual
-    logical :: no_average = .true.
+    logical :: average
 
     if (present(outflow_type)) then
       outflow_type_actual = outflow_type
@@ -64,9 +64,9 @@ contains
         ! (which in turn contains the parameters used in that particular
         ! galform run).
       case('superbubble_simple')
-        no_average=.true.
+        average=.false.
       case('superbubble')
-        no_average=.false.
+        average=.true.
       case default
         print *, outflow_type_actual
         stop 'outflow: Unknown outflow_type'
@@ -81,13 +81,22 @@ contains
     constant = 51.3 * (p_outflow_Lsn/1d38)**(1./3.) * p_outflow_fOB/0.7d0 &
         * (p_outflow_etaSN/9.4e-3) * (p_tOB/3d0) * (40d0/p_N_SN1OB)
 
-    outflow_speed = constant * (rs/3.0)**(-2) * SFR
-    outflow_speed = outflow_speed * n**(-1./3.)
-    outflow_speed = outflow_speed * (h/0.2)**(4./3.)
-    outflow_speed = outflow_speed * exp(-r/rs)
-    if (no_average) return
+    where (n>0d0)
+      outflow_speed = constant * (rs/3.0)**(-2) * SFR
+      outflow_speed = outflow_speed * n**(-1./3.)
+      outflow_speed = outflow_speed * (h/0.2)**(4./3.)
+      outflow_speed = outflow_speed * exp(-r/rs)
+    elsewhere
+      ! Sets outflow to zero in the case of zero density
+      ! (n=0 and h<0 are used to flag errors in the pressure calculation)
+      outflow_speed = 0d0
+    endwhere
 
-    outflow_speed = (p_outflow_hot_gas_density/rho) * outflow_speed
+    if (average) then
+      where (n>0d0)
+        outflow_speed = (p_outflow_hot_gas_density/rho) * outflow_speed
+      endwhere
+    endif
 
   end function outflow_speed
 end module outflow

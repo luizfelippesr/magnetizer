@@ -240,7 +240,7 @@ module global_input_parameters
   logical :: p_sech2_profile = .false.
   logical :: p_use_Pdm = .true.
   logical :: p_use_Pbulge = .true.
-  logical :: p_halo_contraction = .false.
+  logical :: p_halo_contraction = .true.
   logical :: p_extra_rotation_curve_outputs = .false.
   logical :: p_extra_pressure_outputs = .false.
   logical :: p_test_DM_old = .false. ! TO BE REMOVED

@@ -160,9 +160,14 @@ contains
                                                  Pbulge(i), Pdm(i))
       enddo
       P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om_kmskpc, G_kmskpc, h_kpc)
-      where (P2>0)
-        P2 = 0
-      endwhere
+      if (p_P2_workaround) then
+        ! The regularisation of the angular velocity profile can generate
+        ! artifacts close to r=0, which can be avoided by simply ensuring P2
+        ! is never positive.
+        where (P2>0)
+          P2 = 0
+        endwhere
+      endif
     endif
 
     ! NUMBER DENSITY PROFILE

@@ -20,6 +20,7 @@ formatted_units_dict = {'microgauss':r'\mu{{\rm G}}',
               'km/s/kpc':r'{{\rm km}}\,{{\rm s}}^{{-1}}\,{{\rm kpc}}^{{-1}}',
               'kpc km/s':r'{{\rm kpc}}\,{{\rm km}}\,{{\rm s}}^{{-1}}',
               'Gyr^-1' : r'\rm Gyr^{{-1}}'
+              'erg cm^-3' : r'\rm erg\,cm^{{-3}}'
               }
 
 quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
@@ -308,7 +309,9 @@ if __name__ == "__main__"  :
                            #'Bfloor',
                            'growth',
                            #'Dcrit',
-                           'D_Dc',
+                           #'D_Dc',
+                           #'P',
+                           #'P2',
                            ]
 
     generate_portfolio(input_filename,

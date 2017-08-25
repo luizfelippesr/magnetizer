@@ -29,7 +29,6 @@ contains
     use messages, only: error_message
     use deriv, only: xder
     use grid, only: x
-    double precision :: Uphi_halfmass_kms  = -1 ! Negative value when unitialized
     double precision, dimension(nx), intent(in), optional :: B
     double precision, dimension(nx) :: d2Urdr2, Ur_kms, Uz_kms
     double precision, dimension(nx) :: Om_kmskpc, G_kmskpc
@@ -94,12 +93,6 @@ contains
     Om = Om_kmskpc/h0_km*h0_kpc*t0_s/t0
     G  = G_kmskpc /h0_km*h0_kpc*t0_s/t0
 
-    ! EXTRA (for debugging/diagnostic): computes quantities at r_disk
-    ! Finds the position in the grid closest to r_disk (disk half-mass radius)
-    i_halfmass = minloc(abs(r_kpc - r_disk), 1)
-    ! Computes the rotation velocity at the disk half-mass radius
-    Uphi_halfmass_kms = Om_kmskpc(i_halfmass)*r_kpc(i_halfmass)
-
     ! RADIAL VELOCITY PROFILE (not currently being used?)
     Ur = 0d0
     dUrdr = 0.d0
@@ -151,6 +144,8 @@ contains
     endif
 
     ! Stricter trap: h/r at a half mass radius
+    ! Finds the position in the grid closest to r_disk (disk half-mass radius)
+    i_halfmass = minloc(abs(r_kpc - r_disk), 1)
     if (h_kpc(i_halfmass)>r_disk) then
       call error_message('construct_profiles','Huge scaleheight detected.', &
                          code='h')

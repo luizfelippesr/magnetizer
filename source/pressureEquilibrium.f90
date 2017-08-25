@@ -76,6 +76,7 @@ contains
     real(fgsl_double), target, dimension(11) :: parameters_array, parameters_array_alt
     integer :: i, i_rreg, nghost_actual, error_count
     type(c_ptr) :: params_ptr, params_ptr_alt
+    double precision, parameter :: GUESS_INTERVAL = 20
 
     if (present(nghost)) then
       nghost_actual = nghost
@@ -189,24 +190,13 @@ contains
       endif
       rho_d(i) = density_to_scaleheight(h_d(i), Sigma_d(i))
 
-      ! emergency fix --------------
-      !if (i> nghost_actual+2 .and. h_d(i)<0) then
-      !  h_d(i) = guess_h
-      !  stop
-      !endif
-      ! end emergency fix --------------
-
       ! Uses previous h value to set up search interval for the next one.
-      ! The guess assumes an exponentially increasing scaleheight
       if (i/=size(r)) then
-!         if (h_d(i)>0) then
-            guess_h = h_d(i)*exp( (r(i+1)-r(i))/rs )
-!         else
-!             ! If previous calculation was an error, apply a patch
-!             guess_h = h_d(i-1)*exp( (r(i+1)-r(i-1))/rs )
-!         endif
-        maximum_h = guess_h*1.2d0 ! assumes the root will be within \pm 20%
-        minimum_h = guess_h*0.8d0 ! assumes the root will be within \pm 20%
+        ! The guess assumes an exponentially increasing scaleheight
+        guess_h = h_d(i)*exp( (r(i+1)-r(i))/rs )
+        ! The root is assumed to be within GUESS_INTERVAL% of the guess value
+        maximum_h = guess_h*(1d0+GUESS_INTERVAL/100.)
+        minimum_h = guess_h*(1d0+GUESS_INTERVAL/100.)
       end if
 
       if (rho_d(i) < p_minimum_density) then
@@ -286,7 +276,15 @@ contains
                                             Om_h, G_h, Om_b, G_b)
     ! Computes the midplane pressure, from gravity (the radial part)
     P2 = computes_midplane_ISM_pressure_P2(Sigma_d, Om, G, h)
-    if (P2>0) P2 = 0
+
+    if (p_P2_workaround) then
+      ! The regularisation of the angular velocity profile can generate
+      ! artifacts close to r=0, which can be avoided by simply ensuring P2
+      ! is never positive.
+      if (P2>0) then
+        P2 = 0
+      endif
+    endif
 
     ! Computes the midplane pressure, from the density
     rho_cgs = density_to_scaleheight(h, Sigma_d)
@@ -495,6 +493,7 @@ contains
     ! Output: array containing the pressure in Gaussian units
     use input_constants
     use Integration
+    use messages, only: error_message
     double precision, intent(in) :: r, Sigma_d, Sigma_star, R_m, h_d
     double precision, intent(in) :: Om_h, G_h, Om_b, G_b
     double precision,intent(out),optional :: Pd_out,Pm_out,Pstars_out,Pbulge_out,Pdm_out
@@ -557,7 +556,12 @@ contains
 
     ! Galaxy stellar bulge
     if (p_use_Pbulge .and. Mstars_bulge>Mstars_bulge_min) then
-      if (p_test_bulge_old) then
+      if (.not.p_Pbulge_numerical) then
+        ! Uses steepest descent approximation for the integration of the bulge
+        ! profile. Recommended option.
+        Pbulge =  Om_b*(1.5d0*Om_b+G_b) * (km_SI/kpc_SI)**2
+        Pbulge = Pbulge * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
+      else
         ! Prepares global variables
         rb = r_bulge * rb_to_r50
         rho_b_SI = Mstars_bulge*Msun_SI/(2d0*pi)*(rb*kpc_SI)**(-3)
@@ -566,11 +570,8 @@ contains
         ! Numerically integrates and computes result
         I_bulge = Integrate(small, 7d0, integrand_bulge, integrandFunction,  &
                             integrationWorkspace, toleranceRelative=rel_TOL, &
-                            toInfinity=.false., reset=integrationReset)
+                            toInfinity=.true., reset=integrationReset)
         Pbulge = preFactor * 2d0 * rho_b_SI * (h_d*kpc_SI) * I_bulge
-      else
-        Pbulge =  Om_b*(1.5d0*Om_b+G_b) * (km_SI/kpc_SI)**2
-        Pbulge = Pbulge * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
       endif
     else
       Pbulge = 0d0
@@ -578,7 +579,12 @@ contains
 
     ! Halo dark matter halo
     if (p_use_Pdm) then
-      if (p_test_DM_old) then
+      if (.not.p_Pdm_numerical) then
+        ! Uses steepest descent approximation for the integration of the DM
+        ! profile. Recommended option.
+        Pdm =  Om_h*(1.5d0*Om_h+G_h) * (km_SI/kpc_SI)**2
+        Pdm = Pdm * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
+      else if (.not.p_halo_contraction) then
         ! Numerically integrates and computes result
         ! NB this does NOT account for halo contraction!
         ! Prepares global variables
@@ -586,15 +592,15 @@ contains
         i_R_to_Rsdm = r/rs_DM
 
         I_dm = Integrate(0d0, 100d0, integrand_dm, integrandFunction,     &
-                        integrationWorkspace, toleranceRelative=rel_TOL, &
+                        integrationWorkspace, toleranceRelative=rel_TOL,  &
                         toInfinity=.true., reset=integrationReset)
         Pdm = preFactor * 2d0 * rho_dm_SI * (h_d*kpc_SI) * I_dm
-
       else
-        ! NB this does account for halo contraction but involves
-        ! major approximations
-        Pdm =  Om_h*(1.5d0*Om_h+G_h) * (km_SI/kpc_SI)**2
-        Pdm = Pdm * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
+        call error_message('computes_midplane_ISM_pressure_P1',      &
+                           'Invalid combination p_Pdm_numerical and '&
+                         //'p_halo_contraction both true. Dying.',   &
+                            info=0)
+        stop
       endif
     endif
     ! Finishes calculation

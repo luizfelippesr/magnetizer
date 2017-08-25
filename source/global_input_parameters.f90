@@ -237,14 +237,18 @@ module global_input_parameters
 
   ! Adopts a \rho \propto sech^2(z/h) profile for gas and stars
   ! NB Defaul: rho \propto exp(-|z|/h)
-  logical :: p_sech2_profile = .false.
   logical :: p_use_Pdm = .true.
   logical :: p_use_Pbulge = .true.
   logical :: p_halo_contraction = .true.
   logical :: p_extra_rotation_curve_outputs = .false.
   logical :: p_extra_pressure_outputs = .false.
-  logical :: p_test_DM_old = .false. ! TO BE REMOVED
-  logical :: p_test_bulge_old = .false. ! TO BE REMOVED
+  ! Keeps P2>0 to avoid possible artifacts which the regularisation may introduce
+  ! Usually not necessary.
+  logical :: p_P2_workaround = .false.
+  ! legacy, probably unnecessary options
+  logical :: p_sech2_profile = .false.
+  logical :: p_Pdm_numerical = .false.
+  logical :: p_Pbulge_numerical = .false.
 
   namelist /ISM_and_disk_parameters/ &
     p_ISM_sound_speed_km_s, p_ISM_kappa, p_ISM_xi, p_ISM_gamma, &
@@ -258,7 +262,7 @@ module global_input_parameters
     p_use_legacy_cubic_solver, p_enable_P2, p_truncates_within_rreg, &
     p_minimum_density, p_sech2_profile, p_use_Pdm, p_use_Pbulge, &
     p_halo_contraction, p_extra_rotation_curve_outputs, &
-    p_extra_pressure_outputs, p_test_DM_old, p_test_bulge_old
+    p_extra_pressure_outputs, p_Pdm_numerical, p_Pbulge_numerical
 
 
   ! -------------------------------------------------------

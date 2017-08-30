@@ -58,11 +58,15 @@ contains
     lseparate_output = p_IO_separate_output
 
     if (.not.present(mpi_comm)) then
-      stop 'Fatal Error: start_IO, trying to initialize parallel hdf5 IO without a communicator.'
+      call error_message('IO_start', &
+                        'Fatal Error: start_IO, trying to initialize parallel'&
+                       //' hdf5 IO without a communicator.',abort=.true.)
     endif
 
     if (Initialized) then
-      stop 'Fatal Error: start_IO trying to initialize already initialized IO'
+      call error_message('IO_start', &
+                        'Fatal Error: start_IO trying to initialize already '&
+                        //' initialized IO', abort=.true.)
     endif
 
     ! Initializes predefined datatypes
@@ -139,7 +143,8 @@ contains
     integer, intent(in) :: gal_id
 
     if (.not.Initialized) then
-      stop  'Fatal Error: IO_write_meta, IO not initialized'
+      call error_message('IO_start_galaxy','Fatal Error: IO not initialized',&
+                         abort=.true.)
     endif
 
     call message('IO initialised', gal_id=gal_id,info=2)
@@ -202,9 +207,8 @@ contains
                     mem_space_id=memspace_ids(idx))
 
     if (error/=0) then
-      call message('Error in IO_write_dataset_scalar. Exiting..', &
-                   gal_id=gal_id, info=0)
-      stop
+      call error_message('IO_write_dataset_scalar','Error. Exiting..', &
+                        gal_id=gal_id, info=0, abort=.true.)
     endif
 
     return
@@ -355,9 +359,8 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
                     mem_space_id=memspace_ids(idx))
 
     if (error/=0) then
-      call message('Error in IO_write_dataset_vector. Exiting..', &
-                   gal_id=gal_id, info=0)
-      stop
+      call error_message('IO_write_dataset_vector','Fatal error. Exiting..', &
+                         gal_id=gal_id, info=0, abort=.true.)
     endif
 
     return
@@ -420,9 +423,8 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
     if (error/=0) then
-      call message('Error in IO_write_dataset_code. Exiting..', &
-                   gal_id=gal_id, info=0)
-      stop
+      call error_message('IO','Error in IO_write_dataset_code. Exiting..', &
+                         gal_id=gal_id, info=0, abort=.true.)
     endif
 
     return
@@ -701,8 +703,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
   subroutine check(error)
     integer, intent(in) :: error
     if (error /= 0) then
-      call message("Error when calling HDF5.  ", val_int=error, info=0)
-      stop
+      call error_message("IO","Error when calling HDF5.", info=0, abort=.true.)
     endif
   end subroutine
 

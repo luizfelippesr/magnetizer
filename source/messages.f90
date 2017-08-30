@@ -92,13 +92,16 @@ contains
   end subroutine message
 
 
-  subroutine error_message(location, msg, gal_id, info, code)
+  subroutine error_message(location, msg, gal_id, info, code, abort)
     ! Prints an error message (using the message subroutine) and updates the
     ! error status code.
+    use mpi
     character(len=*), intent(in) :: location, msg
+    logical, optional, intent(in) :: abort
     character, optional, intent(in) :: code
     integer, optional, intent(in) :: info, gal_id
-    integer :: info_actual, m
+    integer :: info_actual, m, ierr
+
 
     if (present(code)) status_code = code
 
@@ -114,6 +117,10 @@ contains
                    info=info_actual)
     else
       call message('Error: '//location//' - '//msg, info=info_actual)
+    endif
+
+    if (present(abort)) then
+      if (abort) call MPI_ABORT(MPI_COMM_WORLD, -1, ierr)
     endif
   end subroutine error_message
 

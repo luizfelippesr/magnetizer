@@ -10,7 +10,7 @@ program magnetizer
   implicit none
 
   integer :: igal, jgal, nmygals
-  integer, parameter :: master=0
+  integer, parameter :: master_rank = 0
   integer, allocatable, dimension(:) :: mygals
   character(len=100) :: command_argument
   integer :: i
@@ -27,16 +27,15 @@ program magnetizer
     call message('Error starting MPI program. Terminating.')
     call MPI_ABORT(MPI_COMM_WORLD, rc, ierr)
   endif
-  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr) !Get the rank of the processor this thread is running on
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, nproc, ierr) !Get the number of processors this job
-  call MPI_GET_PROCESSOR_NAME(hostname, len, ierr) !Get the name of this processor (usually the hostname)
+  call MPI_Comm_Rank(MPI_COMM_WORLD, rank, ierr) !Get the rank of the processor this thread is running on
+  call MPI_Comm_Size(MPI_COMM_WORLD, nproc, ierr) !Get the number of processors this job
+  call MPI_Get_Processor_Name(hostname, len, ierr) !Get the name of this processor (usually the hostname)
   if (ierr/= MPI_SUCCESS) then
     call message('Error getting processor hostname. Terminating.')
-    call MPI_ABORT(MPI_COMM_WORLD, rc, ierr)
+    call MPI_Abort(MPI_COMM_WORLD, rc, ierr)
   endif
 
-
-  if (rank== 0) then !Only the master (rank 0)
+  if (rank == master_rank) then !Only the master (rank 0)
     tstart = MPI_wtime()
   else
     tstart = -1
@@ -109,7 +108,7 @@ program magnetizer
     end do
   else
     allocate(mygals(1))
-    if (rank==0) then
+    if (rank == master_rank) then
       mygals(1) = str2int(command_argument)+1
       nmygals = 1
     else
@@ -145,22 +144,22 @@ program magnetizer
   call message('All computing done', info=0)
 
   ! Gets the date
-  if (rank==0) then
+  if (rank == master_rank) then
     call date_and_time(date=date)
   end if
   ! Broadcast the date
-  call MPI_BCAST(date, 8, MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Bcast(date, 8, MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
 
   ! Finalizes IO
   call IO_end(date)
   call message('IO finished')
 
   !Tell the MPI library to release all resources it is using
-  call MPI_FINALIZE(ierr)
+  call MPI_Finalize(ierr)
   call message('MPI finished')
 
-  if (rank == 0) then !Only the master (rank 0)
-    tfinish= MPI_wtime()
+  if (rank == master_rank) then !Only the master (rank 0)
+    tfinish= MPI_WTime()
     ! Removes stop file if necessary
     if (lstop) then
       i = 17

@@ -234,9 +234,6 @@ module global_input_parameters
   double precision :: Mgas_disk_min=1d4 ! solar masses
   double precision :: rmin_over_rmax=0.001
 
-
-  ! Adopts a \rho \propto sech^2(z/h) profile for gas and stars
-  ! NB Defaul: rho \propto exp(-|z|/h)
   logical :: p_use_Pdm = .true.
   logical :: p_use_Pbulge = .true.
   logical :: p_halo_contraction = .true.
@@ -245,7 +242,10 @@ module global_input_parameters
   ! Keeps P2>0 to avoid possible artifacts which the regularisation may introduce
   ! Usually not necessary.
   logical :: p_P2_workaround = .false.
-  ! legacy, probably unnecessary options
+
+  ! Legacy, probably unnecessary, options
+  ! Adopts a \rho \propto sech^2(z/h) profile for gas and stars
+  ! NB Defaul: rho \propto exp(-|z|/h)
   logical :: p_sech2_profile = .false.
   logical :: p_Pdm_numerical = .false.
   logical :: p_Pbulge_numerical = .false.

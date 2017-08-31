@@ -28,15 +28,21 @@ Here is a list of the possible status codes.
         p_height_tolerance times the half-mass radius. (I.e. the disc is not
         thin!)
 
-- `H` - Negative scale-height detected.
+- `P` - Invalid solution to the hydrotatic equilibrium equation detected for a
+        one specific radius. A patch was applied: the neighbouring values for
+        h and rho were used instead.
+        NB This is usually harmless, if the patch is applied multiple times the code will fail with status H instead of this.
 
-- `P` - Invalid solution to the hydrotatic equilibrium equation detected.
+- `H` - Negative scale-height detected. Most likely, the code failed to solve
+        the vertical pressure equilibrium and the galaxy aborted.
 
 - `s` - Timestep became too short and the galaxy was aborted.
 
 - `i` - After reducing the timestep multiple times, the run was aborted.
 
 - `p` - Error while reading input parameters.
+
+- `-` - Redshift without have any data (it was absent in the input files).
 
 
 

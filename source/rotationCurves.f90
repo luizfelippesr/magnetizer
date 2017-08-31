@@ -230,6 +230,7 @@ contains
     double precision :: fun_min
     type(c_ptr) :: params_ptr
     integer, parameter :: MAX_INTERVAL_EXPONENT=8
+    logical :: find_root_success
     integer :: i
 
     ! Interfacing gymnastics...
@@ -257,7 +258,13 @@ contains
         if (halo_velocity_contracted_fun(r*1.5d0**i, params_ptr)/fun_min <0) exit
       enddo
 
-      r0 = FindRoot(halo_velocity_contracted_fun, params_ptr, [r, r*1.5d0**i])
+      r0 = FindRoot(halo_velocity_contracted_fun, params_ptr, [r, r*1.5d0**i], &
+                    find_root_success)
+      if (.not.find_root_success) then
+        call error_message('halo_velocity_contracted',                         &
+                           'Unable to find a root in the adiabatic contraction'&
+                        // ' calculation. Aborting.', abort=.true.)
+      endif
 
       V = sqrt(r0/r) * halo_velocity(r0, r_halo, v_halo, nfw_cs1)
 

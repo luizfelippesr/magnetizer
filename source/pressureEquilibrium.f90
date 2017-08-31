@@ -77,6 +77,8 @@ contains
     integer :: i, i_rreg, nghost_actual, error_count
     type(c_ptr) :: params_ptr, params_ptr_alt
     double precision, parameter :: GUESS_INTERVAL = 20
+    integer, parameter :: ERROR_COUNT_MAX = 3
+    logical :: success
 
     if (present(nghost)) then
       nghost_actual = nghost
@@ -158,7 +160,15 @@ contains
       if (sign(1d0,pressure_equation_min) /= sign(1d0,pressure_equation_max)) then
         ! If there is a change in sign, finds the root
         h_d(i) = FindRoot(pressure_equation, params_ptr, &
-                          [minimum_h, maximum_h])
+                          [minimum_h, maximum_h], success)
+        if (.not.success) then
+          ! If unable to find a root, despite having a change in sign (!), just
+          ! give up and use negative scaleheights to propagate the problem
+          ! to the profile module
+          h_d = -1
+          rho_d = 0d0
+          return
+        endif
       else
         ! Otherwise, tries again with a larger interval (i.e. a second chance)
         minimum_h = minimum_h/2d0
@@ -169,10 +179,19 @@ contains
 
         if (sign(1d0,pressure_equation_min) /= sign(1d0,pressure_equation_max)) then
           h_d(i) = FindRoot(pressure_equation, params_ptr, &
-                        [minimum_h, maximum_h])
+                            [minimum_h, maximum_h], success)
+          if (.not.success) then
+            ! If unable to find a root, despite having a change in sign,
+            ! just give up and use negative scaleheights to propagate the
+            ! problem to the profile module
+            h_d = -1
+            rho_d = 0d0
+            return
+          endif
+
         else
           ! If the second chance fails, reports the error
-          if (error_count<3) then
+          if (error_count<ERROR_COUNT_MAX) then
             ! If it only happened a few times, apply a rough patch
             call error_message('solve_hydrostatic_equilibrium_numerical',        &
                               'Initial guess does NOT include a change of sign.'&
@@ -181,7 +200,8 @@ contains
             h_d(i) = h_d(i-1)
             error_count = error_count + 1
           else
-            ! Otherwise signals serious error!
+            ! If after many tries, still unable to find an interval with a
+            ! sign change, give up!
             h_d = -1
             rho_d = 0d0
             return

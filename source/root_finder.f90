@@ -2,9 +2,12 @@
 
 module root_finder
   use FGSL
+  use, intrinsic :: iso_c_binding
   implicit none
   private
   public :: CubicRootClose, FindRoot
+
+  integer, save :: error_state = fgsl_success
 
 contains
   double precision function CubicRootClose(a3, a2, a1, a0, refpoint,all_roots)
@@ -49,7 +52,7 @@ contains
     return
   end function CubicRootClose
 
-  function FindRoot(func, params_ptr, interval, max_it) result(root)
+  function FindRoot(func, params_ptr, interval, success, max_it) result(root)
     ! Wrapper to FGSL's root finder, based on the FSGL's example roots.f90
     ! Input: func -> a function with two arguments: a scalar and a pointer to a C-array
     !                of parameters.
@@ -58,8 +61,6 @@ contains
     !        max_it, optional -> maximum number of iterations
     ! Output: the root!
     !
-    use, intrinsic :: iso_c_binding
-
     real(fgsl_double), external :: func
     type(c_ptr), intent(in) :: params_ptr
     real(fgsl_double), dimension(2), intent(in) :: interval
@@ -71,9 +72,16 @@ contains
     character(kind=fgsl_char,len=fgsl_strmax) :: name
     integer :: i
     integer(fgsl_int) :: status
+    logical, intent(out), optional :: success
     type(fgsl_root_fsolver) :: root_fslv
     type(fgsl_function) :: fgsl_func
 
+    type(fgsl_error_handler_t) :: default_errh, my_errh
+
+    my_errh = fgsl_error_handler_init(err_sub)
+    default_errh = fgsl_set_error_handler(my_errh)
+
+    if (present(success)) success = .true.
     if (present(max_it)) itmax = max_it
 
     root = -huge(root)
@@ -85,11 +93,17 @@ contains
     if (fgsl_well_defined(root_fslv)) then
       status = fgsl_root_fsolver_set(root_fslv, fgsl_func, interval(1), interval(2))
       name = fgsl_root_fsolver_name (root_fslv)
+
+      if (status /= fgsl_success) then
+        if (present(success)) success = .false.
+        return
+      endif
       i = 0
       do
           i = i + 1
           status = fgsl_root_fsolver_iterate(root_fslv)
           if (status /= fgsl_success .or. i > itmax) then
+            if (present(success)) success = .false.
             write(6, *) 'FindRoot: Failed to converge or iterate'
             exit
           end if
@@ -105,4 +119,11 @@ contains
     call fgsl_function_free(fgsl_func)
   end function FindRoot
 
+  subroutine err_sub (reason, file, line, errno) bind(c)
+    ! Here we define our own error handler. It is not thread-safe
+    ! since global state is being maintained.
+    type(c_ptr), value :: reason, file
+    integer(c_int), value :: line, errno
+    error_state = errno
+  end subroutine err_sub
 end module root_finder

@@ -19,8 +19,8 @@ program magnetizer
 
   character(len=8) :: date
   double precision :: tstart,tfinish
-  integer :: rank, nproc, ierr, rc, len
-  character(len=MPI_MAX_PROCESSOR_NAME) hostname
+  integer :: rank, nproc, ierr, rc, length
+  character(len=MPI_MAX_PROCESSOR_NAME) :: hostname
 
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -29,7 +29,7 @@ program magnetizer
   endif
   call MPI_Comm_Rank(MPI_COMM_WORLD, rank, ierr) !Get the rank of the processor this thread is running on
   call MPI_Comm_Size(MPI_COMM_WORLD, nproc, ierr) !Get the number of processors this job
-  call MPI_Get_Processor_Name(hostname, len, ierr) !Get the name of this processor (usually the hostname)
+  call MPI_Get_Processor_Name(hostname, length, ierr) !Get the name of this processor (usually the hostname)
   if (ierr/= MPI_SUCCESS) then
     call message('Error getting processor hostname. Terminating.')
     call MPI_Abort(MPI_COMM_WORLD, rc, ierr)

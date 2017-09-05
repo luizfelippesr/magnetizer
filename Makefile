@@ -15,12 +15,12 @@ endif
 
 FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
-FCFLAGS_TEST=-g -Wall -Wuninitialized
+FCFLAGS_TEST=-g -Wall
 FCFLAGS_PROD=-Ofast
 
 # Builds parallel version
 test: $(OBJ) ${builddir}/mpicalldynamo.o
-	$(FC) $^ $(FCFLAGS) $(FCFLAGS_TEST) -o magnetize_galform.exe
+	$(FC) $^ $(FCFLAGS_TEST) $(FCFLAGS)  -o magnetize_galform.exe
 prod: $(OBJ) ${builddir}/mpicalldynamo.o
 	$(FC) $^ $(FCFLAGS) $(FCFLAGS_PROD) -o magnetize_galform.exe
 

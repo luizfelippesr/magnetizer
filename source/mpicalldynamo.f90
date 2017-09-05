@@ -16,7 +16,8 @@ program magnetizer
   integer :: i
   logical :: lstop
   logical :: lsingle_galaxy_mode = .false.
-
+  logical :: start_galaxy = .false.
+  logical :: lresuming_run = .false.
   character(len=8) :: date
   double precision :: tstart,tfinish
   integer :: rank, nproc, ierr, rc, length
@@ -93,8 +94,18 @@ program magnetizer
     endif
   endif
 
+  ! Checks whether this is a new run or if one is resuming an older run
+  ! Note: resuming runs currently only works for separate output files
+  if (p_IO_separate_output) then
+    if (rank == master_rank) then
+      inquire (file=trim(output_file_name), exist=lresuming_run)
+    endif
+    ! Broadcast the the result
+    call MPI_Bcast(lresuming_run, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
+  endif
+
   ! Initializes IO
-  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL)
+  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL, lresuming_run)
 
   if (.not.lsingle_galaxy_mode) then
     ! Distributes galaxies between processors
@@ -128,9 +139,15 @@ program magnetizer
 
   if (nmygals > 0) then
     do jgal=1,nmygals
+      igal = mygals(jgal)
       ! Call dynamo code for each galaxy in mygals
-      call message('Starting',gal_id=mygals(jgal), rank=rank)
-      call dynamo_run(mygals(jgal), p_no_magnetic_fields_test_run, rank)
+      call message('Starting',gal_id=igal, rank=rank)
+      ! Check whether the galaxy was processed previously
+      start_galaxy = IO_start_galaxy(igal)
+      if (start_galaxy) then
+        ! If it is a new galaxy, runs it!
+        call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+      endif
       ! Checks whether a STOP file exists
       inquire (file='STOP', exist=lstop)
       ! If yes, exits gently

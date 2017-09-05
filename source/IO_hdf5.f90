@@ -15,9 +15,15 @@ module IO
   ! Number of galaxies
   integer :: gals_number, grid_points
 
+  ! Is this a new run or are we continuing a previous one?
+  logical :: lresuming_run
+
+
   ! Parameter setting the maximum possible number of datasets
   integer, parameter :: max_number_of_datasets=50
-  
+  ! Maximum length of a text attribute
+  integer, parameter :: ATTRIB_MAX_LEN = 200
+
   integer(hid_t) :: file_id          ! hdf5 file identifier
   integer(hid_t) :: file_id_out      ! hdf5 file identifier
   integer(hid_t) :: output_group_id  ! hdf5 group identifier
@@ -39,16 +45,17 @@ module IO
 
 contains
 
-  subroutine IO_start(mpi_comm, mpi_info)
+  subroutine IO_start(mpi_comm, mpi_info, resuming_run)
     use grid
     use global_input_parameters
     ! Initializes IO
-    integer, intent(in), optional :: mpi_comm, mpi_info
+    integer, intent(in) :: mpi_comm, mpi_info
+    logical, intent(in) :: resuming_run
     integer(hid_t) :: plist_id      ! property list identifier
     integer :: error
     integer, parameter :: MAX_NMLSTR=20000
     character(len=MAX_NMLSTR) :: namelist_str
-    
+
     ! Reads properties from the global parameters module
     grid_points = nx
     lchunking = p_IO_chunking
@@ -57,11 +64,7 @@ contains
     chunksize = p_IO_number_of_galaxies_in_chunks
     lseparate_output = p_IO_separate_output
 
-    if (.not.present(mpi_comm)) then
-      call error_message('IO_start', &
-                        'Fatal Error: start_IO, trying to initialize parallel'&
-                       //' hdf5 IO without a communicator.',abort=.true.)
-    endif
+    lresuming_run = resuming_run
 
     if (Initialized) then
       call error_message('IO_start', &
@@ -81,74 +84,105 @@ contains
     call check(error)
 
     ! Reads some properties from the global attributes
-    gals_number = read_global_attribute('Number of galaxies')
+    gals_number = read_int_attribute(file_id,'Number of galaxies')
     ngals = gals_number
-    number_of_redshifts = read_global_attribute('Number of snapshots')
+    number_of_redshifts = read_int_attribute(file_id,'Number of snapshots')
 
     if (lseparate_output) then
-      ! Creates the file collectively.
-      call message('Creating file'//trim(output_file_name), info=3)
-      call h5fcreate_f(trim(output_file_name), H5F_ACC_TRUNC_F, &
+      ! Opens if file exists, creates, otherwise
+      if (lresuming_run) then
+        call message('Opening file'//trim(output_file_name), info=3)
+        call h5fopen_f(trim(output_file_name), H5F_ACC_RDWR_F, &
                         file_id_out, error, access_prp=plist_id)
-      call check(error)
+        call check(error)
+      else
+        call message('Creating file'//trim(output_file_name), info=3)
+        call h5fcreate_f(trim(output_file_name), H5F_ACC_TRUNC_F, &
+                        file_id_out, error, access_prp=plist_id)
+        call check(error)
+      endif
     else
+      lresuming_run = .false. ! NB at the moment, resuming a run with
+                              ! unified output/input files is NOT
+                              ! supported! This will be added later.
       file_id_out = file_id
     endif
 
-    ! Saves global parameters file to the HDF5 file
-    call add_text_attribute(file_id_out, 'Model name', model_name)
-
-    write(namelist_str, nml=run_parameters)
-    call add_text_attribute(file_id_out,'run_parameters',trim(namelist_str))
-    
-    write(namelist_str, nml=io_parameters)
-    call add_text_attribute(file_id_out,'io_parameters',trim(namelist_str))
-    
-    write(namelist_str, nml=grid_parameters)
-    call add_text_attribute(file_id_out,'grid_parameters',trim(namelist_str))
-    
-    write(namelist_str, nml=dynamo_parameters)
-    call add_text_attribute(file_id_out,'dynamo_parameters',trim(namelist_str))
-    
-    write(namelist_str, nml=ISM_and_disk_parameters)
-    call add_text_attribute(file_id_out,'ISM_and_disk_parameters',trim(namelist_str))
-    
-    write(namelist_str, nml=outflow_parameters)
-    call add_text_attribute(file_id_out,'outflow_parameters',trim(namelist_str))
-
-    ! Creates output group
-    call message('Creating groups', info=3)
-    call h5gcreate_f(file_id_out, 'Log', log_group_id, error)
-    call check(error)
-    ! Creates output group
-    call h5gcreate_f(file_id_out, 'Output', output_group_id, error)
-    call check(error)
     ! Opens input group
     call h5gopen_f(file_id, 'Input', input_group_id, error)
     call check(error)
 
+    if (.not.lresuming_run) then
+      ! Saves global parameters file to the HDF5 file
+      call add_text_attribute(file_id_out, 'Model name', model_name)
+
+      write(namelist_str, nml=run_parameters)
+      call add_text_attribute(file_id_out,'run_parameters',trim(namelist_str))
+
+      write(namelist_str, nml=io_parameters)
+      call add_text_attribute(file_id_out,'io_parameters',trim(namelist_str))
+
+      write(namelist_str, nml=grid_parameters)
+      call add_text_attribute(file_id_out,'grid_parameters',trim(namelist_str))
+
+      write(namelist_str, nml=dynamo_parameters)
+      call add_text_attribute(file_id_out,'dynamo_parameters',trim(namelist_str))
+
+      write(namelist_str, nml=ISM_and_disk_parameters)
+      call add_text_attribute(file_id_out,'ISM_and_disk_parameters',trim(namelist_str))
+
+      write(namelist_str, nml=outflow_parameters)
+      call add_text_attribute(file_id_out,'outflow_parameters',trim(namelist_str))
+
+      ! Creates log group
+      call message('Creating groups', info=3)
+      call h5gcreate_f(file_id_out, 'Log', log_group_id, error)
+      call check(error)
+      ! Creates output group
+      call h5gcreate_f(file_id_out, 'Output', output_group_id, error)
+      call check(error)
+    else
+      ! Opens output group
+      call h5gopen_f(file_id_out, 'Output', output_group_id, error)
+      call check(error)
+      ! Opens log group
+      call h5gopen_f(file_id_out, 'Log', log_group_id, error)
+      call check(error)
+    endif
     ! Closes property list
     call h5pclose_f(plist_id, error)
     call check(error)
 
     Initialized = .true.
-    return    
+    return
     
   end subroutine IO_start
   
 
-  subroutine IO_start_galaxy(gal_id)
-    ! Initializes galaxy
-    ! At the moment, this is a dummy
+  logical function IO_start_galaxy(gal_id)
+    ! Returns true if the galaxy has a completion flag
+    ! Returns false, otherwise.
     integer, intent(in) :: gal_id
+    double precision, dimension(1) :: flag
 
     if (.not.Initialized) then
       call error_message('IO_start_galaxy','Fatal Error: IO not initialized',&
                          abort=.true.)
     endif
 
-    call message('IO initialised', gal_id=gal_id,info=2)
-  end subroutine IO_start_galaxy
+    IO_start_galaxy = .true.
+
+    if (lresuming_run) then
+      ! If continuing a previous Magnetizer run, checks whether the galaxy
+      ! was finished earlier.
+      call IO_read_dataset_scalar('completed', gal_id, flag, is_log=.true.)
+      if (flag(1)>0.5d0) then
+        IO_start_galaxy = .false.
+        call message('galaxy previously run. Skipping.', gal_id=gal_id,info=2)
+      endif
+    endif
+
+  end function IO_start_galaxy
 
   subroutine IO_write_dataset_scalar(dataset_name, gal_id, data, &
                                      units, description, is_log)
@@ -184,17 +218,20 @@ contains
       if (present(is_log)) then
           if (is_log) group_id = log_group_id
       endif
-      idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca, &
+      if (lresuming_run) then
+        idx = open_dset(dataset_name, group_id=group_id)
+      else
+        idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca, &
                           group_id=group_id)
-      ! Also writes the attributes (if needed)
-      if (present(units)) &
-        call add_text_attribute(dset_ids(idx), 'Units', units)
-      if (present(description)) &
-        call add_text_attribute(dset_ids(idx), 'Description', description)
+        ! Also writes the attributes (if needed)
+        if (present(units)) &
+          call add_text_attribute(dset_ids(idx), 'Units', units)
+        if (present(description)) &
+          call add_text_attribute(dset_ids(idx), 'Description', description)
+      endif
 
       call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
-
     end if
 
     ! Selects hyperslab in the file.
@@ -215,11 +252,12 @@ contains
 
   end subroutine IO_write_dataset_scalar
 
-subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
+subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id
     integer, intent(in), optional :: nrows
+    logical, intent(in), optional :: is_log
     logical :: full
     double precision, dimension(:), intent(out) :: data
     integer ::  idx, error, nrows_actual
@@ -228,7 +266,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     integer, dimension(1) :: data_shape
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
+    logical :: is_log_actual
     
+    if (present(is_log)) then
+      is_log_actual = is_log
+    else
+      is_log_actual = .false.
+    endif
+
     if (present(nrows)) then
         nrows_actual = nrows
         full = .true.
@@ -246,7 +291,12 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      idx = open_dset(dataset_name)
+      if (is_log_actual) then
+        idx = open_dset(dataset_name, log_group_id)
+      else
+        idx = open_dset(dataset_name) !Defaults to the input_group_id
+      endif
+
       if (full) then
         dimsf_sca = [nrows_actual,1]
         call h5screate_simple_f(rank, dimsf_sca, memspace_ids(idx), error)
@@ -339,12 +389,16 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      idx = create_dset(dataset_name, dimsf_vec=dimsf_vec)
-      ! Also writes the attributes (if needed)
-      if (present(units)) &
-        call add_text_attribute(dset_ids(idx), 'Units', units)
-      if (present(description)) &
-        call add_text_attribute(dset_ids(idx), 'Description', description)
+      if (lresuming_run) then
+        idx = open_dset(dataset_name, group_id=output_group_id)
+      else
+        idx = create_dset(dataset_name, dimsf_vec=dimsf_vec)
+        ! Also writes the attributes (if needed)
+        if (present(units)) &
+          call add_text_attribute(dset_ids(idx), 'Units', units)
+        if (present(description)) &
+          call add_text_attribute(dset_ids(idx), 'Description', description)
+      endif
 
       call h5screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error) 
       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
@@ -385,7 +439,11 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
 
+
     group_id = output_group_id
+    if (present(is_log)) then
+        if (is_log) group_id = log_group_id
+    endif
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
@@ -397,21 +455,20 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      ! Flag 'is_log' can be used to choose the group 'Log' instead of 'Output'
-      if (present(is_log)) then
-          if (is_log) group_id = log_group_id
+      if (lresuming_run) then
+        idx = open_dset(dataset_name, group_id=group_id)
+      else
+        ! Flag 'is_log' can be used to choose the group 'Log' instead of 'Output'
+        idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca, &
+                            group_id=group_id, datatype=H5T_NATIVE_CHARACTER)
+        ! Also writes the attributes (if needed)
+        if (present(units)) &
+          call add_text_attribute(dset_ids(idx), 'Units', units)
+        if (present(description)) &
+          call add_text_attribute(dset_ids(idx), 'Description', description)
       endif
-      idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca, &
-                          group_id=group_id, datatype=H5T_NATIVE_CHARACTER)
-      ! Also writes the attributes (if needed)
-      if (present(units)) &
-        call add_text_attribute(dset_ids(idx), 'Units', units)
-      if (present(description)) &
-        call add_text_attribute(dset_ids(idx), 'Description', description)
-
       call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
       call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
-
     end if
 
     ! Selects hyperslab in the file.
@@ -448,8 +505,8 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     character(len=*), intent(in) :: date
     character(len=10) :: date_formatted
 
-    date_formatted = date(1:4)//'-'//date(5:6)//'-'//date(7:8)
-    call add_text_attribute(file_id_out, 'Run date', date_formatted)
+!     date_formatted = date(1:4)//'-'//date(5:6)//'-'//date(7:8)
+!     call add_text_attribute(file_id_out, 'Run date', date_formatted)
 
     ! Closes all dataspaces, namespaces and datasets
     ! (this may be moved to IO_finish_galaxy, if necessary)
@@ -488,11 +545,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
       call h5fclose_f(file_id_out, error)
       call check(error)
     endif
+    ! Resets initialisation flag
+    Initialized =.false.
 
   end subroutine IO_end  
   
-  subroutine add_text_attribute(dset_id, attribute_name, attribute)
-    ! Adds new text attributes to an existing dataset
+  subroutine add_int_attribute(dset_id, attribute_name, attribute)
+    ! Adds or modifies int attributes to an existing dataset
+    !
     ! Input: dset_id -> id of an opened dataset
     !        attribute_name -> string with the name
     !        attribute -> strig with the value
@@ -507,11 +567,61 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     integer(size_t) :: attrlen    ! length of the attribute string
     integer     ::   error ! error flag
     integer(hsize_t), dimension(1) :: data_dims
-
-
+    integer :: old_attr_value
     attrlen = len(attribute)
     data_dims(1) = 1
+    ! Creates scalar data space for the attribute.
+    call h5screate_simple_f(arank, adims, aspace_id, error)
+    call check(error)
 
+    ! Creates datatype for the attribute.
+    call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
+    call check(error)
+    call h5tset_size_f(atype_id, attrlen, error)
+    call check(error)
+
+    ! Creates dataset attribute.
+    call h5acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
+                     error)
+    if (error/=0) then
+      ! If the attribute already exists (which will be an error),
+      ! opens it to overwritting
+      call h5aopen_f(dset_id, attribute_name, attr_id, error)
+      call check(error)
+    endif
+    ! Writes the attribute data.
+    call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
+    call check(error)
+    ! Closes the attribute.
+    call h5aclose_f(attr_id, error)
+    call check(error)
+    ! Terminates access to the data space.
+    call h5sclose_f(aspace_id, error)
+    call check(error)
+  end subroutine add_int_attribute
+
+  subroutine add_text_attribute(dset_id, attribute_name, attribute)
+    ! Adds new text attributes to an existing dataset
+    ! If the attribute already exists, checks whether it has the same value
+    ! and fails if the values differ.
+    !
+    ! Input: dset_id -> id of an opened dataset
+    !        attribute_name -> string with the name
+    !        attribute -> strig with the value
+    character(len=*), intent(in) ::  attribute_name ! attribute name
+    character(len=*), intent(in) ::  attribute ! attribute data
+    integer(hid_t) :: dset_id       ! Dataset identifier
+    integer(hid_t) :: attr_id       ! attribute identifier
+    integer(hid_t) :: aspace_id     ! attribute dataspace identifier
+    integer(hid_t) :: atype_id      ! attribute dataspace identifier
+    integer(hsize_t), dimension(1) :: adims = [1] ! attribute dimension
+    integer     ::   arank = 1                      ! attribute rank
+    integer(size_t) :: attrlen    ! length of the attribute string
+    integer     ::   error ! error flag
+    integer(hsize_t), dimension(1) :: data_dims
+    character(len=ATTRIB_MAX_LEN) :: old_attr_value
+    attrlen = len(attribute)
+    data_dims(1) = 1
     ! Creates scalar data space for the attribute.
     call h5screate_simple_f(arank, adims, aspace_id, error)
     call check(error)
@@ -525,16 +635,21 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     ! Creates dataset attribute.
     call h5acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
                      error)
-    call check(error)
-
-    ! Writes the attribute data.
-    call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
-    call check(error)
-
-
-    ! Closes the attribute.
-    call h5aclose_f(attr_id, error)
-    call check(error)
+    if (error/=0) then
+      ! If the attribute already exists (which will be an error), reads
+      ! its value and compares with the one that one is trying to write
+      old_attr_value = read_text_attribute(dset_id, attribute_name)
+      if (trim(old_attr_value)/=trim(attribute)) then
+        call error_message("IO","Attribute alread exists.", info=0, abort=.true.)
+      endif
+    else
+      ! Writes the attribute data.
+      call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
+      call check(error)
+      ! Closes the attribute.
+      call h5aclose_f(attr_id, error)
+      call check(error)
+    endif
 
     ! Terminates access to the data space.
     call h5sclose_f(aspace_id, error)
@@ -543,11 +658,12 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
   end subroutine add_text_attribute
 
 
-  function read_global_attribute(attribute_name)
-    integer(hid_t) :: attr_id,atype_id       ! attribute identifier
+  function read_int_attribute(dset_id, attribute_name)
+    integer(hid_t) :: attr_id, atype_id       ! attribute identifier
+    integer(hid_t) :: dset_id   ! Dataset identifier
     integer     ::   error ! error flag
     integer(hsize_t), dimension(1) :: dimsf_sca
-    integer :: read_global_attribute
+    integer :: read_int_attribute
     character(len=*), intent(in) ::  attribute_name ! attribute name
 
     dimsf_sca = 0
@@ -555,17 +671,41 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
     call check(error)
 
-    call h5aopen_f(file_id, attribute_name, attr_id, error)
+    call h5aopen_f(dset_id, attribute_name, attr_id, error)
     call check(error)
 
-    call h5aread_f(attr_id, atype_id, read_global_attribute, dimsf_sca,error)
+    call h5aread_f(attr_id, atype_id, read_int_attribute, dimsf_sca,error)
     call check(error)
 
     ! Closes the attribute.
     call h5aclose_f(attr_id, error)
     call check(error)
 
-  end function read_global_attribute
+  end function read_int_attribute
+
+    function read_text_attribute(dset_id, attribute_name)
+    integer(hid_t) :: attr_id, atype_id       ! attribute identifier
+    integer(hid_t) :: dset_id ! Dataset identifier
+    integer     ::   error ! error flag
+    integer(hsize_t), dimension(1) :: dimsf_sca
+    character(len=ATTRIB_MAX_LEN) :: read_text_attribute
+    character(len=*), intent(in) ::  attribute_name ! attribute name
+
+    dimsf_sca = 0
+    call h5tcopy_f(H5T_NATIVE_CHARACTER, atype_id, error)
+    call check(error)
+
+    call h5aopen_f(dset_id, attribute_name, attr_id, error)
+    call check(error)
+
+    call h5aread_f(attr_id, atype_id, read_text_attribute, dimsf_sca, error)
+    call check(error)
+
+    ! Closes the attribute.
+    call h5aclose_f(attr_id, error)
+    call check(error)
+
+  end function read_text_attribute
 
 
 
@@ -663,12 +803,20 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
   end function create_dset
 
 
-  function open_dset(dataset_name) result(idx)
+  function open_dset(dataset_name, group_id) result(idx)
     ! Creates a hdf5 dataspace, a namespace and dataset
     ! Returns the index
     ! NB This is a collective procedure
     character(len=*), intent(in) :: dataset_name
+    integer(hid_t), optional :: group_id
     integer :: idx, error
+    integer(hid_t) :: group_id_actual
+
+    if (present(group_id)) then
+      group_id_actual = group_id
+    else
+      group_id_actual = input_group_id
+    endif
 
     ! Increments ndsets and sets idx
     ndsets = ndsets+1
@@ -677,7 +825,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows)
     dset_names(idx) = dataset_name
 
     ! Opens the dataset
-    call h5dopen_f(input_group_id, dataset_name, dset_ids(idx), error)
+    call h5dopen_f(group_id_actual, dataset_name, dset_ids(idx), error)
     call check(error)
 
     return

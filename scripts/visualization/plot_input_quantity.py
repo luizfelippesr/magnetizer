@@ -73,5 +73,7 @@ if __name__ == "__main__"  :
         else:
             P.xlabel(r'$t\,[{\rm Gyr}]$')
         P.ylabel(q)
+        if q=='central':
+            P.ylim(-0.1,1.1)
         pdf.savefig(fig)
     pdf.close()

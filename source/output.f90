@@ -16,9 +16,6 @@ contains
     integer, intent(in) :: gal_id
     double precision, intent(in) :: runtime
 
-    ! Writes any meta information about the run
-    call IO_start_galaxy(gal_id)
-
     ! Writes log data
     call IO_write_dataset('runtime', gal_id,                        &
                           [runtime],                                &
@@ -35,6 +32,9 @@ contains
                           ts_status_code,                           &
                           description='Status codes.',              &
                           is_log=.true.)
+
+    call IO_write_dataset('completed', gal_id,                      &
+                          [1d0], is_log=.true.)
 
     ! Outputs the data!
     call IO_write_dataset('Br', gal_id,                             &

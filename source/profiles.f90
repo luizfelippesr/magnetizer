@@ -156,6 +156,7 @@ contains
         P(i) = computes_midplane_ISM_pressure_P1(r_kpc(i), Sigma_d(i),      &
                                                  Sigma_star(i), Rm(i),      &
                                                  h_kpc(i), Om_h(i), G_h(i), &
+                                                 Om_b(i), G_b(i), &
                                                  Pd(i), Pm(i), Pstars(i),   &
                                                  Pbulge(i), Pdm(i))
       enddo

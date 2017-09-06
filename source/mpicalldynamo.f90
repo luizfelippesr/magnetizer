@@ -21,18 +21,18 @@ program magnetizer
   character(len=8) :: date
   double precision :: tstart,tfinish
   integer :: rank, nproc, ierr, rc, length
-  character(len=MPI_MAX_PROCESSOR_NAME) :: hostname
 
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
     call message('Error starting MPI program. Terminating.')
     call MPI_ABORT(MPI_COMM_WORLD, rc, ierr)
   endif
-  call MPI_Comm_Rank(MPI_COMM_WORLD, rank, ierr) !Get the rank of the processor this thread is running on
-  call MPI_Comm_Size(MPI_COMM_WORLD, nproc, ierr) !Get the number of processors this job
-  call MPI_Get_Processor_Name(hostname, length, ierr) !Get the name of this processor (usually the hostname)
+  !Get the number of processors this job
+  call MPI_Comm_Size(MPI_COMM_WORLD, nproc, ierr)
+  !Get the rank of the processor this thread is running on
+  call MPI_Comm_Rank(MPI_COMM_WORLD, rank, ierr)
   if (ierr/= MPI_SUCCESS) then
-    call message('Error getting processor hostname. Terminating.')
+    call message('Error getting processor rank. Terminating.')
     call MPI_Abort(MPI_COMM_WORLD, rc, ierr)
   endif
 
@@ -43,19 +43,24 @@ program magnetizer
     tfinish = -1
   endif
 
-
   ! Tries to read the parameter filename from the command argument (or --help)
   call get_command_argument(1, command_argument)
   ! If --help is detected, prints help information
-  if (trim(command_argument)=='--help' .or. &
-                  trim(command_argument)=='-h') then
+  if (trim(command_argument)=='--help' .or. trim(command_argument)=='-h') then
     call get_command_argument(0, command_argument)
-    print *, 'Magnetizer '
-    print *,
-    print *, 'Usage:'
-    print *, trim(command_argument), ' <input_parameters_file> [galaxy number]'
-    print *,
-    print *, 'One day this will be a nice help message'
+    if (rank==master_rank) then
+      print *, 'Magnetizer '
+      print *,
+      print *, 'Computes ISM properties and solves mean field dynamo equation'&
+               //' for the output of a semi-analytic galaxy formation model.'
+      print *,
+      print *, 'Usage:'
+      print *, trim(command_argument), ' <input_parameters_file> [galaxy number]'
+      print *,
+      print *, 'For more details pleas visit: '&
+             //'https://github.com/luizfelippesr/magnetizer'
+      print *,
+    endif
     stop
   endif
 

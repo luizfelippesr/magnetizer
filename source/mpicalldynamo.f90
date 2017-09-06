@@ -158,6 +158,7 @@ program magnetizer
 
       ! Loops sending and receiving
       do igal=nproc+igal_first-1, igal_last
+        if (igal>ngals) exit
         if ( p_master_works_too .and. &
             modulo(igal, (nproc + int(nproc/p_master_skip))) == 0) then
           ! Call dynamo code for each galaxy in mygals

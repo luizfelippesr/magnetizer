@@ -41,7 +41,7 @@ module IO
   logical :: lchunking, lcompression, lseparate_output
   integer :: chunksize, compression_level
   public IO_start, IO_start_galaxy, IO_finish_galaxy, IO_write_dataset, IO_end
-  public IO_read_dataset_scalar, IO_read_dataset_single
+  public IO_read_dataset_scalar, IO_read_dataset_single, IO_flush
 
 contains
 
@@ -230,16 +230,16 @@ contains
           call add_text_attribute(dset_ids(idx), 'Description', description)
       endif
 
-      call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
-      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+      call H5Screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
+      call H5Dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
     end if
 
     ! Selects hyperslab in the file.
     offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
-    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+    call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
     ! At last, writes the dataset
-    call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
+    call H5Dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
 
@@ -299,23 +299,23 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
 
       if (full) then
         dimsf_sca = [nrows_actual,1]
-        call h5screate_simple_f(rank, dimsf_sca, memspace_ids(idx), error)
+        call H5Screate_simple_f(rank, dimsf_sca, memspace_ids(idx), error)
       else
-        call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
+        call H5Screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
       endif
-      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+      call H5Dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
     end if
 
     ! Selects hyperslab in the file.
     offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
     if (.not.full) &
-      call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+      call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                  offset, dimsf_sca_1gal, error)
     ! At last, reads the dataset
     if (full) then
-      call h5dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error)
+      call H5Dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error)
     else
-      call h5dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
+      call H5Dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
                       file_space_id=dataspace_ids(idx), &
                       mem_space_id=memspace_ids(idx))
     endif
@@ -346,16 +346,16 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
       idx = open_dset(dataset_name)
-      call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
-      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+      call H5Screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
+      call H5Dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
     end if
 
     ! Selects hyperslab in the file.
     offset = [gal_id-1] ! Means: in second dimension, start from gal_id-1
-    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+    call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
     ! At last, reads the dataset
-    call h5dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
+    call H5Dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
     return
@@ -400,15 +400,15 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
           call add_text_attribute(dset_ids(idx), 'Description', description)
       endif
 
-      call h5screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error) 
-      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+      call H5Screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error)
+      call H5Dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
     end if
     ! Selects hyperslab in the file.
     offset = [0,0,gal_id-1] ! Means: in third dimension, start from gal_id-1
-    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+    call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_vec_1gal, error)
     ! At last, writes the dataset
-    call h5dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error, &
+    call H5Dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error, &
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
 
@@ -467,16 +467,16 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
         if (present(description)) &
           call add_text_attribute(dset_ids(idx), 'Description', description)
       endif
-      call h5screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
-      call h5dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+      call H5Screate_simple_f(rank, dimsf_sca_1gal, memspace_ids(idx), error)
+      call H5Dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
     end if
 
     ! Selects hyperslab in the file.
     offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
-    call h5sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+    call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
     ! At last, writes the dataset
-    call h5dwrite_f(dset_ids(idx), H5T_NATIVE_CHARACTER, data, dimsf_sca, error,&
+    call H5Dwrite_f(dset_ids(idx), H5T_NATIVE_CHARACTER, data, dimsf_sca, error,&
                     file_space_id=dataspace_ids(idx), &
                     mem_space_id=memspace_ids(idx))
     if (error/=0) then
@@ -513,13 +513,13 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     do i=1,ndsets
       call message('Preparing to close dataset '//dset_names(i), info=3)
       call message('Closing dataspace ', val_int=i, info=4)
-      call h5sclose_f(dataspace_ids(i), error)
+      call H5Sclose_f(dataspace_ids(i), error)
       call check(error)
       call message('Closing memspace ', val_int=i, info=4)
-      call h5sclose_f(memspace_ids(i), error)
+      call H5Sclose_f(memspace_ids(i), error)
       call check(error)
       call message('Closing dataset '//dset_names(i), info=4)
-      call h5dclose_f(dset_ids(i), error)
+      call H5Dclose_f(dset_ids(i), error)
       call check(error)
     end do
     ndsets = 0
@@ -550,6 +550,18 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
 
   end subroutine IO_end  
   
+  subroutine IO_flush()
+    integer :: error
+    call message('Flushing HDF5 file(s).', info=3)
+
+    call H5Fflush_f(file_id, H5F_SCOPE_GLOBAL_F , error)
+    call check(error)
+    if (lseparate_output) then
+      call H5Fflush_f(file_id_out, H5F_SCOPE_GLOBAL_F , error)
+      call check(error)
+    endif
+  end subroutine IO_flush
+
   subroutine add_int_attribute(dset_id, attribute_name, attribute)
     ! Adds or modifies int attributes to an existing dataset
     !
@@ -571,32 +583,32 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     attrlen = len(attribute)
     data_dims(1) = 1
     ! Creates scalar data space for the attribute.
-    call h5screate_simple_f(arank, adims, aspace_id, error)
+    call H5Screate_simple_f(arank, adims, aspace_id, error)
     call check(error)
 
     ! Creates datatype for the attribute.
-    call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
+    call H5Tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
     call check(error)
-    call h5tset_size_f(atype_id, attrlen, error)
+    call H5Tset_size_f(atype_id, attrlen, error)
     call check(error)
 
     ! Creates dataset attribute.
-    call h5acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
+    call H5Acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
                      error)
     if (error/=0) then
       ! If the attribute already exists (which will be an error),
       ! opens it to overwritting
-      call h5aopen_f(dset_id, attribute_name, attr_id, error)
+      call H5Aopen_f(dset_id, attribute_name, attr_id, error)
       call check(error)
     endif
     ! Writes the attribute data.
-    call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
+    call H5Awrite_f(attr_id, atype_id, attribute, data_dims, error)
     call check(error)
     ! Closes the attribute.
-    call h5aclose_f(attr_id, error)
+    call H5Aclose_f(attr_id, error)
     call check(error)
     ! Terminates access to the data space.
-    call h5sclose_f(aspace_id, error)
+    call H5Sclose_f(aspace_id, error)
     call check(error)
   end subroutine add_int_attribute
 
@@ -623,17 +635,17 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     attrlen = len(attribute)
     data_dims(1) = 1
     ! Creates scalar data space for the attribute.
-    call h5screate_simple_f(arank, adims, aspace_id, error)
+    call H5Screate_simple_f(arank, adims, aspace_id, error)
     call check(error)
 
     ! Creates datatype for the attribute.
-    call h5tcopy_f(H5T_NATIVE_CHARACTER, atype_id, error)
+    call H5Tcopy_f(H5T_NATIVE_CHARACTER, atype_id, error)
     call check(error)
-    call h5tset_size_f(atype_id, attrlen, error)
+    call H5Tset_size_f(atype_id, attrlen, error)
     call check(error)
 
     ! Creates dataset attribute.
-    call h5acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
+    call H5Acreate_f(dset_id, attribute_name, atype_id, aspace_id, attr_id, &
                      error)
     if (error/=0) then
       ! If the attribute already exists (which will be an error), reads
@@ -644,15 +656,15 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
       endif
     else
       ! Writes the attribute data.
-      call h5awrite_f(attr_id, atype_id, attribute, data_dims, error)
+      call H5Awrite_f(attr_id, atype_id, attribute, data_dims, error)
       call check(error)
       ! Closes the attribute.
-      call h5aclose_f(attr_id, error)
+      call H5Aclose_f(attr_id, error)
       call check(error)
     endif
 
     ! Terminates access to the data space.
-    call h5sclose_f(aspace_id, error)
+    call H5Sclose_f(aspace_id, error)
     call check(error)
 
   end subroutine add_text_attribute
@@ -668,17 +680,17 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
 
     dimsf_sca = 0
 
-    call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
+    call H5Tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
     call check(error)
 
-    call h5aopen_f(dset_id, attribute_name, attr_id, error)
+    call H5Aopen_f(dset_id, attribute_name, attr_id, error)
     call check(error)
 
-    call h5aread_f(attr_id, atype_id, read_int_attribute, dimsf_sca,error)
+    call H5Aread_f(attr_id, atype_id, read_int_attribute, dimsf_sca,error)
     call check(error)
 
     ! Closes the attribute.
-    call h5aclose_f(attr_id, error)
+    call H5Aclose_f(attr_id, error)
     call check(error)
 
   end function read_int_attribute
@@ -692,17 +704,17 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     character(len=*), intent(in) ::  attribute_name ! attribute name
 
     dimsf_sca = 0
-    call h5tcopy_f(H5T_NATIVE_CHARACTER, atype_id, error)
+    call H5Tcopy_f(H5T_NATIVE_CHARACTER, atype_id, error)
     call check(error)
 
-    call h5aopen_f(dset_id, attribute_name, attr_id, error)
+    call H5Aopen_f(dset_id, attribute_name, attr_id, error)
     call check(error)
 
-    call h5aread_f(attr_id, atype_id, read_text_attribute, dimsf_sca, error)
+    call H5Aread_f(attr_id, atype_id, read_text_attribute, dimsf_sca, error)
     call check(error)
 
     ! Closes the attribute.
-    call h5aclose_f(attr_id, error)
+    call H5Aclose_f(attr_id, error)
     call check(error)
 
   end function read_text_attribute
@@ -761,14 +773,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
       rank = 2
       if (lchunking) &
           chunkdim_sca = [ dimsf_sca(1), min(dimsf_sca(2), chunksize) ]
-      call h5screate_simple_f(rank, dimsf_sca, dataspace, error)
+      call H5Screate_simple_f(rank, dimsf_sca, dataspace, error)
       call check(error)
     else
       ! 3 dimensions: galaxy id, time and radius
       rank = 3
       if (lchunking) chunkdim_vec = &
               [ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) ]
-      call h5screate_simple_f(rank, dimsf_vec, dataspace, error)
+      call H5Screate_simple_f(rank, dimsf_vec, dataspace, error)
       call check(error)
     endif
 
@@ -792,11 +804,11 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
       endif
     endif
     ! Creates the dataset
-    call h5dcreate_f(group_id_actual, dataset_name, datatype_actual, &
+    call H5Dcreate_f(group_id_actual, dataset_name, datatype_actual, &
                     dataspace, dset_ids(idx), error,  dcpl_id=plist_id)
     call check(error)
     ! Closes dataspace
-    call h5sclose_f(dataspace, error)
+    call H5Sclose_f(dataspace, error)
     call check(error)
 
     return
@@ -825,7 +837,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     dset_names(idx) = dataset_name
 
     ! Opens the dataset
-    call h5dopen_f(group_id_actual, dataset_name, dset_ids(idx), error)
+    call H5Dopen_f(group_id_actual, dataset_name, dset_ids(idx), error)
     call check(error)
 
     return

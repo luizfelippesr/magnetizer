@@ -32,7 +32,7 @@ module global_input_parameters
   ! distribute work and do some work by himself once every
   ! (nproc+int(nproc/p_master_skip)) galaxies.
   logical :: p_master_works_too = .true.
-  double precision :: p_master_skip = 1
+  double precision :: p_master_skip = 2
 
   namelist /io_parameters/ &
     output_file_name, input_file_name, p_IO_separate_output, &

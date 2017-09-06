@@ -20,7 +20,7 @@ program magnetizer
   logical :: lresuming_run = .false.
   character(len=8) :: date
   double precision :: tstart,tfinish
-  integer :: rank, nproc, ierr, rc, length, ncycles
+  integer :: rank, nproc, ierr, rc, length, ncycles, flush_signal
   integer, parameter :: finished_tag = 0
   integer, parameter :: newjob_tag = 17
   integer, dimension(MPI_STATUS_SIZE) :: status
@@ -136,6 +136,7 @@ program magnetizer
   allocate(mygals(ngals))
   mygals = -17 ! Initializes to bad value
   allocate(allgals(ngals*nproc))
+  flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
 
   ! ----------
   !   Master
@@ -145,9 +146,6 @@ program magnetizer
       igal_first = 1+j*p_ncheckpoint
       igal_last = (j+1)*p_ncheckpoint
       call message('Cycle',val_int=j+1, master_only=.true.)
-      call message('First',val_int=igal_first, master_only=.true.)
-      call message('Last',val_int=igal_last, master_only=.true.)
-
 
       ! Submit initial jobs
       do iproc=1, nproc-1
@@ -176,16 +174,14 @@ program magnetizer
           ! Receives finished work from worker
           call MPI_Recv(igal_finished, 1, MPI_INTEGER, MPI_ANY_SOURCE, finished_tag, &
                         MPI_COMM_WORLD, status, ierr)
+          ! Finds out which worker has just finished this work
           iproc = STATUS(MPI_SOURCE)
-
-          ! Sends new job!
+          ! Sends new job to that worker
           call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, &
                         ierr)
-          !print *, '  igal',igal, 'sending to', iproc
-
         endif
       enddo
-!
+
       ! Checks whether a STOP file exists
       inquire (file='STOP', exist=lstop)
       ! If yes, exits gently
@@ -194,29 +190,28 @@ program magnetizer
                      info=0, master_only=.true.)
       endif
 
+      ! Goes through all workers, requesting them to either stop or flush
+      ! the data to the disk
       i = 0
       do iproc=1, nproc-1
+          ! Receives whatever message it is sending
           call MPI_Recv(igal_finished, 1, MPI_INTEGER, iproc, finished_tag, &
                         MPI_COMM_WORLD, status, ierr)
-          if (igal_finished>0 .and. igal_finished<=ngals) then
-            i = i+1
-            allgals(i) = igal_finished
-          endif
-
           if (lstop .or. (igal_last>ngals)) then
-            ! Tells to workers to finish
+            ! If it is time to stop, tells to workers to finish
             call MPI_Send(-1, 1, MPI_INTEGER, iproc, newjob_tag, &
                           MPI_COMM_WORLD, ierr)
-            !print *, '  signal',-1, 'sending to', iproc
           else
-            ! Sends an invalid galaxy to keep the workers going
-            call MPI_Send(ngals+1, 1, MPI_INTEGER, iproc, newjob_tag, &
+            ! Otherwise, sends a signal requesting the worker to flush
+            call MPI_Send(flush_signal, 1, MPI_INTEGER, iproc, newjob_tag, &
                           MPI_COMM_WORLD, ierr)
-            !print *, '  signal',ngals+1, 'sending to', iproc
           endif
       enddo
 
+      ! Tells the master to stop
       if (lstop) exit
+      ! Tells the master to flush
+      call IO_flush()
     enddo
   ! ----------
   !   Worker
@@ -243,30 +238,23 @@ program magnetizer
 
           ! Sends the result (to mark it done)
           call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
+        else if (igal==flush_signal) then
+          call IO_flush()
+          call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
+
         else
-          ! Invalid galaxy. (More processors than galaxies!) Nothing is done.
+          ! Invalid galaxy. Probably, more processors than galaxies!) Nothing is done.
           call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
         endif
      enddo
   endif
-
-
-
-
-
-
-
-
-
-
-
 
   call message('All computing done', info=0)
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
   if (nmygals>0) then
     if (nmygals<10) then
-      print *, trim(str(rank)),': Worked on galaxies:', mygals(:nmygals),'.'
+      print *, trim(str(rank)),': Finished working on galaxies:', mygals(:nmygals),'.'
     else
       call message('Finished working on', val_int=nmygals, msg_end='galaxies.')
     endif
@@ -286,7 +274,7 @@ program magnetizer
 
   ! Prints a small report
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  call sleep(1)
+
   ! Finalizes IO
   call IO_end(date)
   call message('', master_only=.true.)
@@ -331,5 +319,7 @@ program magnetizer
   call message('Total wall time in seconds =',tfinish-tstart, &
                master_only=.true., info=0)
   call message('Wall time per galaxy =', (tfinish-tstart)/ngals, &
+               master_only=.true., info=0)
+  call message('Average CPU per galaxy =', (tfinish-tstart)*nproc/ngals, &
                master_only=.true., info=0)
 end program magnetizer

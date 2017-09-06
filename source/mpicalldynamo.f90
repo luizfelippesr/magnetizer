@@ -248,6 +248,8 @@ program magnetizer
      enddo
   endif
 
+
+  call IO_flush()
   call message('All computing done', info=0)
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)

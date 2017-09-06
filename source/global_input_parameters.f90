@@ -26,11 +26,19 @@ module global_input_parameters
   integer :: p_IO_number_of_galaxies_in_chunks = 10
   logical :: p_IO_compression = .false. ! requires chunking!
   integer :: p_IO_compression_level = 6
+  ! Number of galaxies after which output file is updated
+  integer :: p_ncheckpoint = 5000
+  ! The master/root process takes part in the calculation? If .true. it will
+  ! distribute work and do some work by himself once every
+  ! (nproc+int(nproc/p_master_skip)) galaxies.
+  logical :: p_master_works_too = .true.
+  double precision :: p_master_skip = 1
 
   namelist /io_parameters/ &
     output_file_name, input_file_name, p_IO_separate_output, &
     p_IO_chunking, p_IO_number_of_galaxies_in_chunks, p_IO_compression, &
-    p_IO_compression_level
+    p_IO_compression_level, &
+    p_master_works_too, p_master_skip, p_ncheckpoint
 
 
   ! -------------------------------------------------------
@@ -51,19 +59,11 @@ module global_input_parameters
   logical :: p_no_magnetic_fields_test_run = .false.
   ! Seed for the random number generator (can be any integer different from 0)
   integer :: p_random_seed = 17
-  ! Number of galaxies after which output file is updated
-  integer :: p_ncheckpoint = 5000
-  ! The master/root process takes part in the calculation? If .true. it will
-  ! distribute work and do some work by himself once every
-  ! (nproc+int(nproc/p_master_skip)) galaxies.
-  logical :: p_master_works_too = .true.
-  double precision :: p_master_skip = 2
 
   namelist /run_parameters/ &
     model_name, info, nsteps_0, p_courant_v, p_courant_eta, &
     p_variable_timesteps, p_nsteps_max, p_oneSnaphotDebugMode, &
-    p_no_magnetic_fields_test_run, p_MAX_FAILS, p_random_seed, &
-    p_master_works_too, p_master_skip, p_ncheckpoint
+    p_no_magnetic_fields_test_run, p_MAX_FAILS, p_random_seed
 
   ! -------------------------------------------------------
   ! Grid settings

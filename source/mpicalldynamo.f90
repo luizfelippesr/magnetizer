@@ -9,18 +9,22 @@ program magnetizer
 
   implicit none
 
-  integer :: igal, jgal, nmygals
+  integer :: igal, nmygals, igal_first, igal_last, igal_finished
   integer, parameter :: master_rank = 0
-  integer, allocatable, dimension(:) :: mygals
+  integer, allocatable, dimension(:) :: mygals, allgals
   character(len=100) :: command_argument
-  integer :: i
+  integer :: i, j, iproc
   logical :: lstop
   logical :: lsingle_galaxy_mode = .false.
   logical :: start_galaxy = .false.
   logical :: lresuming_run = .false.
   character(len=8) :: date
   double precision :: tstart,tfinish
-  integer :: rank, nproc, ierr, rc, length
+  integer :: rank, nproc, ierr, rc, length, ncycles
+  integer, parameter :: finished_tag = 0
+  integer, parameter :: newjob_tag = 17
+  integer, dimension(MPI_STATUS_SIZE) :: status
+  integer, dimension(1) :: ind ! TEMPORARY
 
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -72,7 +76,7 @@ program magnetizer
   else
     call message('Magnetizer', rank=rank, set_info=info, &
                  master_only=.true., info=0)
-    call message(' ', rank=-1)
+    call message(' ', master_only=.true.)
     call message('Runnning on', val_int=nproc, msg_end='processors', &
                  master_only=.true., info=0)
   endif
@@ -112,58 +116,166 @@ program magnetizer
   ! Initializes IO
   call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL, lresuming_run)
 
-  if (.not.lsingle_galaxy_mode) then
-    ! Distributes galaxies between processors
-    allocate(mygals(ngals))
-    nmygals = 0
-    do i=0,ngals
-      igal = rank + i*nproc+1
-      if (igal>ngals) exit
-      mygals(i+1) = igal
-      nmygals = nmygals + 1
-    end do
-  else
-    allocate(mygals(1))
-    if (rank == master_rank) then
-      mygals(1) = str2int(command_argument)+1
-      nmygals = 1
-    else
-      nmygals = 0
+  if (lsingle_galaxy_mode .and. (rank == master_rank)) then
+    igal = str2int(command_argument)
+    ncycles = 0
+    call message('Starting',gal_id=igal, rank=rank)
+    ! Check whether the galaxy was processed previously
+    start_galaxy = IO_start_galaxy(igal)
+    if (start_galaxy) then
+      ! If it is a new galaxy, runs it!
+      call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
     endif
+  else
+    ncycles = max(ngals/p_ncheckpoint, 1)
+    call message('Total number of cycles',val_int=ncycles, master_only=.true.)
   endif
 
-  if (ngals<1000) then
-    call message('List of galaxies to run', rank=rank)
-    ! The following doesn't work because an interface for printing vectors
-    ! wasn't yet writen.
-    ! call message('    mygals =',mygals(:nmygals), rank=rank)
-    ! Will do it by hand. Later, if this proves useful, the messages module can
-    ! be updated.
-    print *, str(rank),':  ','mygals = ',mygals(:nmygals)
-  endif
+  ! Allocates a arrays to for logging
+  nmygals = 0
+  allocate(mygals(ngals))
+  mygals = -17 ! Initializes to bad value
+  allocate(allgals(ngals*nproc))
 
-  if (nmygals > 0) then
-    do jgal=1,nmygals
-      igal = mygals(jgal)
-      ! Call dynamo code for each galaxy in mygals
-      call message('Starting',gal_id=igal, rank=rank)
-      ! Check whether the galaxy was processed previously
-      start_galaxy = IO_start_galaxy(igal)
-      if (start_galaxy) then
-        ! If it is a new galaxy, runs it!
-        call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
-      endif
+  ! ----------
+  !   Master
+  ! ----------
+  if (rank==master_rank) then
+    do j=0, ncycles
+      igal_first = 1+j*p_ncheckpoint
+      igal_last = (j+1)*p_ncheckpoint
+      call message('Cycle',val_int=j+1, master_only=.true.)
+      call message('First',val_int=igal_first, master_only=.true.)
+      call message('Last',val_int=igal_last, master_only=.true.)
+
+
+      ! Submit initial jobs
+      do iproc=1, nproc-1
+          igal = iproc-1+igal_first
+!           print *, igal, iproc
+          if (igal > igal_last) igal=ngals+1
+          print *, '  igal',igal, 'sending to', iproc
+          call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, ierr)
+      enddo
+
+      ! Loops sending and receiving
+      do igal=nproc+igal_first-1, igal_last
+        if ( p_master_works_too .and. &
+            modulo(igal, (nproc + int(nproc/p_master_skip))) == 0) then
+          ! Call dynamo code for each galaxy in mygals
+          call message('Starting',gal_id=igal, rank=rank)
+          ! Check whether the galaxy was processed previously
+          start_galaxy = IO_start_galaxy(igal)
+          if (start_galaxy) then
+            ! If it is a new galaxy, runs it!
+            call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+            nmygals = nmygals + 1
+            mygals(nmygals) = igal
+          endif
+        else
+          ! Receives finished work from worker
+          call MPI_Recv(igal_finished, 1, MPI_INTEGER, MPI_ANY_SOURCE, finished_tag, &
+                        MPI_COMM_WORLD, status, ierr)
+          iproc = STATUS(MPI_SOURCE)
+
+          ! Sends new job!
+          call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, &
+                        ierr)
+          !print *, '  igal',igal, 'sending to', iproc
+
+        endif
+      enddo
+!
       ! Checks whether a STOP file exists
       inquire (file='STOP', exist=lstop)
       ! If yes, exits gently
       if (lstop) then
-        call message('Found STOP file. Exiting..', info=0)
-        exit
+        call message('STOP file found. Will finish this cycle and then exit.', &
+                     info=0, master_only=.true.)
       endif
+
+      i = 0
+      do iproc=1, nproc-1
+          call MPI_Recv(igal_finished, 1, MPI_INTEGER, iproc, finished_tag, &
+                        MPI_COMM_WORLD, status, ierr)
+          if (igal_finished>0 .and. igal_finished<=ngals) then
+            i = i+1
+            allgals(i) = igal_finished
+          endif
+
+          if (lstop .or. (igal_last>ngals)) then
+            ! Tells to workers to finish
+            call MPI_Send(-1, 1, MPI_INTEGER, iproc, newjob_tag, &
+                          MPI_COMM_WORLD, ierr)
+            !print *, '  signal',-1, 'sending to', iproc
+          else
+            ! Sends an invalid galaxy to keep the workers going
+            call MPI_Send(ngals+1, 1, MPI_INTEGER, iproc, newjob_tag, &
+                          MPI_COMM_WORLD, ierr)
+            !print *, '  signal',ngals+1, 'sending to', iproc
+          endif
+      enddo
+
+      if (lstop) exit
     enddo
+  ! ----------
+  !   Worker
+  ! ----------
+  else
+      do
+        ! Receives new task or a flag
+        call MPI_Recv(igal, 1, MPI_INTEGER, 0, newjob_tag, MPI_COMM_WORLD, status, ierr)
+        ! If received an exit flag, exits
+        if (igal<0) then
+          call message('Exiting', rank=rank)
+          exit
+        else if (igal<=ngals) then
+          ! Call dynamo code for each galaxy in mygals
+          call message('Starting',gal_id=igal, rank=rank)
+          ! Check whether the galaxy was processed previously
+          start_galaxy = IO_start_galaxy(igal)
+          if (start_galaxy) then
+            ! If it is a new galaxy, runs it!
+            call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+            nmygals = nmygals + 1
+            mygals(nmygals) = igal
+          endif
+
+          ! Sends the result (to mark it done)
+          call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
+        else
+          ! Invalid galaxy. (More processors than galaxies!) Nothing is done.
+          call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
+        endif
+     enddo
   endif
 
+
+
+
+
+
+
+
+
+
+
+
   call message('All computing done', info=0)
+
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  if (nmygals>0) then
+    if (nmygals<10) then
+      print *, trim(str(rank)),': Worked on galaxies:', mygals(:nmygals),'.'
+    else
+      call message('Finished working on', val_int=nmygals, msg_end='galaxies.')
+    endif
+  else
+    call message('Finished without working on any galaxy.')
+  endif
+
+  call MPI_Gather(mygals, ngals, MPI_INTEGER, allgals, ngals, &
+                  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
   ! Gets the date
   if (rank == master_rank) then
@@ -172,13 +284,31 @@ program magnetizer
   ! Broadcast the date
   call MPI_Bcast(date, 8, MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
 
+  ! Prints a small report
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  call sleep(1)
   ! Finalizes IO
   call IO_end(date)
-  call message('IO finished')
+  call message('', master_only=.true.)
+  call message('IO finished', master_only=.true.)
+
+  j = 0
+  if (rank==master_rank) then
+    do i=1,ngals*2
+      ind = maxloc(allgals)
+      if (allgals(ind(1))>0 .and. allgals(ind(1))<=ngals) then
+        j = j+1
+        mygals(j) = allgals(ind(1))
+      endif
+      allgals(ind(1)) = -1000
+    enddo
+    ngals = j
+  endif
+
 
   !Tell the MPI library to release all resources it is using
   call MPI_Finalize(ierr)
-  call message('MPI finished')
+  call message('MPI finished', master_only=.true.)
 
   if (rank == master_rank) then !Only the master (rank 0)
     tfinish= MPI_WTime()
@@ -191,9 +321,15 @@ program magnetizer
     endif
   endif
 
+  if (info>1 .and. j>0) then
+    print *,
+    print *, '  Galaxies in this run:'
+    print *, mygals(:j)
+    print *,
+  endif
+
   call message('Total wall time in seconds =',tfinish-tstart, &
                master_only=.true., info=0)
-  call message('Average (total) time per galaxy =', &
-               (tfinish-tstart)*nproc/ngals, &
+  call message('Wall time per galaxy =', (tfinish-tstart)/ngals, &
                master_only=.true., info=0)
 end program magnetizer

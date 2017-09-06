@@ -150,9 +150,7 @@ program magnetizer
       ! Submit initial jobs
       do iproc=1, nproc-1
           igal = iproc-1+igal_first
-!           print *, igal, iproc
           if (igal > igal_last) igal=ngals+1
-          print *, '  igal',igal, 'sending to', iproc
           call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, ierr)
       enddo
 

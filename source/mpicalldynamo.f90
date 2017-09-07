@@ -143,6 +143,7 @@ program magnetizer
   ! ----------
   if (rank==master_rank) then
     do j=0, ncycles
+      if (lsingle_galaxy_mode) exit
       igal_first = 1+j*p_ncheckpoint
       igal_last = (j+1)*p_ncheckpoint
       call message('Cycle',val_int=j+1, master_only=.true.)
@@ -255,7 +256,7 @@ program magnetizer
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
   if (nmygals>0) then
     if (nmygals<10) then
-      print *, trim(str(rank)),': Finished working on galaxies:', mygals(:nmygals),'.'
+      print *, trim(str(rank)),':  Finished working on galaxies:', mygals(:nmygals),'.'
     else
       call message('Finished working on', val_int=nmygals, msg_end='galaxies.')
     endif
@@ -319,8 +320,10 @@ program magnetizer
 
   call message('Total wall time in seconds =',tfinish-tstart, &
                master_only=.true., info=0)
-  call message('Wall time per galaxy =', (tfinish-tstart)/ngals, &
-               master_only=.true., info=0)
-  call message('Average CPU per galaxy =', (tfinish-tstart)*nproc/ngals, &
-               master_only=.true., info=0)
+  if (.not.lsingle_galaxy_mode) then
+    call message('Wall time per galaxy =', (tfinish-tstart)/ngals, &
+                 master_only=.true., info=0)
+    call message('Average CPU per galaxy =', (tfinish-tstart)*nproc/ngals, &
+                 master_only=.true., info=0)
+  endif
 end program magnetizer

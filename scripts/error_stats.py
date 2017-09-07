@@ -15,18 +15,18 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p']):
                                      Default: ['e','g','h','H','s','i','p']
     """
     status = h5file['Log']['status']
-    completed = h5file['Log']['completed']
+    completed = h5file['Log']['completed'][:]
+    runtime = h5file['Log']['runtime'][:]
 
     # Initializes dictionaries
     err_number = {c: 0 for c in error_codes}
     err_gals = {c: [] for c in error_codes}
     nice = 0
 
-    completed_indices = np.where(completed[:]>0)
+    completed_indices = np.where(completed>0)
     ngal = completed_indices[0].size
 
     for i in completed_indices[0]:
-        print i
         # Reads the status
         gal_status = status[i,:]
 
@@ -44,13 +44,17 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p']):
 
     print 'Total number of galaxies', completed.size
     print 'Number of completed galaxies', ngal
-
+    print '\nSummary of errors'
     print ' Code\tFrac \t N\tExamples'
     for c in err_number:
+        max_idx = min(len(err_gals[c]),9)
         print ' {0} \t{1:.1%}\t {2} \t{3}'.format(c, err_number[c]/ngal,
-                                          err_number[c], ','.join(err_gals[c][:7]))
+                                  err_number[c],','.join(err_gals[c][:max_idx]))
 
     print ' ok\t{1:.1%}\t {2}'.format(c, nice/ngal, nice)
+
+    print '\nAverage CPU time per galaxy:', runtime[completed_indices].sum()/ngal
+    print
 
     return
 

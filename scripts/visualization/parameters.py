@@ -20,7 +20,7 @@ class Parameters(object):
     def __init__(self,h5file):
 
         self.name = h5file.attrs['Model name'][0]
-        self.date = h5file.attrs['Run date'][0]
+        #self.date = h5file.attrs['Run date'][0]
         self.file = h5file
 
         for p in ('ISM_and_disk','dynamo', 'grid','io','outflow','run'):

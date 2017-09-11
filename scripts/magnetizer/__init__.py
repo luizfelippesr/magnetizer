@@ -1,0 +1,3 @@
+from MagnetizerRun import MagnetizerRun
+print MagnetizerRun
+from parameters import Parameters

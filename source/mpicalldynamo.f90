@@ -113,8 +113,15 @@ program magnetizer
     call MPI_Bcast(lresuming_run, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
   endif
 
-  ! Initializes IO
+  ! Initializes IO (this also reads ngals from the hdf5 input file)
   call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL, lresuming_run)
+
+  ! Allocates a arrays to for logging
+  nmygals = 0
+  allocate(mygals(ngals))
+  mygals = -17 ! Initializes to bad value
+  allocate(allgals(ngals*nproc))
+  flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
 
   if (lsingle_galaxy_mode .and. (rank == master_rank)) then
     igal = str2int(command_argument)
@@ -125,18 +132,14 @@ program magnetizer
     if (start_galaxy) then
       ! If it is a new galaxy, runs it!
       call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+      nmygals = nmygals + 1
+      mygals(nmygals) = igal
     endif
   else
     ncycles = max(ngals/p_ncheckpoint, 1)
     call message('Total number of cycles',val_int=ncycles, master_only=.true.)
   endif
 
-  ! Allocates a arrays to for logging
-  nmygals = 0
-  allocate(mygals(ngals))
-  mygals = -17 ! Initializes to bad value
-  allocate(allgals(ngals*nproc))
-  flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
 
   ! ----------
   !   Master

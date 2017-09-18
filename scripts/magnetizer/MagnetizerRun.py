@@ -4,7 +4,10 @@ import h5py, numpy as np
 import sys
 
 from parameters import Parameters
-from extra_quantities import compute_extra_quantity
+from extra_quantities import compute_extra_quantity, units_dict
+
+
+
 
 class MagnetizerRun(object):
     """
@@ -58,17 +61,25 @@ class MagnetizerRun(object):
             if quantity in self._data:
                 profile = len(self._data[quantity].shape)==3
 
+                unit = self._data['Beq'].attrs['Units']
+                if len(units)==1:
+                    unit = unit[0] # unpacks array..
+                unit = units_dict[unit]
                 self._cache[keypair] = self._clean(self._data[quantity],iz,
                                                    profile)
             else:
-                new_data, units = compute_extra_quantity(
-                  quantity, self._data, select_z=iz,
-                  return_units=True)
+                new_data, unit = compute_extra_quantity(quantity, self._data,
+                                                  select_z=iz,
+                                                  return_units=True)
 
                 profile = len(new_data.shape)==2
 
                 self._cache[keypair] = self._clean(new_data, iz, profile,
-                                                   pre_selected_z=True)
+                                          pre_selected_z=True)
+
+        if unit is not None:
+            self._cache[keypair] = self._cache[keypair]*unit
+
         # Returns the cached quantity
         return self._cache[keypair]
 
@@ -97,13 +108,18 @@ class MagnetizerRun(object):
                 return np.where(self._valid[:,:,iz],
                                 dataset[self._completed,:],
                                 np.NaN)
-            # If corresponds to a profile
+
             return np.where(self._valid[:,:,iz],
                             dataset[self._completed,:,iz],
                             np.NaN)
 
         else:
-            raise NotImplementedError
+            # If corresponds to a profile
+            if pre_selected_z:
+                # If the redshift was previously selected
+                # and if corresponds to a profile
+                return dataset[self._completed]
+            return dataset[self._completed,iz]
 
 
     def __closest_redshift_idx(self, z):

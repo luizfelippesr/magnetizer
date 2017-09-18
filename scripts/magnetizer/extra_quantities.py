@@ -5,6 +5,24 @@ This shall be updated later to include more complex properties.
 from numpy import pi, arctan, sqrt
 import numpy as np
 import re
+import astropy.units as u
+
+units_dict = {
+              'Gyr' : u.Gyr,
+              'Mpc^-3' : u.Mpc**-3,
+              'Msun' : u.Msun,
+              'Msun/yr' : u.Msun/u.yr,
+              'cm^-3' : u.cm**-3,
+              'erg cm^-3' : u.erg*u.cm**-3,
+              'km/s' : u.km/u.s,
+              'km/s/kpc': u.km/u.s/u.kpc,
+              'kpc' : u.kpc,
+              'kpc km/s' : u.kpc*u.km/u.s,
+              'microgauss' : u.microgauss,
+              'pc' : u.pc,
+              's' : u.s
+             }
+
     
 def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                            select_r=slice(None,None,None),
@@ -48,15 +66,15 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
 
     elif qname == '|Bp|':
         quantity = np.abs(f['Bp'][ig,ir,iz])
-        unit = r'microgauss'
+        unit = units_dict['microgauss']
 
     elif qname == '|Br|':
         quantity = np.abs(f['Bp'][ig,ir,iz])
-        unit = r'microgauss'
+        unit = units_dict['microgauss']
 
     elif qname == '|Bz|':
         quantity = f['Bzmod'][ig,ir,iz]
-        unit = r'microgauss'
+        unit = units_dict['microgauss']
 
     elif qname == 'p':
         quantity = arctan(f['Br'][ig,ir,iz]/f['Bp'][ig,ir,iz])*180/pi
@@ -77,14 +95,14 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
         quantity = sqrt(f['Bp'][ig,ir,iz]**2 +
                     f['Br'][ig,ir,iz]**2 +
                     f['Bzmod'][ig,ir,iz]**2)
-        unit = r'microgauss'
+        unit = units_dict['microgauss']
 
     elif qname == r'B_Beq':
         quantity = sqrt(f['Bp'][ig,ir,iz]**2 +
                     f['Br'][ig,ir,iz]**2 +
                     f['Bzmod'][ig,ir,iz]**2)
         quantity /= f['Beq'][ig,ir,iz]
-        unit = r'microgauss'
+        unit = units_dict['microgauss']
 
     elif qname == r'D_Dc':
 
@@ -106,7 +124,7 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
     elif qname == r'growth':
         if iz==0:
             quantity = 0.0 * f['r'][ig,ir,iz]
-            unit = r'Gyr^-1'
+            unit = 1./u.Gyr
         else:
             Btot1 = sqrt(f['Bp'][ig,ir,iz]**2 +
                          f['Br'][ig,ir,iz]**2 +
@@ -119,18 +137,18 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
             delta_t = f['t'][iz] - f['t'][iz-1]
 
             quantity = delta_logB/delta_t
-        unit = r'Gyr^-1'
+        unit = 1./u.Gyr
     elif qname == r'Bmax':
-        if len(ig)==1:
-            quantity = sqrt(f['Bp'][ig,:,iz]**2 +
-                            f['Br'][ig,:,iz]**2 +
-                            f['Bzmod'][ig,:,iz]**2).max()
-        else:
-            quantity = sqrt(f['Bp'][ig,:,iz]**2 +
-                            f['Br'][ig,:,iz]**2 +
-                            f['Bzmod'][ig,:,iz]**2).max(axis=1)
+        #if len(ig)==1:
+            #quantity = sqrt(f['Bp'][ig,:,iz]**2 +
+                            #f['Br'][ig,:,iz]**2 +
+                            #f['Bzmod'][ig,:,iz]**2).max()
+        #else:
+        quantity = sqrt(f['Bp'][ig,:,iz]**2 +
+                        f['Br'][ig,:,iz]**2 +
+                        f['Bzmod'][ig,:,iz]**2).max(axis=1)
 
-        unit = r'microgauss'
+        unit = units_dict['microgauss']
     elif qname == r'rmax':
         print 'asdasdasdsasd'
         btot = sqrt(f['Bp'][ig,:,iz]**2 +
@@ -147,7 +165,7 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                 quantity[i] = f['r'][i,ok[i],iz]
 
                 print 'test', f['Bp'][i,ok[i],iz]
-        unit = r'kpc'
+        unit = units_dict['kpc']
     else:
         raise ValueError, qname + ' is unknown.'
 

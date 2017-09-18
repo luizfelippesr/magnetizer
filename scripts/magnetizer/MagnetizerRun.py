@@ -4,7 +4,7 @@ import h5py, numpy as np
 import sys
 
 from parameters import Parameters
-
+from extra_quantities import compute_extra_quantity
 
 class MagnetizerRun(object):
     """
@@ -52,24 +52,29 @@ class MagnetizerRun(object):
         iz = self.__closest_redshift_idx(z)
         keypair = (quantity, iz)
 
-        # If this quantity at this redshift was already loaded, returns it
+        # If this quantity at this redshift was not already loaded, load or
+        # computes it (and save to the cache)
         if keypair not in self._cache:
-
             if quantity in self._data:
                 profile = len(self._data[quantity].shape)==3
-
 
                 self._cache[keypair] = self._clean(self._data[quantity],iz,
                                                    profile)
             else:
-                new_data = compute_extra_quantity(
-                  quantity, data_dict, select_gal=igal, select_z=it,
+                new_data, units = compute_extra_quantity(
+                  quantity, self._data, select_z=iz,
                   return_units=True)
 
+                profile = len(new_data.shape)==2
+
+                self._cache[keypair] = self._clean(new_data, iz, profile,
+                                                   pre_selected_z=True)
+        # Returns the cached quantity
         return self._cache[keypair]
 
 
-    def _clean(self, dataset, iz = slice(None, None, None), profile=True):
+    def _clean(self, dataset, iz = slice(None, None, None), profile=True,
+               pre_selected_z=False):
         """
         Removes incomplete and invalid data from a dataset.
         """
@@ -86,6 +91,12 @@ class MagnetizerRun(object):
             self._valid = self._valid[self._completed, :, :] > 0
 
         if profile:
+            if pre_selected_z:
+                # If the redshift was previously selected
+                # and if corresponds to a profile
+                return np.where(self._valid[:,:,iz],
+                                dataset[self._completed,:],
+                                np.NaN)
             # If corresponds to a profile
             return np.where(self._valid[:,:,iz],
                             dataset[self._completed,:,iz],

@@ -77,8 +77,8 @@ class MagnetizerRun(object):
                 self._cache[keypair] = self._clean(new_data, iz, profile,
                                           pre_selected_z=True)
 
-        if unit is not None:
-            self._cache[keypair] = self._cache[keypair]*unit
+            if unit is not None:
+                self._cache[keypair] = self._cache[keypair]*unit
 
         # Returns the cached quantity
         return self._cache[keypair]

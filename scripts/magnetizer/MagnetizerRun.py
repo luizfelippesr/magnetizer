@@ -62,7 +62,7 @@ class MagnetizerRun(object):
                 profile = len(self._data[quantity].shape)==3
 
                 unit = self._data['Beq'].attrs['Units']
-                if len(units)==1:
+                if len(unit)==1:
                     unit = unit[0] # unpacks array..
                 unit = units_dict[unit]
                 self._cache[keypair] = self._clean(self._data[quantity],iz,

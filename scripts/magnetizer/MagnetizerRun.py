@@ -51,7 +51,7 @@ class MagnetizerRun(object):
 
 
 
-    def get(self, quantity, z, position=None):
+    def get(self, quantity, z, position=None, binning=None):
         iz = self.__closest_redshift_idx(z)
         keypair = (quantity, iz)
 
@@ -85,18 +85,24 @@ class MagnetizerRun(object):
 
         if position is None:
             # Returns the cached quantity
-            return self._cache[keypair]
-
+            return_data = self._cache[keypair]
         else:
             # Returns the cached quantity at selected radius
-
             rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
             target_pos = int(self.ngrid/rmax_rdisc)
             print target_pos, target_pos
-            return self._cache[keypair].base[:,target_pos]*self._cache[keypair].unit
+            return_data = self._cache[keypair].base[:,target_pos]*self._cache[keypair].unit
 
+        if binning is None:
+            return return_data
 
+        else:
+            return_list = [None]*binning.nbins
 
+            for i in range(binning.nbins):
+                return_list[i] = return_data[binning.masks[i]]
+
+            return return_list
 
 
     def _clean(self, dataset, iz = slice(None, None, None), profile=True,

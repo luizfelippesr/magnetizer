@@ -19,8 +19,9 @@ class BinningObject(object):
             for m_m, m_p in zip(M_bins[:-1],M_bins[1:]):
                 bins.append((m_m, m_p))
 
-        self.masks = [None]*len(self.bins)
         self.bins = tuple(bins)
+        self.nbins = len(self.bins)
+        self.masks = [None]*self.nbins
         self._quantitytype = None
 
     def _compute_bin_filter(self,quantity, bin_interval):

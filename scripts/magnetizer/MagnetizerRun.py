@@ -6,9 +6,6 @@ import sys
 from parameters import Parameters
 from extra_quantities import compute_extra_quantity, units_dict
 
-
-
-
 class MagnetizerRun(object):
     """
     Provides an interface to access a given Magnetizer run.
@@ -45,23 +42,29 @@ class MagnetizerRun(object):
         self.name = self.parameters.name
         self._z_tolerance = z_tolerance
 
+        self.ngals, self.ngrid, self.nz = data_dict['h'].shape
+
         # Place-holders used elsewhere
         self._completed = None
         self._valid = None
-        #self._valid_scalar = None
+        self._valid_scalar = None
 
-    def get(self, quantity, z):
 
+
+    def get(self, quantity, z, position=None):
         iz = self.__closest_redshift_idx(z)
         keypair = (quantity, iz)
 
         # If this quantity at this redshift was not already loaded, load or
         # computes it (and save to the cache)
         if keypair not in self._cache:
-            if quantity in self._data:
+            if quantity == 'status':
+                self._cache[keypair] = status[self._completed, iz]
+
+            elif quantity in self._data:
                 profile = len(self._data[quantity].shape)==3
 
-                unit = self._data['Beq'].attrs['Units']
+                unit = self._data[quantity].attrs['Units']
                 if len(unit)==1:
                     unit = unit[0] # unpacks array..
                 unit = units_dict[unit]
@@ -69,19 +72,31 @@ class MagnetizerRun(object):
                                                    profile)
             else:
                 new_data, unit = compute_extra_quantity(quantity, self._data,
-                                                  select_z=iz,
-                                                  return_units=True)
+                                                        select_z=iz,
+                                                        return_units=True)
 
                 profile = len(new_data.shape)==2
 
                 self._cache[keypair] = self._clean(new_data, iz, profile,
-                                          pre_selected_z=True)
+                                                   pre_selected_z=True)
 
             if unit is not None:
                 self._cache[keypair] = self._cache[keypair]*unit
 
-        # Returns the cached quantity
-        return self._cache[keypair]
+        if position is None:
+            # Returns the cached quantity
+            return self._cache[keypair]
+
+        else:
+            # Returns the cached quantity at selected radius
+
+            rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
+            target_pos = int(self.ngrid/rmax_rdisc)
+            print target_pos, target_pos
+            return self._cache[keypair].base[:,target_pos]*self._cache[keypair].unit
+
+
+
 
 
     def _clean(self, dataset, iz = slice(None, None, None), profile=True,
@@ -98,8 +113,8 @@ class MagnetizerRun(object):
         if self._valid is None:
             # Pre-loads heights, which will be used to distinguish between valid
             # and invalid outputs.
-            self._valid = self._data['h'][...]
-            self._valid = self._valid[self._completed, :, :] > 0
+            self._valid = self._data['h'][self._completed, :, :] > 0
+
 
         if profile:
             if pre_selected_z:
@@ -130,6 +145,5 @@ class MagnetizerRun(object):
             raise ValueError("Requested redshift not available (check tolerance).")
 
         return iz
-
 
 

@@ -25,7 +25,6 @@ class BinningObject(object):
         self._quantitytype = None
 
     def _compute_bin_filter(self,quantity, bin_interval):
-        print quantity
         select  = quantity >  bin_interval[0]
         select *= quantity <= bin_interval[1]
         return select

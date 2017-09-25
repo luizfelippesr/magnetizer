@@ -64,10 +64,13 @@ class MagnetizerRun(object):
             elif quantity in self._data:
                 profile = len(self._data[quantity].shape)==3
 
-                unit = self._data[quantity].attrs['Units']
-                if len(unit)==1:
-                    unit = unit[0] # unpacks array..
-                unit = units_dict[unit]
+                if 'Units' in self._data[quantity].attrs:
+                    unit = self._data[quantity].attrs['Units']
+                    if len(unit)==1:
+                        unit = unit[0] # unpacks array..
+                    unit = units_dict[unit]
+                else:
+                    unit = 1
                 self._cache[keypair] = self._clean(self._data[quantity],iz,
                                                    profile)
             else:

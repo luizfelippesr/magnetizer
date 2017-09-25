@@ -22,6 +22,7 @@ class BinningObject(object):
         self.bins = tuple(bins)
         self.nbins = len(self.bins)
         self.masks = [None]*self.nbins
+        self.bin_counts = [0]*self.nbins
         self._quantitytype = None
 
     def _compute_bin_filter(self,quantity, bin_interval):
@@ -36,6 +37,7 @@ class BinningObject(object):
                self.masks[i] = mask
             else:
                self.masks[i] *= mask
+            self.bin_counts[i] = mask.sum()
 
     def __repr__(self):
         return_str = '[BinningObject]\n'
@@ -43,8 +45,8 @@ class BinningObject(object):
 
     def __str__(self):
         return_str = '{} bins:\n'.format(self._quantitytype)
-        for (b1, b2) in self.bins:
-            return_str += '{0}   {1}\n'.format(b1, b2)
+        for (b1, b2), bc in zip(self.bins, self.bin_counts):
+            return_str += '[{0}, {1}] {2} galaxies\n'.format(b1, b2, bc)
         return return_str
 
 

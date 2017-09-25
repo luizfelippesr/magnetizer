@@ -138,12 +138,17 @@ class MagnetizerRun(object):
                             np.NaN)
 
         else:
-            # If corresponds to a profile
+            # If doesn't correspond to a profile
             if pre_selected_z:
                 # If the redshift was previously selected
                 # and if corresponds to a profile
-                return dataset[self._completed]
-            return dataset[self._completed,iz]
+                return np.where(self._valid[:,0,iz],
+                                dataset[self._completed],
+                                np.NaN)
+
+            return np.where(self._valid[:,0,iz],
+                                dataset[self._completed,iz],
+                                np.NaN)
 
 
     def __closest_redshift_idx(self, z):

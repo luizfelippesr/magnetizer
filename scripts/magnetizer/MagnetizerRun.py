@@ -15,7 +15,7 @@ class MagnetizerRun(object):
                        If absent, will assume the same as output_file_path.
     """
     def __init__(self, output_file_path, input_file_path=None,
-                 z_tolerance=0.01):
+                 z_tolerance=0.01, verbose=False):
 
         # Open files for reading
         hout = h5py.File(output_file_path,'r')
@@ -31,7 +31,7 @@ class MagnetizerRun(object):
                               for x in hin['Input']})
         data_dict.update({x: hout['Log'][x]
                               for x in hout['Log']})
-
+        self.verbose = verbose
         self._data = data_dict
         self._hin = hin
         self._hout = hout
@@ -60,6 +60,7 @@ class MagnetizerRun(object):
         if keypair not in self._cache:
             if quantity == 'status':
                 self._cache[keypair] = status[self._completed, iz]
+                raise NotImplementedError
 
             elif quantity in self._data:
                 profile = len(self._data[quantity].shape)==3
@@ -71,9 +72,16 @@ class MagnetizerRun(object):
                     unit = units_dict[unit]
                 else:
                     unit = 1
+
+                if self.verbose:
+                    print 'Loading {0} at z={1}'.format(quantity,
+                                                        self.redshifts[iz])
+
                 self._cache[keypair] = self._clean(self._data[quantity],iz,
                                                    profile)
             else:
+                print 'Computing {0} at z={1}'.format(quantity,
+                                                      self.redshifts[iz])
                 new_data, unit = compute_extra_quantity(quantity, self._data,
                                                         select_z=iz,
                                                         return_units=True)
@@ -93,7 +101,6 @@ class MagnetizerRun(object):
             # Returns the cached quantity at selected radius
             rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
             target_pos = int(self.ngrid/rmax_rdisc)
-            print target_pos, target_pos
             return_data = self._cache[keypair].base[:,target_pos]*self._cache[keypair].unit
 
         if binning is None:

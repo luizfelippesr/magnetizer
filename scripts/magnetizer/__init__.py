@@ -1,3 +1,4 @@
 from MagnetizerRun import MagnetizerRun
-print MagnetizerRun
+from Binning import *
+
 from parameters import Parameters

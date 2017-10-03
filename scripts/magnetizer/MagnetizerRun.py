@@ -80,8 +80,9 @@ class MagnetizerRun(object):
                 self._cache[keypair] = self._clean(self._data[quantity],iz,
                                                    profile)
             else:
-                print 'Computing {0} at z={1}'.format(quantity,
-                                                      self.redshifts[iz])
+                if self.verbose:
+                    print 'Computing {0} at z={1}'.format(quantity,
+                                                          self.redshifts[iz])
                 new_data, unit = compute_extra_quantity(quantity, self._data,
                                                         select_z=iz,
                                                         return_units=True)
@@ -120,7 +121,6 @@ class MagnetizerRun(object):
         """
         Removes incomplete and invalid data from a dataset.
         """
-
         if self._completed is None:
             # Creates a mask for finished runs
             self._completed = self._data['completed'][:]>0.
@@ -156,7 +156,6 @@ class MagnetizerRun(object):
             return np.where(self._valid[:,0,iz],
                                 dataset[self._completed,iz],
                                 np.NaN)
-
 
     def __closest_redshift_idx(self, z):
         iz = np.abs(self.redshifts - z).argmin()

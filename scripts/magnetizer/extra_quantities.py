@@ -1,4 +1,4 @@
-""" 
+"""
 Contains routines that compute auxiliary quantities.
 This shall be updated later to include more complex properties.
 """
@@ -23,15 +23,15 @@ units_dict = {
               's' : u.s
              }
 
-    
+
 def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                            select_r=slice(None,None,None),
                            select_z=slice(None,None,None),
                            return_units=False):
-    """ 
+    """
     Computes extra Magnetizer quantites.
-    
-    Input: qname -> code-name of the quantity 
+
+    Input: qname -> code-name of the quantity
            f -> object containing the quantities keys (e.g. hdf5file['Output'])
            select_gal -> optional, index or mask for the galaxy indices
            select_r -> optional, index or mask for the radius indices
@@ -139,32 +139,21 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
             quantity = delta_logB/delta_t
         unit = 1./u.Gyr
     elif qname == r'Bmax':
-        #if len(ig)==1:
-            #quantity = sqrt(f['Bp'][ig,:,iz]**2 +
-                            #f['Br'][ig,:,iz]**2 +
-                            #f['Bzmod'][ig,:,iz]**2).max()
-        #else:
         quantity = sqrt(f['Bp'][ig,:,iz]**2 +
                         f['Br'][ig,:,iz]**2 +
                         f['Bzmod'][ig,:,iz]**2).max(axis=1)
 
         unit = units_dict['microgauss']
     elif qname == r'rmax':
-        print 'asdasdasdsasd'
         btot = sqrt(f['Bp'][ig,:,iz]**2 +
                     f['Br'][ig,:,iz]**2 +
                     f['Bzmod'][ig,:,iz]**2)
-        if len(ig)==1:
-            quantity = f['r'][ig,np.argmax(btot),iz]
-            print 'TEST'
-        else:
-            quantity = np.empty(btot.shape[0])
-            ok = np.argmax(btot,axis=1)
-            print btot.shape[0]
-            for i in range(btot.shape[0]):
-                quantity[i] = f['r'][i,ok[i],iz]
+        r = f['r'][ig,:,iz]
 
-                print 'test', f['Bp'][i,ok[i],iz]
+        ok = np.argmax(btot,axis=1)
+
+        quantity[i] = r[ok]
+
         unit = units_dict['kpc']
     else:
         raise ValueError, qname + ' is unknown.'

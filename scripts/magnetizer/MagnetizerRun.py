@@ -2,7 +2,7 @@
 from os.path import basename
 import h5py, numpy as np
 import sys
-
+from astropy.units import Quantity
 from parameters import Parameters
 from extra_quantities import compute_extra_quantity, units_dict
 
@@ -101,8 +101,12 @@ class MagnetizerRun(object):
         else:
             # Returns the cached quantity at selected radius
             rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
-            target_pos = int(self.ngrid/rmax_rdisc)
-            return_data = self._cache[keypair].base[:,target_pos]*self._cache[keypair].unit
+            target_pos = int(self.ngrid/rmax_rdisc*position)
+            if isinstance(self._cache[keypair], Quantity):
+                return_data = self._cache[keypair].base[:,target_pos]*self._cache[keypair].unit
+            else:
+                return_data = self._cache[keypair][:,target_pos]
+
 
         if binning is None:
             return return_data

@@ -141,23 +141,21 @@ class MagnetizerRun(object):
                     unit = 1
 
                 if self.verbose:
-                    print 'Loading {0} at z={1}'.format(quantity,
-                                                        self.redshifts[iz])
+                    print 'Loading {0} for galaxy {1}'.format(quantity, gal_id)
 
                 self._cache[key] = self._clean_gal(self._data[quantity],gal_id,
                                                    profile)
             else:
                 if self.verbose:
-                    print 'Computing {0} at z={1}'.format(quantity,
-                                                          self.redshifts[iz])
+                    print 'Computing {0} for galaxy {1}'.format(quantity, gal_id)
                 new_data, unit = compute_extra_quantity(quantity, self._data,
-                                                        select_z=iz,
+                                                        select_gal=gal_id,
                                                         return_units=True)
 
                 profile = len(new_data.shape)==2
 
-                self._cache[key] = self._clean(new_data, iz, profile,
-                                                   pre_selected_z=True)
+                self._cache[key] = self._clean_gal(new_data, gal_id, profile,
+                                                   pre_selected_gal_id=True)
 
             if unit is not None:
                 self._cache[key] = self._cache[key]*unit
@@ -202,7 +200,8 @@ class MagnetizerRun(object):
                                 dataset[self._completed,iz],
                                 np.NaN)
 
-    def _clean_gal(self, dataset, gal_id, profile=True):
+    def _clean_gal(self, dataset, gal_id, profile=True,
+                   pre_selected_gal_id=False):
         """
         Removes incomplete and invalid data from a dataset.
         """
@@ -210,13 +209,18 @@ class MagnetizerRun(object):
         if profile:
             # Uses the scaleheight as the proxy for a valid profile
             valid = self._data['h'][gal_id, :, :] > 0
-            return np.where(valid, dataset[gal_id,:,:], np.NaN)
+            if not pre_selected_gal_id:
+                return np.where(valid, dataset[gal_id,:,:], np.NaN)
+            else:
+                return np.where(valid, dataset[:,:], np.NaN)
         else:
             # Uses the disk stellar mass as proxy for a valid profile
             # (with some tolerance)
             valid = self._data['Mstars_disk'][gal_id, :] > -0.1
-            return np.where(valid, dataset[gal_id,:], np.NaN)
-
+            if not pre_selected_gal_id:
+                return np.where(valid, dataset[gal_id,:], np.NaN)
+            else:
+                return np.where(valid, dataset, np.NaN)
 
 
     def __closest_redshift_idx(self, z):

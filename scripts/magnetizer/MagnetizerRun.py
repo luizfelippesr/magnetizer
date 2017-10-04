@@ -44,24 +44,27 @@ class MagnetizerRun(object):
 
         self.ngals, self.ngrid, self.nz = data_dict['h'].shape
 
+        # Creates a mask for finished runs
+        self._completed = self._data['completed'][:]>0.
+        self._completed = self._completed[:,0] # Eliminates bogus axis
+
+        self.gal_id = np.arange(self._completed.size)[self._completed]
+
         # Place-holders used elsewhere
-        self._completed = None
         self._valid = None
         self._valid_scalar = None
 
 
-
     def get(self, quantity, z, position=None, binning=None):
         iz = self.__closest_redshift_idx(z)
-        keypair = (quantity, iz)
+        key = (quantity, iz)
 
         # If this quantity at this redshift was not already loaded, load or
         # computes it (and save to the cache)
-        if keypair not in self._cache:
+        if key not in self._cache:
             if quantity == 'status':
-                self._cache[keypair] = status[self._completed, iz]
+                self._cache[key] = status[self._completed, iz]
                 raise NotImplementedError
-
             elif quantity in self._data:
                 profile = len(self._data[quantity].shape)==3
 
@@ -77,7 +80,7 @@ class MagnetizerRun(object):
                     print 'Loading {0} at z={1}'.format(quantity,
                                                         self.redshifts[iz])
 
-                self._cache[keypair] = self._clean(self._data[quantity],iz,
+                self._cache[key] = self._clean(self._data[quantity],iz,
                                                    profile)
             else:
                 if self.verbose:
@@ -89,23 +92,23 @@ class MagnetizerRun(object):
 
                 profile = len(new_data.shape)==2
 
-                self._cache[keypair] = self._clean(new_data, iz, profile,
+                self._cache[key] = self._clean(new_data, iz, profile,
                                                    pre_selected_z=True)
 
             if unit is not None:
-                self._cache[keypair] = self._cache[keypair]*unit
+                self._cache[key] = self._cache[key]*unit
 
         if position is None:
             # Returns the cached quantity
-            return_data = self._cache[keypair]
+            return_data = self._cache[key]
         else:
             # Returns the cached quantity at selected radius
             rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
             target_pos = int(self.ngrid/rmax_rdisc*position)
-            if isinstance(self._cache[keypair], Quantity):
-                return_data = self._cache[keypair].base[:,target_pos]*self._cache[keypair].unit
+            if isinstance(self._cache[key], Quantity):
+                return_data = self._cache[key].base[:,target_pos]*self._cache[key].unit
             else:
-                return_data = self._cache[keypair][:,target_pos]
+                return_data = self._cache[key][:,target_pos]
 
 
         if binning is None:
@@ -119,16 +122,54 @@ class MagnetizerRun(object):
 
             return return_list
 
+    def get_galaxy(self, quantity, gal_id):
+
+        key = ('gal', quantity, gal_id)
+
+        # If this quantity at this redshift was not already loaded, load or
+        # computes it (and save to the cache)
+        if key not in self._cache:
+            if quantity in self._data:
+                profile = len(self._data[quantity].shape)==3
+
+                if 'Units' in self._data[quantity].attrs:
+                    unit = self._data[quantity].attrs['Units']
+                    if len(unit)==1:
+                        unit = unit[0] # unpacks array..
+                    unit = units_dict[unit]
+                else:
+                    unit = 1
+
+                if self.verbose:
+                    print 'Loading {0} at z={1}'.format(quantity,
+                                                        self.redshifts[iz])
+
+                self._cache[key] = self._clean_gal(self._data[quantity],gal_id,
+                                                   profile)
+            else:
+                if self.verbose:
+                    print 'Computing {0} at z={1}'.format(quantity,
+                                                          self.redshifts[iz])
+                new_data, unit = compute_extra_quantity(quantity, self._data,
+                                                        select_z=iz,
+                                                        return_units=True)
+
+                profile = len(new_data.shape)==2
+
+                self._cache[key] = self._clean(new_data, iz, profile,
+                                                   pre_selected_z=True)
+
+            if unit is not None:
+                self._cache[key] = self._cache[key]*unit
+
+        return self._cache[key]
+
 
     def _clean(self, dataset, iz = slice(None, None, None), profile=True,
                pre_selected_z=False):
         """
         Removes incomplete and invalid data from a dataset.
         """
-        if self._completed is None:
-            # Creates a mask for finished runs
-            self._completed = self._data['completed'][:]>0.
-            self._completed = self._completed[:,0] # Eliminates bogus axis
 
         if self._valid is None:
             # Pre-loads heights, which will be used to distinguish between valid
@@ -160,6 +201,23 @@ class MagnetizerRun(object):
             return np.where(self._valid[:,0,iz],
                                 dataset[self._completed,iz],
                                 np.NaN)
+
+    def _clean_gal(self, dataset, gal_id, profile=True):
+        """
+        Removes incomplete and invalid data from a dataset.
+        """
+
+        if profile:
+            # Uses the scaleheight as the proxy for a valid profile
+            valid = self._data['h'][gal_id, :, :] > 0
+            return np.where(valid, dataset[gal_id,:,:], np.NaN)
+        else:
+            # Uses the disk stellar mass as proxy for a valid profile
+            # (with some tolerance)
+            valid = self._data['Mstars_disk'][gal_id, :] > -0.1
+            return np.where(valid, dataset[gal_id,:], np.NaN)
+
+
 
     def __closest_redshift_idx(self, z):
         iz = np.abs(self.redshifts - z).argmin()

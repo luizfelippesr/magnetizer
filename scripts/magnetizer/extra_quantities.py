@@ -105,10 +105,18 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
         unit = units_dict['microgauss']
 
     elif qname == r'D_Dc':
-
         D = compute_extra_quantity('D', f, ig,ir,iz)
         Dc = compute_extra_quantity('Dcrit', f, ig,ir,iz)
         quantity = D/Dc
+
+    elif qname in ('active_dynamo', 'active'):
+        D = compute_extra_quantity('D', f, select_gal=ig,select_z=iz)
+        Dc = compute_extra_quantity('Dcrit', f, select_gal=ig,select_z=iz)
+
+        if select_gal==slice(None,None,None):
+            quantity = (D/Dc).max(axis=1) > 1
+        else:
+            quantity = (D/Dc).max(axis=0) > 1
 
     elif qname == r'Bfloor':
         h = f['h'][ig,ir,iz]/1e3
@@ -150,7 +158,11 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
                     f['Bzmod'][ig,:,iz]**2)
         r = f['r'][ig,:,iz]
 
-        ok = np.argmax(btot,axis=1)
+
+        if select_gal==slice(None,None,None):
+            ok = np.argmax(btot,axis=1)
+        else:
+            ok = np.argmax(btot,axis=0)
 
         quantity[i] = r[ok]
 

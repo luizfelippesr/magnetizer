@@ -62,6 +62,7 @@ clean:
 	rm -fv ${builddir}/*.mod ${builddir}/*.o
 
 cleanall: clean
-	rm -fv scripts/*.pyc
-	rm -fv scripts/*/*.pyc
+	rm -fv python/*.pyc
+	rm -fv python/*/*.pyc
+	rm -fv python/*/*/*.pyc
 	rm -fv *.exe

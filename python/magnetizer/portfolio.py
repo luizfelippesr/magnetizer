@@ -19,25 +19,20 @@ default_quantities = [
                         'Shear',
                         'Uz',
                         'alp',
-                        #'alp_k',
-                        #'alp_m',
-                        #'delta_r',
-                        'etat',
+                        #'etat',
                         'h',
-                        #'l',
                         'n',
-                        #'tau',
                         'Beq',
                         'Bp',
                         'Br',
                         'Bzmod',
                         'Btot',
-                        #'Bfloor',
-                        #'growth',
+                        ##'Bfloor',
+                        ##'growth',
                         #'Dcrit',
                         #'D_Dc',
                         #'P',
-                        #'P2',
+                        ##'P2',
                         ]
 
 formatted_units_dict = {'microgauss':r'\mu{{\rm G}}',
@@ -68,10 +63,10 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'D_Dc': r'D/D_c',
                    '|Bp|'   : r'|\overline{{B}}_\phi|',
                    'Bpmod'   : r'|\overline{{B}}_\phi|',
-                   'Mstars_bulge': r'$M_{{\star,bulge}}',
-                   'Mstars_disk': r'$M_{{\star,disc}}',
-                   'Mgas_disk': r'$M_{{gas,disc}}',
-                   'r_disk': r'$r_{{disc}}',
+                   'Mstars_bulge': r'$M_{{\star,\rm bulge}}',
+                   'Mstars_disk': r'$M_{{\star,\rm disc}}',
+                   'Mgas_disk': r'$M_{{\rm gas,disc}}',
+                   'r_disk': r'$r_{{\rm disc}}',
                    }
 
 log_quantities = ('Beq','n','h')
@@ -109,8 +104,8 @@ def plot_frame(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
         ax.set_yscale('log')
 
 
-def single_galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
-                            selected_quantities=None, cmap=plt.cm.viridis):
+def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
+                     selected_quantities=None, cmap=plt.cm.viridis):
     if selected_quantities is None:
         # Copies (do not copy reference) the default list of quantities
         selected_quantities = list(default_quantities)
@@ -160,14 +155,29 @@ def single_galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
     fig.suptitle('Galaxy {0}{1}'.format(igal, info))
     # Finds space for the color bar
     fig.tight_layout()
-    fig.subplots_adjust(top=0.95, bottom=0.1)
+    fig.subplots_adjust(top=0.95, bottom=0.15)
     # Prepares colorbar
-    norm = matplotlib.colors.Normalize(vmin=run_obj.times[ok].min(),
-                                       vmax=run_obj.times[ok].max())
+    norm = matplotlib.colors.Normalize(vmin=run_obj.times.min(),
+                                       vmax=run_obj.times.max())
     ax = fig.add_axes([.065, .04, .9, .01])
-    x = matplotlib.colorbar.ColorbarBase(ax, cmap=plt.cm.viridis, norm=norm,
+    cbar = matplotlib.colorbar.ColorbarBase(ax, cmap=plt.cm.viridis, norm=norm,
                                     orientation='horizontal')
-    x.set_label(r'$t\,\,[{{\rm Gyr }}]$')
+    cbar.set_label(r'$t\,\,[{{\rm Gyr }}]$')
+    cbar.ax.xaxis.set_label_position("bottom")
+
+
+    ticks = run_obj.times[::3]
+    tlabels = ['{0:.1f}'.format(x) for x in ticks]
+    zlabels = ['{0:.1f}'.format(abs(x)) for x in run_obj.redshifts[::3]]
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels(tlabels)
+
+
+    cax2 = ax.twiny()
+    cax2.set_xlim(run_obj.times.min(),run_obj.times.max())
+    cax2.set_xticks(ticks)
+    cax2.set_xticklabels(zlabels)
+    cax2.set_xlabel("$z$")
 
     return fig
 

@@ -19,7 +19,7 @@ formatted_units_dict = {'microgauss':r'\mu{{\rm G}}',
               'km/s':r'{{\rm km}}\,{{\rm s}}^{{-1}}',
               'km/s/kpc':r'{{\rm km}}\,{{\rm s}}^{{-1}}\,{{\rm kpc}}^{{-1}}',
               'kpc km/s':r'{{\rm kpc}}\,{{\rm km}}\,{{\rm s}}^{{-1}}',
-              'Gyr^-1' : r'\rm Gyr^{{-1}}'
+              'Gyr^-1' : r'\rm Gyr^{{-1}}',
               'erg cm^-3' : r'\rm erg\,cm^{{-3}}'
               }
 

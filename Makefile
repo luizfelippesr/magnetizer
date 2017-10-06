@@ -14,13 +14,37 @@ endif
 FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
 FCFLAGS_TEST=-g -Wall
-FCFLAGS_PROD=-Ofast
+FCFLAGS_PROD=-O3 -ffast-math
 
-# Builds parallel version
-test: $(OBJ) ${builddir}/mpicalldynamo.o
-	$(FC) $^ $(FCFLAGS_TEST) $(FCFLAGS)  -o magnetize_galform.exe
-prod: $(OBJ) ${builddir}/mpicalldynamo.o
-	$(FC) $^ $(FCFLAGS) $(FCFLAGS_PROD) -o magnetize_galform.exe
+
+help:
+	@echo '---------------------'
+	@echo ' Magnetizer Makefile'
+	@echo '---------------------'
+	@echo '  make prod -> Builds main program for a production run.'
+	@echo '  make test -> Builds main program for a test run (debugging and backtracing enabled).'
+	@echo '  make clean -> Removes all object files.'
+	@echo '  make cleanall -> Removes all object files, executables files and python bytecode.'
+	@echo '  make all -> Builds all test programs and main program (test settings).'
+	@echo '  make help -> Displays this help'
+
+prod: PRD main
+
+test: TST main
+
+PRD:
+	@echo ''
+	@echo 'Building Magnetizer production run'
+	@echo ''
+	$(eval FCFLAGS += $(FCFLAGS_PROD))
+TST:
+	@echo ''
+	@echo 'Building Magnetizer test/debug run'
+	@echo ''
+	$(eval FCFLAGS += $(FCFLAGS_TEST))
+
+main: $(OBJ) ${builddir}/mpicalldynamo.o
+	$(FC) $^ $(FCFLAGS) -o magnetize_galform.exe
 
 # Test programs
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
@@ -34,7 +58,17 @@ testPressureEquilibrium: ${builddir}/constants.o ${builddir}/messages.o ${buildd
 testIntegration: ${builddir}/integration.o ${builddir}/tests.integration.o
 	$(FC) $(FCFLAGS) ${builddir}/integration.o ${builddir}/tests.integration.o -o testIntegration.exe
 # All programs
-all: testRoots testProfiles mpi
+all: test testRoots testProfiles
+
+# Tides up
+clean:
+	rm -fv ${builddir}/*.mod ${builddir}/*.o
+
+cleanall: clean
+	rm -fv python/*.pyc
+	rm -fv python/*/*.pyc
+	rm -fv python/*/*/*.pyc
+	rm -fv *.exe
 
 # Builds all objects/modules following
 ${builddir}/%.o : ${srcdir}/%.f90
@@ -56,13 +90,3 @@ $(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
 $(srcdir)/floor_field.f90: ${builddir}/grid.o ${builddir}/global_input_parameters.o
 $(srcdir)/seed_field.f90: ${builddir}/grid.o ${builddir}/profiles.o ${builddir}/global_input_parameters.o
-
-# Tides up
-clean:
-	rm -fv ${builddir}/*.mod ${builddir}/*.o
-
-cleanall: clean
-	rm -fv python/*.pyc
-	rm -fv python/*/*.pyc
-	rm -fv python/*/*/*.pyc
-	rm -fv *.exe

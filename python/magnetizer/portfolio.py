@@ -184,7 +184,7 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
 
 def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
                        selected_galaxies=None, galaxies_per_bin=10,
-                       pdf_filename=None):
+                       pdf_filename=None, return_figures=False):
 
     # Creates a list of galaxy indices satisfying the selection criteria
     if selected_galaxies is None:
@@ -200,20 +200,31 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
             selected_galaxies = np.append(selected_galaxies ,igals)
 
     print 'Producing all figures'
-    print
-    figures = []
-    for igal in selected_galaxies:
-        fig = galaxy_portfolio(igal, run_obj,
-                               selected_quantities=selected_quantities)
-        figures.append(fig)
+
+    if return_figures:
+        figures = []
+    else:
+        figures = None
 
     if pdf_filename is not None:
         pdf = PdfPages(pdf_filename)
-        for fig in figures:
-            if fig:
-                continue
-        pdf.savefig(fig)
+
+
+    for igal in selected_galaxies:
+        fig = galaxy_portfolio(igal, run_obj,
+                               selected_quantities=selected_quantities)
+
+        if fig is not None:
+            if pdf_filename is not None:
+                pdf.savefig(fig)
+
+            if return_figures:
+                figures.append(fig)
+            else:
+                plt.close(fig)
+
+    if pdf_filename is not None:
         print 'Plots done. Saving file'
         pdf.close()
 
-    return
+    return figures

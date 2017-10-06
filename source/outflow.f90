@@ -35,6 +35,7 @@ contains
     character(len=*), optional, intent(in) :: outflow_type
     character(len=35) :: outflow_type_actual
     logical :: average
+    double precision, parameter :: VDISK_MIN = 0.001
 
     if (present(outflow_type)) then
       outflow_type_actual = outflow_type
@@ -52,8 +53,8 @@ contains
       case('wind')
         ! Computes the molecular fraction
         fm = Rm/(1d0+Rm)
-        ! Computes the mass loading
-        beta = (vdisk/p_outflow_vhot)**p_outflow_alphahot
+        ! Computes the mass loading (traps possible problems)
+        beta = (max(VDISK_MIN,vdisk)/p_outflow_vhot)**p_outflow_alphahot
         ! This case assumes the outflow rates used in galform are correct
         ! This, together with a Blitz&Rosolowsky star formation law leads
         ! to:

@@ -72,7 +72,7 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
 log_quantities = ('Beq','n','h')
 
 
-def plot_frame(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
+def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
                ax=None, **args):
     """Plots the time variation of a quantity for a given galaxy """
     if ax is None:
@@ -146,9 +146,9 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
             break
         ax = fig.add_subplot(nrows, ncols, subplot_idx)
 
-        plot_frame(run_obj.times, prop_dict['r'],
-                   prop_dict[quantity], name=quantity,ax=ax,
-                   cmap=cmap, linewidth=1.5, alpha=0.5)
+        plot_output(run_obj.times, prop_dict['r'],
+                    prop_dict[quantity], name=quantity,ax=ax,
+                    cmap=cmap, linewidth=1.5, alpha=0.5)
 
 
     # Adds title
@@ -181,3 +181,39 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
 
     return fig
 
+
+def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
+                       selected_galaxies=None, galaxies_per_bin=10,
+                       pdf_filename=None):
+
+    # Creates a list of galaxy indices satisfying the selection criteria
+    if selected_galaxies is None:
+        # Dies if neither a binning nor a galaxy numbers were specified
+        if binning_obj is None:
+            raise ValueError
+        # Draws random galaxies based on binning information.
+        selected_galaxies = []
+        for mask in binning_obj.masks:
+            igals = run_obj.gal_id[mask]
+            if igals.size > galaxies_per_bin:
+                igals = random.sample(igals, galaxies_per_bin)
+            selected_galaxies = np.append(selected_galaxies ,igals)
+
+    print 'Producing all figures'
+    print
+    figures = []
+    for igal in selected_galaxies:
+        fig = galaxy_portfolio(igal, run_obj,
+                               selected_quantities=selected_quantities)
+        figures.append(fig)
+
+    if pdf_filename is not None:
+        pdf = PdfPages(pdf_filename)
+        for fig in figures:
+            if fig:
+                continue
+        pdf.savefig(fig)
+        print 'Plots done. Saving file'
+        pdf.close()
+
+    return

@@ -136,6 +136,22 @@ program magnetizer
       mygals(nmygals) = igal
     endif
   else
+    ! Before distributing work between workers, master will try to run a single
+    ! galaxy. This helps catching any obvious problem and allows one to find
+    ! out where a possible previous run has stopped.
+    if (rank==master_rank) then
+
+      do igal=1, ngals
+        start_galaxy = IO_start_galaxy(igal)
+        if (start_galaxy) then
+          call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+          nmygals = nmygals + 1
+          mygals(nmygals) = igal
+          exit
+        endif
+      enddo
+    endif
+    ! Calculates the number of cycles (under the assumption of
     ncycles = max(ngals/p_ncheckpoint, 1)
     call message('Total number of cycles',val_int=ncycles, master_only=.true.)
   endif
@@ -147,9 +163,13 @@ program magnetizer
   if (rank==master_rank) then
     do j=0, ncycles
       if (lsingle_galaxy_mode) exit
+      ! Finds boundaries of present cycle
       igal_first = 1+j*p_ncheckpoint
       igal_last = (j+1)*p_ncheckpoint
       call message('Cycle',val_int=j+1, master_only=.true.)
+      ! If previous work had been done, accounts for it.
+      if (igal>igal_last) cycle
+      igal_first = max(igal_first, igal)
 
       ! Submit initial jobs
       do iproc=1, nproc-1
@@ -160,6 +180,7 @@ program magnetizer
 
       ! Loops sending and receiving
       do igal=nproc+igal_first-1, igal_last
+        ! Sends finished work from worker
         if (igal>ngals) exit
         if ( p_master_works_too .and. &
             modulo(igal, (nproc + int(nproc/p_master_skip))) == 0) then

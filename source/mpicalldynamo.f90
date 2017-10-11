@@ -24,7 +24,6 @@ program magnetizer
   integer, parameter :: finished_tag = 0
   integer, parameter :: newjob_tag = 17
   integer, dimension(MPI_STATUS_SIZE) :: status
-  integer, dimension(1) :: ind ! TEMPORARY
 
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -289,7 +288,7 @@ program magnetizer
   endif
 
   call MPI_Gather(mygals, ngals, MPI_INTEGER, allgals, ngals, &
-                  MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+                  MPI_INTEGER, master_rank, MPI_COMM_WORLD, ierr)
 
   ! Gets the date
   if (rank == master_rank) then
@@ -306,24 +305,6 @@ program magnetizer
   call message('', master_only=.true.)
   call message('IO finished', master_only=.true.)
 
-  j = 0
-  if (rank==master_rank) then
-    do i=1,ngals*2
-      ind = maxloc(allgals)
-      if (allgals(ind(1))>0 .and. allgals(ind(1))<=ngals) then
-        j = j+1
-        mygals(j) = allgals(ind(1))
-      endif
-      allgals(ind(1)) = -1000
-    enddo
-    ngals = j
-  endif
-
-
-  !Tell the MPI library to release all resources it is using
-  call MPI_Finalize(ierr)
-  call message('MPI finished', master_only=.true.)
-
   if (rank == master_rank) then !Only the master (rank 0)
     tfinish= MPI_WTime()
     ! Removes stop file if necessary
@@ -335,11 +316,21 @@ program magnetizer
     endif
   endif
 
-  if (info>1 .and. j>0) then
-    print *,
-    print *, '  Galaxies in this run:'
-    print *, mygals(:j)
-    print *,
+  if (info>1 .and. rank==master_rank) then
+    i = 1
+    do j=1,ngals*nproc
+      igal = allgals(j)
+      if (igal>0) then
+        mygals(i) = igal
+        i = i+1
+      endif
+    enddo
+    if (i<200 .and. i>1) then
+      print *,
+      print *, '  Galaxies in this run:'
+      print *, mygals(:i-1)
+      print *,
+    endif
   endif
 
   call message('Total wall time in seconds =',tfinish-tstart, &
@@ -350,4 +341,8 @@ program magnetizer
     call message('Average CPU per galaxy =', (tfinish-tstart)*nproc/ngals, &
                  master_only=.true., info=0)
   endif
+  !Tell the MPI library to release all resources it is using
+  call MPI_Finalize(ierr)
+  call message('MPI finished', master_only=.true.)
+
 end program magnetizer

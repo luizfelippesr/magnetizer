@@ -27,6 +27,7 @@ contains
 
     use input_constants
     use global_input_parameters
+    use math_constants
     implicit none
     double precision, intent(in) :: rdisk, vdisk, SFR
     double precision, dimension(:), intent(in) :: r, rho, h, vt, Rm
@@ -35,7 +36,7 @@ contains
     character(len=*), optional, intent(in) :: outflow_type
     character(len=35) :: outflow_type_actual
     logical :: average
-    double precision, parameter :: VDISK_MIN = 0.001
+    double precision, parameter :: VDISK_MIN = 0.01 ! km/s
 
     if (present(outflow_type)) then
       outflow_type_actual = outflow_type
@@ -53,12 +54,14 @@ contains
       case('wind')
         ! Computes the molecular fraction
         fm = Rm/(1d0+Rm)
-        ! Computes the mass loading (traps possible problems)
+        ! Computes the mass loading
+        ! (traps possible problems assigning a minimum rotation velocity)
         beta = (max(VDISK_MIN,vdisk)/p_outflow_vhot)**p_outflow_alphahot
         ! This case assumes the outflow rates used in galform are correct
         ! This, together with a Blitz&Rosolowsky star formation law leads
         ! to:
         outflow_speed = 0.5 * p_outflow_nu0 * beta * h * fm
+        outflow_speed = outflow_speed * km_kpc / s_Gyr
         return
         ! Note: at the moment, nu0 and alpha_hot and Vhot are input
         ! parameters, but later these will be read from the input hdf5 files

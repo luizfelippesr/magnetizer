@@ -208,8 +208,12 @@ contains
     h = h_kpc*h0/h0_kpc
 
     ! VERTICAL VELOCITY PROFILE
-    Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, &
+    if (construct_profiles) then
+        Uz_kms = outflow_speed(r_kpc, rho_cgs, h_kpc, v_kms, &
                                                     r_disk, v_disk, SFR, Rm)
+    else
+        Uz_kms = 0d0
+    endif
     Uz = Uz_kms/h0_km*h0*t0_s/t0
 
     ! TURBULENT DIFFUSIVITY PROFILE

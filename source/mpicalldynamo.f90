@@ -325,10 +325,15 @@ program magnetizer
         i = i+1
       endif
     enddo
-    if (i<200 .and. i>1) then
+    ngals = i-1
+    if (ngals<200 .and. ngals>1) then
       print *,
       print *, '  Galaxies in this run:'
-      print *, mygals(:i-1)
+      print *, mygals(:ngals)
+      print *,
+    else
+      print *,
+      print *, '  Number of galaxies in this run:', ngals
       print *,
     endif
   endif

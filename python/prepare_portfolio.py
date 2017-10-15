@@ -54,7 +54,7 @@ if __name__ == "__main__"  :
     plt.rc(("legend"),fontsize=6)
 
     # Prepares the portfolio
-    magnetizer.portfolio.generate_portfolio(run_obj=magnetizer_run,
+    magnetizer.visualization.generate_portfolio(run_obj=magnetizer_run,
                                             binning_obj=binning,
                                             galaxies_per_bin=ngals_bin,
                                             pdf_filename=args.PDF_OUTPUT)

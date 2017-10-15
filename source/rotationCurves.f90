@@ -229,7 +229,7 @@ contains
     double precision, parameter :: v2_tol = -1d0 ! (km/s)^2
     double precision :: fun_min
     type(c_ptr) :: params_ptr
-    integer, parameter :: MAX_INTERVAL_EXPONENT=8
+    integer, parameter :: MAX_INTERVAL_EXPONENT=10
     logical :: find_root_success
     integer :: i
 

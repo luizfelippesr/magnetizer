@@ -14,7 +14,7 @@ program magnetizer
   integer, allocatable, dimension(:) :: mygals, allgals
   character(len=100) :: command_argument
   integer :: i, j, iproc
-  logical :: lstop
+  logical :: lstop, error
   logical :: lsingle_galaxy_mode = .false.
   logical :: start_galaxy = .false.
   logical :: lresuming_run = .false.
@@ -130,7 +130,7 @@ program magnetizer
     start_galaxy = IO_start_galaxy(igal)
     if (start_galaxy) then
       ! If it is a new galaxy, runs it!
-      call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+      call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
       nmygals = nmygals + 1
       mygals(nmygals) = igal
     endif
@@ -143,7 +143,8 @@ program magnetizer
       do igal=1, ngals
         start_galaxy = IO_start_galaxy(igal)
         if (start_galaxy) then
-          call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+          call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
+          if (error) cycle
           nmygals = nmygals + 1
           mygals(nmygals) = igal
           exit
@@ -189,7 +190,7 @@ program magnetizer
           start_galaxy = IO_start_galaxy(igal)
           if (start_galaxy) then
             ! If it is a new galaxy, runs it!
-            call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+            call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
             nmygals = nmygals + 1
             mygals(nmygals) = igal
           endif
@@ -254,7 +255,7 @@ program magnetizer
           start_galaxy = IO_start_galaxy(igal)
           if (start_galaxy) then
             ! If it is a new galaxy, runs it!
-            call dynamo_run(igal, p_no_magnetic_fields_test_run, rank)
+            call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
             nmygals = nmygals + 1
             mygals(nmygals) = igal
           endif

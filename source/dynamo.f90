@@ -19,14 +19,15 @@ module dynamo
   public dynamo_run
 
   contains
-    subroutine dynamo_run(gal_id, test_run, rank)
+    subroutine dynamo_run(gal_id, test_run, rank, error)
       use interpolation
       use floor_field
       double precision :: cpu_time_start
       integer, intent(in) :: gal_id
       integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
-      logical :: ok, able_to_construct_profiles, elliptical, timestep_ok, error
+      logical, intent(out) :: error
+      logical :: ok, able_to_construct_profiles, elliptical, timestep_ok
       logical :: next_output
       integer :: fail_count, rank_actual
       double precision, dimension(nx) :: Btmp

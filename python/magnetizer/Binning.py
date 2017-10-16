@@ -19,6 +19,7 @@ class BinningObject(object):
             for m_m, m_p in zip(M_bins[:-1],M_bins[1:]):
                 bins.append((m_m, m_p))
 
+        self.redshift = z
         self.bins = tuple(bins)
         self.nbins = len(self.bins)
         self.masks = [None]*self.nbins

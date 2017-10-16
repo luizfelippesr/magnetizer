@@ -262,3 +262,100 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
         pdf.close()
 
     return figures
+
+
+
+def closest_indices(zs, zs_target):
+    izs =[]
+    for zt in zip(zs_target):
+        izs.append(np.abs(zs - zt).argmin())
+    return izs
+
+def prepare_mass_bins_list(mag_run, redshifts, **kwargs):
+    mass_bins = []
+    redshifts = mag_run.redshifts[closest_indices(mag_run.redshifts, redshifts)]
+    for z in redshifts:
+        mass_bins.append(magnetizer.MassBinningObject(mag_run, z=z, **kwargs))
+    return mass_bins
+
+
+def plot_redshift_evolution(quantity, mag_run,
+                            target_redshifts=None, bin_objs=None,
+                            minimum_number_per_bin=5,
+                            log=True, color='#d95f0e', **kwargs):
+
+    single_binning = no_binning = False
+
+    if bin_objs is None:
+        nbins = 1
+        bin_dict = None
+        no_binning = True
+    else:
+        if isinstance(bin_objs, magnetizer.BinningObject):
+            nbins = bin_objs.nbins
+            single_binning = True
+        else:
+            nbins = bin_objs[0].nbins
+            for bin_obj in bin_objs:
+                assert bin_obj.nbins == nbins
+            bin_dict = {bin_obj.redshift: bin_obj for bin_obj in bin_objs}
+
+    if (no_binning or single_binning) and (target_redshifts is None):
+        raise ValueError, 'Must specify either a list of binning objects ' \
+          '(bin_objs=[bin_obj1,...]) or a list of redshifts (target_redshifts=[z1,...])'
+
+    if target_redshifts is not None:
+        zs = mag_run.redshifts[closest_indices(mag_run.redshifts, target_redshifts)]
+    else:
+        zs = sorted(bin_dict.keys())
+
+    p15 = [np.empty_like(zs)*np.nan] * nbins
+    p85 = [np.empty_like(zs)*np.nan] * nbins
+    p50 = [np.empty_like(zs)*np.nan] * nbins
+
+    for j, z in enumerate(zs):
+        if no_binning:
+            zdata = [mag_run.get(quantity, z=z),]
+        else:
+            if single_binning:
+                zdata = mag_run.get(quantity, z=z, binning=bin_objs)
+            else:
+                zdata = mag_run.get(quantity, z=z, binning=bin_dict[z])
+
+        for i in range(nbins):
+            datum = zdata[i].base
+            datum = datum[np.isfinite(datum)]
+            if datum.size<minimum_number_per_bin:
+                continue
+
+            p15[i][j], p50[i][j], p85[i][j] = np.percentile(datum, [15,50,85])
+
+    for i in range(nbins):
+        if (nbins==1):
+            plt.subplot(1,1,1)
+        else:
+            plt.subplot(math.ceil(float(nbins)/2),2,i+1)
+
+        if not no_binning:
+            if single_binning:
+                bins = bin_objs.bins
+            else:
+                bins = bin_dict[zs[0]].bins
+
+            plt.title('${0}< \log(M/M_\odot) <{1}$'.format(
+                np.log10(bins[i][0].base),
+                np.log10(bins[i][1].base)))
+
+        if log:
+            for p in (p15, p50, p85):
+                p[i] = np.log10(p[i])
+
+        plt.plot(zs, p50[i], color=color, **kwargs)
+        plt.plot(zs, p15[i], color=color, linestyle=':')
+        plt.plot(zs, p85[i], color=color, linestyle=':')
+        plt.fill_between(zs, p15[i], p85[i], color=color, alpha=0.1)
+
+        if quantity in quantities_dict:
+            quantity = '$'+quantities_dict[quantity]+'$'
+        plt.ylabel(quantity)
+        plt.xlabel('$z$')

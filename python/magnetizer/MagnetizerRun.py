@@ -227,7 +227,7 @@ class MagnetizerRun(object):
         iz = np.abs(self.redshifts - z).argmin()
         z_actual = self.redshifts[iz]
         if abs(z_actual-z) > self._z_tolerance:
-            print z_actual-z
+            print z, z_actual, z_actual-z
             raise ValueError("Requested redshift not available (check tolerance).")
 
         return iz

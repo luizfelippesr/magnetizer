@@ -27,6 +27,7 @@ default_quantities = [
                         'Br',
                         'Bzmod',
                         'Btot',
+                        'r_disk',
                         ##'Bfloor',
                         ##'growth',
                         #'Dcrit',
@@ -70,12 +71,14 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'Bmax': r'B_{{\rm max}}'
                    }
 
-log_quantities = ('Beq','n','h')
+log_quantities = ('Beq','n','h', 'Mstars_disk','Mstars_bulge','Mgas_disk',)
 
 
 def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
                ax=None, **args):
-    """Plots the time variation of a quantity for a given galaxy """
+    """
+    Plots the time variation of a quantity for a given galaxy
+    """
     if ax is None:
         ax = plt.gcf().add_subplot(111)
 
@@ -91,24 +94,23 @@ def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
 
         ax.plot(r, q,color=color, rasterized=True, **args)
 
-
-
-        # Some advanced formating
-        if name in quantities_dict:
-            name = quantities_dict[name]
+    if name in log_quantities:
+        ax.set_yscale('log')
+    # Some advanced formating
+    if name in quantities_dict:
+        name = quantities_dict[name]
 
     ax.set_xlim([0.0, rs.base[rs.base>0].max()])
     ax.set_xlabel(r'$r\,[\rm kpc]$')
     ax.set_ylabel(r'$ {0} {1} $'.format(name,unit))
     ax.grid(alpha=0.2)
-    if name in log_quantities:
-        ax.set_yscale('log')
 
 
 
-def plot_input(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
-               ax=None, **args):
-    """Plots the time variation of a quantity for a given galaxy """
+def plot_input(ts, quantity, name='', zs=None, ax=None, **args):
+    """
+    Plots the time variation of a quantity
+    """
     if ax is None:
         ax = plt.gcf().add_subplot(111)
 
@@ -118,28 +120,37 @@ def plot_input(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
     else:
         unit = ''
 
-    for t, r, q in zip(ts, rs.T, quantity.T):
-        # Sets the line colour, using the colormap
-        color = cmap((t-ts.min())/(ts.max()-ts.min()))
+    ax.plot(ts, quantity, **args)
 
-        ax.plot(r, q,color=color, rasterized=True, **args)
-
-
-
-        # Some advanced formating
-        if name in quantities_dict:
-            name = quantities_dict[name]
-
-    ax.set_xlim([0.0, rs.base[rs.base>0].max()])
-    ax.set_xlabel(r'$r\,[\rm kpc]$')
-    ax.set_ylabel(r'$ {0} {1} $'.format(name,unit))
-    ax.grid(alpha=0.2)
     if name in log_quantities:
         ax.set_yscale('log')
+    # Some advanced formating
+    if name in quantities_dict:
+        name = quantities_dict[name]
+
+    ax.set_xlim([0.0, ts.max()])
+    ax.set_xlabel(r'$t\,[\rm Gyr]$')
+    ax.set_ylabel(r'$ {0} {1} $'.format(name,unit))
+    ax.grid(alpha=0.2)
 
 
-def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
+def plot_mass_summary(igal, run_obj, ax=None, **kwargs):
+
+    if ax is None:
+        ax = plt.gcf().add_subplot(111)
+
+    for name in  ('Mstars_disk','Mstars_bulge','Mgas_disk'):
+        data = run_obj.get_galaxy(name, igal)
+        label = '$'+quantities_dict[name]+'$'
+        plot_input(run_obj.times, data, name='M', ax=ax, label=label, **kwargs)
+    ax.set_yscale('log')
+    ax.legend(frameon=False, loc='lower right', fontsize=7)
+
+def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3, mass_frame=True,
                      selected_quantities=None, cmap=plt.cm.viridis):
+    """
+    Prepares a page o plots
+    """
     if selected_quantities is None:
         # Copies (do not copy reference) the default list of quantities
         selected_quantities = list(default_quantities)
@@ -167,7 +178,7 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
             val = r'{0:.2g}\times10^{{{1}}}\rm M_\odot'.format(
                 val/10**np.floor(np.log10(val)),
                 int(np.floor(np.log10(val))))
-        info += r' $-$  {0} = {1}$'.format(quantities_dict[q], val)
+        info += r' $-$  ${0} = {1}$'.format(quantities_dict[q], val)
 
     # Prepares the figure
     fig = plt.figure(figsize=(8.268,11.69),dpi=300)
@@ -179,11 +190,19 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
         if subplot_idx > nrows*ncols:
             break
         ax = fig.add_subplot(nrows, ncols, subplot_idx)
-
-        plot_output(run_obj.times, prop_dict['r'],
-                    prop_dict[quantity], name=quantity,ax=ax,
-                    cmap=cmap, linewidth=1.5, alpha=0.5)
-
+        if len(prop_dict[quantity].shape) == 2:
+            plot_output(run_obj.times, prop_dict['r'],
+                        prop_dict[quantity], name=quantity,ax=ax,
+                        cmap=cmap, linewidth=1.5, alpha=0.5)
+        else:
+            print quantity, len(prop_dict[quantity].shape)
+            plot_input(run_obj.times, prop_dict[quantity],
+                       name=quantity,ax=ax, zs = run_obj.redshifts,
+                       linewidth=1.5)
+    if mass_frame:
+        subplot_idx += 1
+        ax = fig.add_subplot(nrows, ncols, subplot_idx)
+        plot_mass_summary(igal, run_obj,ax=ax, linewidth=1.5)
 
     # Adds title
     fig.suptitle('Galaxy {0}{1}'.format(igal, info))
@@ -219,6 +238,9 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3,
 def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
                        selected_galaxies=None, galaxies_per_bin=10,
                        pdf_filename=None, return_figures=False):
+    """
+    Prepares portfolios of various galaxies for a given Magnetizer run.
+    """
 
     # Creates a list of galaxy indices satisfying the selection criteria
     if selected_galaxies is None:

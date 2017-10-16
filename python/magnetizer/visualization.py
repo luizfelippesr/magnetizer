@@ -8,7 +8,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 from astropy.units import Quantity
 import matplotlib.pyplot as plt
 import numpy as np
-import h5py, random
+import h5py, random, math
+import magnetizer
 from extra_quantities import compute_extra_quantity
 
 
@@ -195,7 +196,6 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3, mass_frame=True,
                         prop_dict[quantity], name=quantity,ax=ax,
                         cmap=cmap, linewidth=1.5, alpha=0.5)
         else:
-            print quantity, len(prop_dict[quantity].shape)
             plot_input(run_obj.times, prop_dict[quantity],
                        name=quantity,ax=ax, zs = run_obj.redshifts,
                        linewidth=1.5)
@@ -301,9 +301,9 @@ def prepare_mass_bins_list(mag_run, redshifts, **kwargs):
     return mass_bins
 
 
-def plot_redshift_evolution(quantity, mag_run,
+def plot_redshift_evolution(quantity, mag_run, position=None,
                             target_redshifts=None, bin_objs=None,
-                            minimum_number_per_bin=5,
+                            minimum_number_per_bin=5, keypos=None,
                             log=True, color='#d95f0e', **kwargs):
 
     single_binning = no_binning = False
@@ -335,14 +335,18 @@ def plot_redshift_evolution(quantity, mag_run,
     p85 = [np.empty_like(zs)*np.nan] * nbins
     p50 = [np.empty_like(zs)*np.nan] * nbins
 
+    zs = np.array(zs)
+
     for j, z in enumerate(zs):
         if no_binning:
-            zdata = [mag_run.get(quantity, z=z),]
+            zdata = [mag_run.get(quantity, z=z, position=position),]
         else:
             if single_binning:
-                zdata = mag_run.get(quantity, z=z, binning=bin_objs)
+                zdata = mag_run.get(quantity, z=z, position=position,
+                                    binning=bin_objs)
             else:
-                zdata = mag_run.get(quantity, z=z, binning=bin_dict[z])
+                zdata = mag_run.get(quantity, z=z, position=position,
+                                    binning=bin_dict[z])
 
         for i in range(nbins):
             datum = zdata[i].base
@@ -354,9 +358,13 @@ def plot_redshift_evolution(quantity, mag_run,
 
     for i in range(nbins):
         if (nbins==1):
-            plt.subplot(1,1,1)
+            ax = plt.subplot(1,1,1)
         else:
-            plt.subplot(math.ceil(float(nbins)/2),2,i+1)
+            ax = plt.subplot(math.ceil(float(nbins)/2),2,i+1)
+
+        if log:
+            for p in (p15, p50, p85):
+                p[i] = np.log10(p[i])
 
         if not no_binning:
             if single_binning:
@@ -364,13 +372,6 @@ def plot_redshift_evolution(quantity, mag_run,
             else:
                 bins = bin_dict[zs[0]].bins
 
-            plt.title('${0}< \log(M/M_\odot) <{1}$'.format(
-                np.log10(bins[i][0].base),
-                np.log10(bins[i][1].base)))
-
-        if log:
-            for p in (p15, p50, p85):
-                p[i] = np.log10(p[i])
 
         plt.plot(zs, p50[i], color=color, **kwargs)
         plt.plot(zs, p15[i], color=color, linestyle=':')
@@ -378,6 +379,43 @@ def plot_redshift_evolution(quantity, mag_run,
         plt.fill_between(zs, p15[i], p85[i], color=color, alpha=0.1)
 
         if quantity in quantities_dict:
-            quantity = '$'+quantities_dict[quantity]+'$'
-        plt.ylabel(quantity)
+            quantitytxt = '$'+quantities_dict[quantity]+'$'
+        plt.ylabel(quantitytxt)
         plt.xlabel('$z$')
+
+        if not no_binning:
+            masstxt = '${0}< \log(M/M_\odot) <{1}$'.format(
+              np.log10(bins[i][0].base), np.log10(bins[i][1].base))
+            if keypos is None:
+                #ok = np.isfinite(p50[i])
+                #ypos = (p50[i][ok].max()-p50[i][ok].min())*0.9+p50[i][ok].min()
+                #keypos = (zs.max()*0.3, ypos)
+
+                 ax_label = ax.twinx()
+                 plt.setp(ax_label.get_yticklabels(), visible=False)
+                 ax_label.set_ylabel(masstxt)
+            else:
+                plt.annotate(masstxt, (keypos[0], keypos[1]))
+
+
+        if zs.size>7:
+            redshifts = np.linspace(zs.min(), zs.max(),7)
+            idx = closest_indices(mag_run.redshifts,redshifts)
+            redshifts = mag_run.redshifts[idx]
+
+        idx = closest_indices(mag_run.redshifts,redshifts)
+        times = mag_run.times[idx]
+
+        tlabels = ['{0:.1f}'.format(x) for x in times]
+        zlabels = ['{0:.1f}'.format(abs(x)) for x in redshifts]
+        ax.set_xlim(redshifts.min(),redshifts.max())
+        ax.xaxis.set_ticks(redshifts)
+        ax.xaxis.set_ticklabels(zlabels)
+
+        ax2 = ax.twiny()
+        ax2.set_xlim(redshifts.min(),redshifts.max())
+        ax2.xaxis.set_ticks(redshifts)
+        ax2.xaxis.set_ticklabels(tlabels)
+        ax2.set_xlabel("$t$")
+
+

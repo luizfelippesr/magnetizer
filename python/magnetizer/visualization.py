@@ -331,9 +331,10 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
     else:
         zs = sorted(bin_dict.keys())
 
-    p15 = [np.empty_like(zs)*np.nan] * nbins
-    p85 = [np.empty_like(zs)*np.nan] * nbins
-    p50 = [np.empty_like(zs)*np.nan] * nbins
+    p15 = np.empty((nbins, zs.size))*np.nan
+    p85 = np.empty((nbins, zs.size))*np.nan
+    p50 = np.empty((nbins, zs.size))*np.nan
+    ngals = np.empty((nbins, zs.size))*np.nan
 
     zs = np.array(zs)
 
@@ -349,12 +350,15 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
                                     binning=bin_dict[z])
 
         for i in range(nbins):
-            datum = zdata[i].base
+            datum = zdata[i]
+            if isinstance(datum, Quantity): # Checks whether it has units
+                datum = datum.base
             datum = datum[np.isfinite(datum)]
             if datum.size<minimum_number_per_bin:
                 continue
 
             p15[i][j], p50[i][j], p85[i][j] = np.percentile(datum, [15,50,85])
+            ngals[i][j] = datum.size
 
     for i in range(nbins):
         if (nbins==1):
@@ -402,6 +406,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             redshifts = np.linspace(zs.min(), zs.max(),7)
             idx = closest_indices(mag_run.redshifts,redshifts)
             redshifts = mag_run.redshifts[idx]
+        else:
+            redshifts = zs
 
         idx = closest_indices(mag_run.redshifts,redshifts)
         times = mag_run.times[idx]
@@ -416,6 +422,6 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         ax2.set_xlim(redshifts.min(),redshifts.max())
         ax2.xaxis.set_ticks(redshifts)
         ax2.xaxis.set_ticklabels(tlabels)
-        ax2.set_xlabel("$t$")
-
+        ax2.set_xlabel(r"$t\;[\rm Gyr]$")
+    return ngals
 

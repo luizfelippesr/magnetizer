@@ -304,7 +304,7 @@ def prepare_mass_bins_list(mag_run, redshifts, **kwargs):
 def plot_redshift_evolution(quantity, mag_run, position=None,
                             target_redshifts=None, bin_objs=None,
                             minimum_number_per_bin=5, keypos=None,
-                            log=True, color='#d95f0e', **kwargs):
+                            log=True, color='#d95f0e', log0=None, **kwargs):
 
     single_binning = no_binning = False
 
@@ -329,7 +329,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
     if target_redshifts is not None:
         zs = mag_run.redshifts[closest_indices(mag_run.redshifts, target_redshifts)]
     else:
-        zs = sorted(bin_dict.keys())
+        zs = np.array(sorted(bin_dict.keys()))
 
     p15 = np.empty((nbins, zs.size))*np.nan
     p85 = np.empty((nbins, zs.size))*np.nan
@@ -362,15 +362,25 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             p15[i][j], p50[i][j], p85[i][j] = np.percentile(datum, [15,50,85])
             ngals[i][j] = datum.size
 
+
+
     for i in range(nbins):
         if (nbins==1):
             ax = plt.subplot(1,1,1)
         else:
             ax = plt.subplot(math.ceil(float(nbins)/2),2,i+1)
 
-        if log:
-            for p in (p15, p50, p85):
+        for p in (p15, p50, p85):
+            if log:
                 p[i] = np.log10(p[i])
+
+            if log:
+                # In a plot of the log of a quantity, it is not uncommon to
+                # have p15 = 0, which means log(p15)=-inf.
+                # The following lines tackle this problem, allowing the user to
+                # set the value of "log(0)" manually.
+                if log0 is not None:
+                    p15[i][~np.isfinite(p15[i])] = log0
 
         if not no_binning:
             if single_binning:
@@ -386,7 +396,10 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
 
         if quantity in quantities_dict:
             if not log:
-                quantitytxt = r'${0}\;[{1}]$'.format(quantities_dict[quantity],unit)
+                if unit != '':
+                    quantitytxt = r'${0}\;[{1}]$'.format(quantities_dict[quantity],unit)
+                else:
+                    quantitytxt = r'${0}$'.format(quantities_dict[quantity],unit)
             else:
                 quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[quantity],unit)
         else:

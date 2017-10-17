@@ -337,7 +337,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
     ngals = np.empty((nbins, zs.size))*np.nan
 
     zs = np.array(zs)
-
+    unit = ''
     for j, z in enumerate(zs):
         if no_binning:
             zdata = [mag_run.get(quantity, z=z, position=position),]
@@ -352,7 +352,9 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         for i in range(nbins):
             datum = zdata[i]
             if isinstance(datum, Quantity): # Checks whether it has units
-                datum = datum.base
+                unit = datum.unit._repr_latex_()
+                unit = unit.replace('$','')
+                datum = datum.base # Strips away the units
             datum = datum[np.isfinite(datum)]
             if datum.size<minimum_number_per_bin:
                 continue
@@ -383,7 +385,13 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         plt.fill_between(zs, p15[i], p85[i], color=color, alpha=0.1)
 
         if quantity in quantities_dict:
-            quantitytxt = '$'+quantities_dict[quantity]+'$'
+            if not log:
+                quantitytxt = r'${0}\;[{1}]$'.format(quantities_dict[quantity],unit)
+            else:
+                quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[quantity],unit)
+        else:
+            quantitytxt = quantity
+
         plt.ylabel(quantitytxt)
         plt.xlabel('$z$')
 

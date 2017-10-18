@@ -75,21 +75,13 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
 log_quantities = ('Beq','n','h', 'Mstars_disk','Mstars_bulge','Mgas_disk',)
 
 
-def PDF(quantity, plot_histogram=False, ax=None, vmax=None, vmin=None,
+def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
         log=False, log0=None, **args):
     import scipy.stats as stat
 
-    values = quantity[np.isfinite(quantity)]
+    unit, values = get_formated_units(quantity, return_base=True, clean=log)
+    values = values[np.isfinite(values)]
 
-    # Sets maximum and minimum values
-    if vmax is None:
-        values_max = values.max()
-    else:
-        values_max = vmax
-    if vmin is None:
-        values_min = values.min()
-    else:
-        values_min = vmin
 
     if ax is None:
         ax = plt.subplot(1,1,1)
@@ -103,13 +95,20 @@ def PDF(quantity, plot_histogram=False, ax=None, vmax=None, vmin=None,
             else:
                 values[~np.isfinite(values)] = log0
 
+    # Sets maximum and minimum values
+    if vmax is None:
+        values_max = values.max()
+    else:
+        values_max = vmax
+    if vmin is None:
+        values_min = values.min()
+    else:
+        values_min = vmin
+
     # Uses gaussian kernel density estimator to evaluate the PDF
     kernel = stat.gaussian_kde(values)
 
-    if log:
-        x = np.linspace(np.log10(values_min),np.log10(values_max), 200)
-    else:
-        x = np.linspace(values_min,values_max, 200)
+    x = np.linspace(values_min,values_max, 200)
     y = kernel.evaluate(x)
 
     if log:
@@ -118,6 +117,20 @@ def PDF(quantity, plot_histogram=False, ax=None, vmax=None, vmin=None,
     ax.plot(x,y, **args)
     if plot_histogram:
         ax.hist(values, normed=True)
+
+    if name in quantities_dict:
+        if not log:
+            if unit != '':
+                quantitytxt = r'${0}{1}$'.format(quantities_dict[name],unit)
+            else:
+                quantitytxt = r'${0}$'.format(quantities_dict[name],unit)
+        else:
+            quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[name],
+                                                    unit)
+    else:
+        quantitytxt = name
+
+    plt.xlabel(quantitytxt)
 
 
 
@@ -376,7 +389,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         for i in range(nbins):
             datum = zdata[i]
             # Checks whether it has units and strips them away
-            unit, datum = get_formated_units(datum, return_base)
+            unit, datum = get_formated_units(datum, return_base=True, clean=log)
             datum = datum[np.isfinite(datum)]
             if datum.size<minimum_number_per_bin:
                 continue
@@ -419,11 +432,12 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         if quantity in quantities_dict:
             if not log:
                 if unit != '':
-                    quantitytxt = r'${0}\;[{1}]$'.format(quantities_dict[quantity],unit)
+                    quantitytxt = r'${0}{1}$'.format(quantities_dict[quantity],unit)
                 else:
                     quantitytxt = r'${0}$'.format(quantities_dict[quantity],unit)
             else:
-                quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[quantity],unit)
+                quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[quantity],
+                                                        unit)
         else:
             quantitytxt = quantity
 
@@ -484,10 +498,12 @@ def prepare_mass_bins_list(mag_run, redshifts, **kwargs):
     return mass_bins
 
 
-def get_formated_units(quantity, return_base=False):
+def get_formated_units(quantity, return_base=False, clean=False):
     if isinstance(quantity, Quantity):
-        unit = r'\;[{0}]'.format(quantity.unit._repr_latex_())
+        unit = r'{0}'.format(quantity.unit._repr_latex_())
         unit = unit.replace('$','')
+        if not clean:
+            unit = r'\;[{0}]'.format(unit)
         if return_base:
             base = quantity.base
     else:

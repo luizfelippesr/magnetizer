@@ -98,7 +98,10 @@ def PDF(quantity, plot_histogram=False, ax=None, vmax=None, vmin=None,
         values = np.log10(values)
 
         if log0 is not None:
-            values[~np.isfinite(values)] = log0
+            if log0 == 'remove':
+                values = values[np.isfinite(values)]
+            else:
+                values[~np.isfinite(values)] = log0
 
     # Uses gaussian kernel density estimator to evaluate the PDF
     kernel = stat.gaussian_kde(values)
@@ -126,11 +129,7 @@ def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
     if ax is None:
         ax = plt.gcf().add_subplot(111)
 
-    if isinstance(quantity, Quantity):
-        unit = r'\;[{0}]'.format(quantity.unit._repr_latex_())
-        unit = unit.replace('$','')
-    else:
-        unit = ''
+    unit = get_formated_units(quantity)
 
     for t, r, q in zip(ts, rs.T, quantity.T):
         # Sets the line colour, using the colormap
@@ -150,7 +149,6 @@ def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
     ax.grid(alpha=0.2)
 
 
-
 def plot_input(ts, quantity, name='', zs=None, ax=None, **args):
     """
     Plots the time variation of a quantity
@@ -158,11 +156,7 @@ def plot_input(ts, quantity, name='', zs=None, ax=None, **args):
     if ax is None:
         ax = plt.gcf().add_subplot(111)
 
-    if isinstance(quantity, Quantity):
-        unit = r'\;[{0}]'.format(quantity.unit._repr_latex_())
-        unit = unit.replace('$','')
-    else:
-        unit = ''
+    unit = get_formated_units(quantity)
 
     ax.plot(ts, quantity, **args)
 
@@ -330,19 +324,6 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
 
 
 
-def closest_indices(zs, zs_target):
-    izs =[]
-    for zt in zip(zs_target):
-        izs.append(np.abs(zs - zt).argmin())
-    return izs
-
-def prepare_mass_bins_list(mag_run, redshifts, **kwargs):
-    mass_bins = []
-    redshifts = mag_run.redshifts[closest_indices(mag_run.redshifts, redshifts)]
-    for z in redshifts:
-        mass_bins.append(magnetizer.MassBinningObject(mag_run, z=z, **kwargs))
-    return mass_bins
-
 
 def plot_redshift_evolution(quantity, mag_run, position=None,
                             target_redshifts=None, bin_objs=None,
@@ -394,10 +375,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
 
         for i in range(nbins):
             datum = zdata[i]
-            if isinstance(datum, Quantity): # Checks whether it has units
-                unit = datum.unit._repr_latex_()
-                unit = unit.replace('$','')
-                datum = datum.base # Strips away the units
+            # Checks whether it has units and strips them away
+            unit, datum = get_formated_units(datum, return_base)
             datum = datum[np.isfinite(datum)]
             if datum.size<minimum_number_per_bin:
                 continue
@@ -489,3 +468,33 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         ax2.set_xlabel(r"$t\;[\rm Gyr]$")
     return ngals
 
+
+def closest_indices(zs, zs_target):
+    izs =[]
+    for zt in zip(zs_target):
+        izs.append(np.abs(zs - zt).argmin())
+    return izs
+
+
+def prepare_mass_bins_list(mag_run, redshifts, **kwargs):
+    mass_bins = []
+    redshifts = mag_run.redshifts[closest_indices(mag_run.redshifts, redshifts)]
+    for z in redshifts:
+        mass_bins.append(magnetizer.MassBinningObject(mag_run, z=z, **kwargs))
+    return mass_bins
+
+
+def get_formated_units(quantity, return_base=False):
+    if isinstance(quantity, Quantity):
+        unit = r'\;[{0}]'.format(quantity.unit._repr_latex_())
+        unit = unit.replace('$','')
+        if return_base:
+            base = quantity.base
+    else:
+        unit = ''
+        if return_base:
+            base = quantity
+    if return_base:
+        return unit, base
+    else:
+        return unit

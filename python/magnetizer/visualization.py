@@ -28,11 +28,11 @@ default_quantities = [
                         'Br',
                         'Bzmod',
                         'Btot',
+                        'D_Dc',
                         'r_disk',
                         ##'Bfloor',
                         ##'growth',
                         #'Dcrit',
-                        #'D_Dc',
                         #'P',
                         ##'P2',
                         ]
@@ -73,6 +73,49 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    }
 
 log_quantities = ('Beq','n','h', 'Mstars_disk','Mstars_bulge','Mgas_disk',)
+
+
+def PDF(quantity, plot_histogram=False, ax=None, vmax=None, vmin=None,
+        log=False, log0=None, **args):
+    import scipy.stats as stat
+
+    values = quantity[np.isfinite(quantity)]
+
+    # Sets maximum and minimum values
+    if vmax is None:
+        values_max = values.max()
+    else:
+        values_max = vmax
+    if vmin is None:
+        values_min = values.min()
+    else:
+        values_min = vmin
+
+    if ax is None:
+        ax = plt.subplot(1,1,1)
+
+    if log:
+        values = np.log10(values)
+
+        if log0 is not None:
+            values[~np.isfinite(values)] = log0
+
+    # Uses gaussian kernel density estimator to evaluate the PDF
+    kernel = stat.gaussian_kde(values)
+
+    if log:
+        x = np.linspace(np.log10(values_min),np.log10(values_max), 200)
+    else:
+        x = np.linspace(values_min,values_max, 200)
+    y = kernel.evaluate(x)
+
+    if log:
+      x = 10**x
+
+    ax.plot(x,y, **args)
+    if plot_histogram:
+        ax.hist(values, normed=True)
+
 
 
 def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,

@@ -149,25 +149,36 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
 
             quantity = delta_logB/delta_t
         unit = 1./u.Gyr
-    elif qname == r'Bmax':
-        quantity = sqrt(f['Bp'][ig,:,iz]**2 +
-                        f['Br'][ig,:,iz]**2 +
-                        f['Bzmod'][ig,:,iz]**2).max(axis=1)
 
-        unit = units_dict['microgauss']
+
+    elif qname == r'growth_max':
+        quantity, unit = compute_extra_quantity('growth', f, ig,slice(None),iz,
+                                                return_units=True)
+        if select_gal==slice(None):
+            quantity = quantity.max(axis=1)
+        else:
+            quantity = quantity.max(axis=0)
+
+    elif qname == r'Bmax':
+        quantity, unit = compute_extra_quantity('Btot', f, ig,slice(None),iz,
+                                                return_units=True)
+
+        if select_gal==slice(None):
+            quantity = quantity.max(axis=1)
+        else:
+            quantity = quantity.max(axis=0)
+
+
     elif qname == r'rmax':
-        btot = sqrt(f['Bp'][ig,:,iz]**2 +
-                    f['Br'][ig,:,iz]**2 +
-                    f['Bzmod'][ig,:,iz]**2)
+        btot = compute_extra_quantity('Btot', f, ig,slice(None),iz)
         r = f['r'][ig,:,iz]
 
-
-        if select_gal==slice(None,None,None):
+        if select_gal==slice(None):
             ok = np.argmax(btot,axis=1)
         else:
             ok = np.argmax(btot,axis=0)
 
-        quantity[i] = r[ok]
+        quantity = r[ok]
 
         unit = units_dict['kpc']
     else:

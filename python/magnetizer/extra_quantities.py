@@ -41,7 +41,6 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
     # Shorthands
     ig, ir, iz = select_gal, select_r, select_z
     unit = None
-
     if qname == 'V':
         quantity = f['Omega'][ig,ir,iz]*f['r'][ig,ir,iz]
         unit = r'km/s'
@@ -109,14 +108,18 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
         Dc = compute_extra_quantity('Dcrit', f, ig,ir,iz)
         quantity = D/Dc
 
-    elif qname in ('active_dynamo', 'active'):
-        D = compute_extra_quantity('D', f, select_gal=ig,select_z=iz)
-        Dc = compute_extra_quantity('Dcrit', f, select_gal=ig,select_z=iz)
+    elif qname == r'D_Dc_max':
+        D_Dc = compute_extra_quantity('D_Dc', f, ig,slice(None),iz)
 
         if select_gal==slice(None,None,None):
-            quantity = (D/Dc).max(axis=1) > 1
+            quantity = D_Dc.max(axis=1)
         else:
-            quantity = (D/Dc).max(axis=0) > 1
+            quantity = D_Dc.max(axis=0)
+
+    elif qname in ('active_dynamo', 'active'):
+        D_Dc = compute_extra_quantity('D_Dc_max', f, ig,slice(None),iz)
+
+        quantity = D_Dc > 1
 
     elif qname == r'Bfloor':
         h = f['h'][ig,ir,iz]/1e3

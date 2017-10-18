@@ -111,9 +111,6 @@ def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     x = np.linspace(values_min,values_max, 200)
     y = kernel.evaluate(x)
 
-    if log:
-      x = 10**x
-
     ax.plot(x,y, **args)
     if plot_histogram:
         ax.hist(values, normed=True)
@@ -129,7 +126,7 @@ def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
                                                     unit)
     else:
         quantitytxt = name
-
+    plt.ylabel('PDF')
     plt.xlabel(quantitytxt)
 
 
@@ -341,6 +338,7 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
 def plot_redshift_evolution(quantity, mag_run, position=None,
                             target_redshifts=None, bin_objs=None,
                             minimum_number_per_bin=5, keypos=None,
+                            ignore_zero_valued=False, zero_value_tol = 1e-4,
                             log=True, color='#d95f0e', log0=None, **kwargs):
 
     single_binning = no_binning = False
@@ -393,6 +391,9 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             datum = datum[np.isfinite(datum)]
             if datum.size<minimum_number_per_bin:
                 continue
+
+            if ignore_zero_valued:
+                datum = datum[np.abs(datum)>zero_value_tol]
 
             p15[i][j], p50[i][j], p85[i][j] = np.percentile(datum, [15,50,85])
             ngals[i][j] = datum.size

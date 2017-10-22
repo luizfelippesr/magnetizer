@@ -24,9 +24,25 @@ units_dict = {
              }
 
 
-def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
-                           select_r=slice(None,None,None),
-                           select_z=slice(None,None,None),
+def __compute_extra_quantity_max(qname, f, ig=slice(None), iz=slice(None)):
+
+        if qname in f:
+            quantity = f[qname][ig,:,iz]
+            unit = ''
+        else:
+            quantity, unit = compute_extra_quantity(qname, f,
+                                                    ig, slice(None), iz,
+                                                    return_units=True)
+        if ig==slice(None):
+            quantity = quantity.max(axis=1)
+        else:
+            quantity = quantity.max(axis=0)
+
+        return quantity, unit
+
+
+def compute_extra_quantity(qname, f, select_gal=slice(None),
+                           select_r=slice(None), select_z=slice(None),
                            return_units=False):
     """
     Computes extra Magnetizer quantites.
@@ -152,21 +168,20 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
 
 
     elif qname == r'growth_max':
-        quantity, unit = compute_extra_quantity('growth', f, ig,slice(None),iz,
-                                                return_units=True)
-        if select_gal==slice(None):
-            quantity = quantity.max(axis=1)
-        else:
-            quantity = quantity.max(axis=0)
+        quantity, unit = __compute_extra_quantity_max('growth', f, ig, iz)
+
+
+    elif qname == 'pmax':
+        quantity, unit = __compute_extra_quantity_max('p', f, ig, iz)
 
     elif qname == r'Bmax':
-        quantity, unit = compute_extra_quantity('Btot', f, ig,slice(None),iz,
-                                                return_units=True)
+        quantity, unit = __compute_extra_quantity_max('Btot', f, ig, iz)
 
-        if select_gal==slice(None):
-            quantity = quantity.max(axis=1)
-        else:
-            quantity = quantity.max(axis=0)
+
+    elif qname == r'bmax':
+        quantity, unit = __compute_extra_quantity_max('Beq', f, ig, iz)
+        quantity /= 2.
+        unit = units_dict['microgauss']
 
 
     elif qname == r'rmax':
@@ -181,6 +196,7 @@ def compute_extra_quantity(qname, f, select_gal=slice(None,None,None),
         quantity = r[ok]
 
         unit = units_dict['kpc']
+
     else:
         raise ValueError, qname + ' is unknown.'
 

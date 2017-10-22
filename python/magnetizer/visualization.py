@@ -69,7 +69,9 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'Mstars_disk': r'M_{{\star,\rm disc}}',
                    'Mgas_disk': r'M_{{\rm gas,disc}}',
                    'r_disk': r'r_{{\rm disc}}',
-                   'Bmax': r'B_{{\rm max}}'
+                   'Bmax': r'B_{{\rm max}}',
+                   'bmax': r'b_{{\rm max}}',
+                   'pmax': r'p_{{\rm max}}'
                    }
 
 log_quantities = ('Beq','n','h', 'Mstars_disk','Mstars_bulge','Mgas_disk',)

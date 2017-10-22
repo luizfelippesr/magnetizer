@@ -4,7 +4,7 @@ import h5py, numpy as np
 import sys
 from astropy.units import Quantity
 from parameters import Parameters
-from extra_quantities import compute_extra_quantity, units_dict
+import extra_quantities as eq
 
 class MagnetizerRun(object):
     """
@@ -56,6 +56,7 @@ class MagnetizerRun(object):
 
 
     def get(self, quantity, z, position=None, binning=None):
+        reload(eq)
         iz = self.__closest_redshift_idx(z)
         key = (quantity, iz)
 
@@ -72,7 +73,7 @@ class MagnetizerRun(object):
                     unit = self._data[quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
-                    unit = units_dict[unit]
+                    unit = eq.units_dict[unit]
                 else:
                     unit = 1
 
@@ -86,7 +87,7 @@ class MagnetizerRun(object):
                 if self.verbose:
                     print 'Computing {0} at z={1}'.format(quantity,
                                                           self.redshifts[iz])
-                new_data, unit = compute_extra_quantity(quantity, self._data,
+                new_data, unit = eq.compute_extra_quantity(quantity, self._data,
                                                         select_z=iz,
                                                         return_units=True)
 
@@ -136,7 +137,7 @@ class MagnetizerRun(object):
                     unit = self._data[quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
-                    unit = units_dict[unit]
+                    unit = eq.units_dict[unit]
                 else:
                     unit = 1
 
@@ -148,7 +149,7 @@ class MagnetizerRun(object):
             else:
                 if self.verbose:
                     print 'Computing {0} for galaxy {1}'.format(quantity, gal_id)
-                new_data, unit = compute_extra_quantity(quantity, self._data,
+                new_data, unit = eq.compute_extra_quantity(quantity, self._data,
                                                         select_gal=gal_id,
                                                         return_units=True)
 

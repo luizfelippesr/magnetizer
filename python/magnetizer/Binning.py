@@ -38,7 +38,6 @@ class BinningObject(object):
             if self.masks[i] is None:
                self.masks[i] = mask
                if self.extra_filter is not None:
-                  print 'oi'
                   self.masks[i] *= self.extra_filter
             else:
                self.masks[i] *= mask

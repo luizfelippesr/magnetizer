@@ -8,7 +8,7 @@ class BinningObject(object):
     select specific mass bins.
     """
     def __init__(self, magnetizer_run, z=0.0, bins=None,
-                 bin_array=None):
+                 bin_array=None, extra_filter=None):
 
         self.run = magnetizer_run # Reference to run object (to avoid mistakes)
         if bins is None:
@@ -25,6 +25,7 @@ class BinningObject(object):
         self.masks = [None]*self.nbins
         self.bin_counts = [0]*self.nbins
         self._quantitytype = None
+        self.extra_filter = extra_filter
 
     def _compute_bin_filter(self,quantity, bin_interval):
         select  = quantity >  bin_interval[0]
@@ -36,6 +37,9 @@ class BinningObject(object):
             mask = self._compute_bin_filter(quantity, interval)
             if self.masks[i] is None:
                self.masks[i] = mask
+               if self.extra_filter is not None:
+                  print 'oi'
+                  self.masks[i] *= self.extra_filter
             else:
                self.masks[i] *= mask
             self.bin_counts[i] = mask.sum()
@@ -53,11 +57,11 @@ class BinningObject(object):
 
 class MassBinningObject(BinningObject):
     def __init__(self, magnetizer_run, z=0.0, bins=None, stellar_mass=True,
-                 gas_mass=False, include_bulge=True,
+                 gas_mass=False, include_bulge=True, extra_filter=None,
                  bin_array=10**np.array([8.,8.75,9.5,10.25,11.])*u.Msun):
 
         BinningObject.__init__(self,magnetizer_run, z=z, bins=bins,
-                               bin_array=bin_array)
+                               bin_array=bin_array, extra_filter=extra_filter)
 
         self.masks = [None]*len(self.bins)
 

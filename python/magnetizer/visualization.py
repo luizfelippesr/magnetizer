@@ -184,19 +184,19 @@ def plot_input(ts, quantity, name='', zs=None, ax=None, **args):
     ax.grid(alpha=0.2)
 
 
-def plot_mass_summary(igal, run_obj, ax=None, **kwargs):
+def plot_mass_summary(igal, ivol, run_obj, ax=None, **kwargs):
 
     if ax is None:
         ax = plt.gcf().add_subplot(111)
 
     for name in  ('Mstars_disk','Mstars_bulge','Mgas_disk'):
-        data = run_obj.get_galaxy(name, igal)
+        data = run_obj.get_galaxy(name, igal, ivol)
         label = '$'+quantities_dict[name]+'$'
         plot_input(run_obj.times, data, name='M', ax=ax, label=label, **kwargs)
     ax.set_yscale('log')
     ax.legend(frameon=False, loc='lower right', fontsize=7)
 
-def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3, mass_frame=True,
+def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
                      selected_quantities=None, cmap=plt.cm.viridis):
     """
     Prepares a page o plots
@@ -212,7 +212,7 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3, mass_frame=True,
     prop_dict = {}
     for name in (selected_quantities +
                  ['Mstars_disk','Mgas_disk','Mstars_bulge','r_disk','r']):
-        prop_dict[name] = run_obj.get_galaxy(name, igal)
+        prop_dict[name] = run_obj.get_galaxy(name, igal, ivol)
 
     # Get galaxy properties closest to the present day and prepares
     # a string with the info
@@ -251,10 +251,10 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3, mass_frame=True,
     if mass_frame:
         subplot_idx += 1
         ax = fig.add_subplot(nrows, ncols, subplot_idx)
-        plot_mass_summary(igal, run_obj,ax=ax, linewidth=1.5)
+        plot_mass_summary(igal, ivol, run_obj,ax=ax, linewidth=1.5)
 
     # Adds title
-    fig.suptitle('Galaxy {0}{1}'.format(igal, info))
+    fig.suptitle('Galaxy {0},{1}{2}'.format(igal, ivol, info))
     # Finds space for the color bar
     fig.tight_layout()
     fig.subplots_adjust(top=0.95, bottom=0.15)
@@ -285,7 +285,8 @@ def galaxy_portfolio(igal, run_obj, nrows=5, ncols=3, mass_frame=True,
 
 
 def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
-                       selected_galaxies=None, galaxies_per_bin=10,
+                       selected_galaxies=None, selected_ivols=None,
+                       galaxies_per_bin=10,
                        pdf_filename=None, return_figures=False):
     """
     Prepares portfolios of various galaxies for a given Magnetizer run.
@@ -297,12 +298,20 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
         if binning_obj is None:
             raise ValueError
         # Draws random galaxies based on binning information.
-        selected_galaxies = []
+        selected_galaxies = np.array([], dtype=int) # Avoids later concatenate
+        selected_ivols = np.array([], dtype=int)    # type problem
         for mask in binning_obj.masks:
             igals = run_obj.gal_id[mask]
+            ivols = run_obj.ivol[mask]
             if igals.size > galaxies_per_bin:
-                igals = random.sample(igals, galaxies_per_bin)
-            selected_galaxies = np.append(selected_galaxies ,igals)
+                idx = np.random.random_integers(0,igals.size-1,galaxies_per_bin)
+                igals = igals[idx]
+                ivols = ivols[idx]
+            selected_galaxies = np.append(selected_galaxies, igals)
+            selected_ivols = np.append(selected_ivols, ivols)
+    else:
+        if selected_ivols is None:
+            selected_ivols = [0]*len(selected_galaxies)
 
     print 'Producing all figures'
 
@@ -315,8 +324,9 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
         pdf = PdfPages(pdf_filename)
 
 
-    for igal in selected_galaxies:
-        fig = galaxy_portfolio(igal, run_obj,
+    for igal, ivol in zip(selected_galaxies, selected_ivols):
+
+        fig = galaxy_portfolio(igal, ivol, run_obj,
                                selected_quantities=selected_quantities)
 
         if fig is not None:

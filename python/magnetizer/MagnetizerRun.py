@@ -85,6 +85,7 @@ class MagnetizerRun(object):
         # If this quantity at this redshift was not already loaded, load or
         # computes it (and save to the cache)
         if key not in self._cache:
+            data = []
             if quantity == 'status':
                 self._cache[key] = status[self._completed, iz]
                 raise NotImplementedError
@@ -102,14 +103,12 @@ class MagnetizerRun(object):
                 if self.verbose:
                     print 'Loading {0} at z={1}'.format(quantity,
                                                         self.redshifts[iz])
-                data = []
                 for i, data_dict in enumerate(self._data):
                       data.append(self._clean(data_dict[quantity],iz,i,profile))
             else:
                 if self.verbose:
                     print 'Computing {0} at z={1}'.format(quantity,
                                                           self.redshifts[iz])
-                data = []
                 for i, data_dict in enumerate(self._data):
                     new_data, unit = eq.compute_extra_quantity(quantity,
                                                                data_dict,
@@ -154,12 +153,13 @@ class MagnetizerRun(object):
 
         # If this quantity at this redshift was not already loaded, load or
         # computes it (and save to the cache)
-        if key not in self._cache:
-            if quantity in self._data:
-                profile = len(self._data[quantity].shape)==3
+        if key not in self._galaxies_cache:
+            data = []
+            if quantity in self._data[0]:
+                profile = len(self._data[0][quantity].shape)==3
 
-                if 'Units' in self._data[quantity].attrs:
-                    unit = self._data[quantity].attrs['Units']
+                if 'Units' in self._data[0][quantity].attrs:
+                    unit = self._data[0][quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
                     unit = eq.units_dict[unit]
@@ -169,24 +169,30 @@ class MagnetizerRun(object):
                 if self.verbose:
                     print 'Loading {0} for galaxy {1}'.format(quantity, gal_id)
 
-                self._cache[key] = self._clean_gal(self._data[quantity],gal_id,
-                                                   profile)
+                for i, data_dict in enumerate(self._data):
+                      data.append(self._clean_gal(data_dict[quantity], gal_id,
+                                                  i, profile))
+
             else:
                 if self.verbose:
                     print 'Computing {0} for galaxy {1}'.format(quantity, gal_id)
-                new_data, unit = eq.compute_extra_quantity(quantity, self._data,
-                                                        select_gal=gal_id,
-                                                        return_units=True)
 
-                profile = len(new_data.shape)==2
 
-                self._cache[key] = self._clean_gal(new_data, gal_id, profile,
-                                                   pre_selected_gal_id=True)
+                for i, data_dict in enumerate(self._data):
+                    new_data, unit = eq.compute_extra_quantity(quantity,
+                                                               data_dict,
+                                                               select_gal=gal_id,
+                                                               return_units=True)
+                    profile = len(new_data.shape)==2
 
+                    data.append( self._clean_gal(new_data, gal_id, i, profile,
+                                                 pre_selected_gal_id=True))
+
+            self._galaxies_cache[key] = np.concatenate(data)
             if unit is not None:
-                self._cache[key] = self._cache[key]*unit
+                self._galaxies_cache[key] = self._galaxies_cache[key]*unit
 
-        return self._cache[key]
+        return self._galaxies_cache[key]
 
 
     def _clean(self, dataset, iz = slice(None), ivol=0, profile=True,
@@ -223,7 +229,7 @@ class MagnetizerRun(object):
             return np.where(valid[:,0,iz], dataset[completed,iz], np.NaN)
 
 
-    def _clean_gal(self, dataset, gal_id, profile=True,
+    def _clean_gal(self, dataset, gal_id, ivol=0, profile=True,
                    pre_selected_gal_id=False):
         """
         Removes incomplete and invalid data from a dataset.
@@ -231,7 +237,7 @@ class MagnetizerRun(object):
 
         if profile:
             # Uses the scaleheight as the proxy for a valid profile
-            valid = self._data['h'][gal_id, :, :] > 0
+            valid = self._data[ivol]['h'][gal_id, :, :] > 0
             if not pre_selected_gal_id:
                 return np.where(valid, dataset[gal_id,:,:], np.NaN)
             else:
@@ -239,7 +245,7 @@ class MagnetizerRun(object):
         else:
             # Uses the disk stellar mass as proxy for a valid profile
             # (with some tolerance)
-            valid = self._data['Mstars_disk'][gal_id, :] > -0.1
+            valid = self._data[ivol]['Mstars_disk'][gal_id, :] > -0.1
             if not pre_selected_gal_id:
                 return np.where(valid, dataset[gal_id,:], np.NaN)
             else:

@@ -61,7 +61,8 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'etat' : r'\eta_t',
                    'Bfloor' : r'B_{\rm floor}',
                    'Btot' : r'|\mathbf{{\overline{{B}}}}|',
-                   'growth' : r'\gamma',
+                   'growth' : r'\Gamma',
+                   'growth_max' : r'\Gamma',
                    'D_Dc': r'D/D_c',
                    '|Bp|'   : r'|\overline{{B}}_\phi|',
                    'Bpmod'   : r'|\overline{{B}}_\phi|',
@@ -71,7 +72,9 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'r_disk': r'r_{{\rm disc}}',
                    'Bmax': r'B_{{\rm max}}',
                    'bmax': r'b_{{\rm max}}',
-                   'pmax': r'p_{{\rm max}}'
+                   'pmax': r'p_{{\rm max}}',
+                   'n': r'n',
+                   'h': r'h',
                    }
 
 log_quantities = ('Beq','n','h', 'Mstars_disk','Mstars_bulge','Mgas_disk',)
@@ -458,7 +461,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         plt.xlabel('$z$')
 
         if not no_binning:
-            masstxt = '${0}< \log(M/M_\odot) <{1}$'.format(
+            masstxt = '${0}< \log(M_\star/M_\odot) <{1}$'.format(
               np.log10(bins[i][0].base), np.log10(bins[i][1].base))
             if keypos is None:
                 #ok = np.isfinite(p50[i])

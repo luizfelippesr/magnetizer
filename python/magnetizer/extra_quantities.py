@@ -168,7 +168,21 @@ def compute_extra_quantity(qname, f, select_gal=slice(None),
 
 
     elif qname == r'growth_max':
-        quantity, unit = __compute_extra_quantity_max('growth', f, ig, iz)
+
+        if iz==0:
+            quantity = 0.0 * f['r'][ig,ir,iz]
+            unit = 1./u.Gyr
+        else:
+            Btot1 = compute_extra_quantity('Bmax', f, ig,ir,iz)
+            Btot0 = compute_extra_quantity('Bmax', f, ig,ir,iz-1)
+
+            delta_logB = np.log(Btot1) - np.log(Btot0)
+            delta_t = f['t'][iz] - f['t'][iz-1]
+
+            quantity = delta_logB/delta_t
+
+        unit = 1./u.Gyr
+
 
 
     elif qname == 'pmax':
@@ -184,17 +198,15 @@ def compute_extra_quantity(qname, f, select_gal=slice(None),
         unit = units_dict['microgauss']
 
 
-    elif qname == r'rmax':
+    elif qname == r'max_r':
         btot = compute_extra_quantity('Btot', f, ig,slice(None),iz)
         r = f['r'][ig,:,iz]
 
-        if select_gal==slice(None):
-            ok = np.argmax(btot,axis=1)
-        else:
-            ok = np.argmax(btot,axis=0)
-
-        quantity = r[ok]
-
+        print btot.shape, r.shape
+        ok = np.argmax(btot,axis=0)
+        print ok.shape, r.shape
+        quantity = btot[ig,ok]
+        print quantity.shape
         unit = units_dict['kpc']
 
     else:

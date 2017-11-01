@@ -78,7 +78,7 @@ class MagnetizerRun(object):
 
 
     def get(self, quantity, z, position=None, binning=None):
-        #reload(eq)
+        reload(eq) # Allows for on-the-fly changes to this module!
         iz = self.__closest_redshift_idx(z)
         key = (quantity, iz)
 

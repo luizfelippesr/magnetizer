@@ -169,7 +169,8 @@ class MagnetizerRun(object):
                 if self.verbose:
                     print 'Loading {0} for galaxy {1}'.format(quantity, gal_id)
 
-                self._galaxies_cache[key] = self._clean_gal(data[quantity],gal_id,
+                self._galaxies_cache[key] = self._clean_gal(data[quantity],
+                                                            gal_id,
                                                             ivol, profile)
             else:
                 if self.verbose:
@@ -243,6 +244,8 @@ class MagnetizerRun(object):
             if not pre_selected_gal_id:
                 return np.where(valid, dataset[gal_id,:], np.NaN)
             else:
+                # This deals with quantities as Bmax
+                valid *= self._data[ivol]['h'][gal_id, 0, :] > 0
                 return np.where(valid, dataset, np.NaN)
 
 

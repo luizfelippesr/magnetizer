@@ -7,213 +7,215 @@ import numpy as np
 import re
 import astropy.units as u
 
-units_dict = {
-              'Gyr' : u.Gyr,
-              'Mpc^-3' : u.Mpc**-3,
-              'Msun' : u.Msun,
-              'Msun/yr' : u.Msun/u.yr,
-              'cm^-3' : u.cm**-3,
-              'erg cm^-3' : u.erg*u.cm**-3,
-              'km/s' : u.km/u.s,
-              'km/s/kpc': u.km/u.s/u.kpc,
-              'kpc' : u.kpc,
-              'kpc km/s' : u.kpc*u.km/u.s,
-              'microgauss' : u.microgauss,
-              'pc' : u.pc,
-              's' : u.s
-             }
 
-
-def __compute_extra_quantity_max(qname, f, ig=slice(None), iz=slice(None)):
-
-        if qname in f:
-            quantity = f[qname][ig,:,iz]
-            unit = ''
-        else:
-            quantity, unit = compute_extra_quantity(qname, f,
-                                                    ig, slice(None), iz,
-                                                    return_units=True)
-        if ig==slice(None):
-            quantity = quantity.max(axis=1)
-        else:
-            quantity = quantity.max(axis=0)
-
-        return quantity, unit
-
-
-def compute_extra_quantity(qname, f, select_gal=slice(None),
-                           select_r=slice(None), select_z=slice(None),
-                           return_units=False):
+def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
     """
     Computes extra Magnetizer quantites.
 
-    Input: qname -> code-name of the quantity
-           f -> object containing the quantities keys (e.g. hdf5file['Output'])
-           select_gal -> optional, index or mask for the galaxy indices
-           select_r -> optional, index or mask for the radius indices
-           select_z -> optional, index or mask for the redshift indices
-    Returns: the computed extra quantity
-    """
-    # Shorthands
-    ig, ir, iz = select_gal, select_r, select_z
-    unit = None
-    if qname == 'V':
-        quantity = f['Omega'][ig,ir,iz]*f['r'][ig,ir,iz]
-        unit = r'km/s'
-    elif qname[:2] == 'V_':
-        quantity = f['Omega_'+qname[2]][ig,ir,iz]*f['r'][ig,ir,iz]
-        unit = r'km/s'
-    elif qname == 'D':
-        S = f['Shear'][ig,ir,iz]
-        eta_t= f['etat'][ig,ir,iz]
-        alpha = f['alp'][ig,ir,iz]
-        h = f['h'][ig,ir,iz]
+    This function needs to be called with either gal_id or z different
+    from None
 
-        quantity = alpha * S * (h/1e3)**3 / (eta_t**2)
+    Parameters
+    ----------
+    qname : string
+        code-name of the quantity
+        
+    mag_run : MagnetizerRun
+        
+    gal_id : integer
+        index of the required galaxy. Having this different from None
+        signals that the redshift evolution of a given galaxy should be
+        computed
+
+    z : float
+        target redshift . Having this different from None signals that
+        the quantity needs to be computed at this redshift only for a
+        range of galaxies.
+
+
+    Returns
+    -------
+    astropy quantity
+        if gal_id!=None, this will have shape (ngrid,nz) or (nz)
+        if z!=None, this will have shape (ngals,ngrid) or (ngals)
+    """
+
+    # Makes sure the correct method is used
+    if (gal_id is not None) and (z is None) :
+        get = lambda quantity: mag_run.get_galaxy(quantity, gal_id)
+    elif (gal_id is None) and (z is not None):
+        get = lambda quantity, redshift=z: mag_run.get(quantity, redshift)
+    else:
+        raise ValueError, 'Must choose either gal_id or z'
+
+    if qname == 'V':
+        quantity = get('Omega')*get('r')
+
+    elif qname == 'D':
+        S = get('Shear')
+        eta_t= get('etat')
+        alpha = get('alp')
+        h = get('h')
+
+        quantity = alpha * S * h**3 / (eta_t**2)
+        quantity = quantity.cgs
 
     elif qname in (r'D_{{\rm crit}}','Dc','Dcrit'):
-        Ru = compute_extra_quantity('R_u', f, ig,ir,iz)
-        Cu = 0.25
+        Ru = get('R_u')
+        Cu = 0.25 # hard-coded at input_constants module
         quantity = - (pi/2.)**5 * (1. + 4./pi**2 *Cu * Ru)**2
+        quantity = quantity.cgs
 
     elif qname == 'R_u':
-        quantity = f['Uz'][ig,ir,iz] * ( f['h'][ig,ir,iz]/1e3) / f['etat'][ig,ir,iz]
+        quantity = get('Uz') * get('h') / get('etat')
 
     elif qname == '|Bp|':
-        quantity = np.abs(f['Bp'][ig,ir,iz])
-        unit = units_dict['microgauss']
+        quantity = np.abs(get('Bp'))
 
     elif qname == '|Br|':
-        quantity = np.abs(f['Bp'][ig,ir,iz])
-        unit = units_dict['microgauss']
+        quantity = np.abs(get('Bp'))
 
     elif qname == '|Bz|':
-        quantity = f['Bzmod'][ig,ir,iz]
-        unit = units_dict['microgauss']
+        quantity = get('Bzmod')
 
     elif qname == 'p':
-        quantity = arctan(f['Br'][ig,ir,iz]/f['Bp'][ig,ir,iz])*180/pi
+        quantity = arctan(get('Br')/get('Bp'))
+        quantity = quantity.to(u.degree)
 
     elif qname == 'q':
-        quantity = -f['Shear'][ig,ir,iz]/f['Omega'][ig,ir,iz],
+        quantity = -get('Shear')/get('Omega')
 
     elif qname == 'l/h':
-        quantity = f['l'][ig,ir,iz]/f['h'][ig,ir,iz]
+        quantity = get('l')/get('h')
 
     elif qname == 'h/r':
-        quantity = f['h'][ig,ir,iz]/f['r'][ig,ir,iz]/1e3
+        quantity = get('h')/get('r')
 
     elif qname == r'\tau\Omega':
-        quantity = f['tau'][ig,ir,iz]*f['Omega'][ig,ir,iz]
+        quantity = get('tau')*get('Omega')
 
     elif qname == r'Btot':
-        quantity = sqrt(f['Bp'][ig,ir,iz]**2 +
-                    f['Br'][ig,ir,iz]**2 +
-                    f['Bzmod'][ig,ir,iz]**2)
-        unit = units_dict['microgauss']
+        quantity = sqrt(get('Bp')**2 +
+                    get('Br')**2 +
+                    get('Bzmod')**2)
 
     elif qname == r'B_Beq':
-        quantity = sqrt(f['Bp'][ig,ir,iz]**2 +
-                    f['Br'][ig,ir,iz]**2 +
-                    f['Bzmod'][ig,ir,iz]**2)
-        quantity /= f['Beq'][ig,ir,iz]
-        unit = units_dict['microgauss']
+        quantity = sqrt(get('Bp')**2 +
+                    get('Br')**2 +
+                    get('Bzmod')**2)
+        quantity /= get('Beq')
 
     elif qname == r'D_Dc':
-        D = compute_extra_quantity('D', f, ig,ir,iz)
-        Dc = compute_extra_quantity('Dcrit', f, ig,ir,iz)
-        quantity = D/Dc
-
-    elif qname == r'D_Dc_max':
-        D_Dc = compute_extra_quantity('D_Dc', f, ig,slice(None),iz)
-
-        if select_gal==slice(None,None,None):
-            quantity = D_Dc.max(axis=1)
-        else:
-            quantity = D_Dc.max(axis=0)
-
-    elif qname in ('active_dynamo', 'active'):
-        D_Dc = compute_extra_quantity('D_Dc_max', f, ig,slice(None),iz)
-
-        quantity = D_Dc > 1
+        quantity = get('D')/get('Dc')
 
     elif qname == r'Bfloor':
-        h = f['h'][ig,ir,iz]/1e3
-        l = f['l'][ig,ir,iz]/1e3
-        Delta_r = 2.
+        r = get('r')
+        h = get('h')
+        Beq = get('Beq')
+        #l = get('l') # This is not what is actually used in the code!
+        l = mag_run.parameters.ISM_and_disk['P_ISM_TURBULENT_LENGTH']*u.pc
+        kappa = mag_run.parameters.dynamo['P_FLOOR_KAPPA']
+
+        Delta_r = l * kappa
         fmag = 0.5
-        r = f['r'][ig,ir,iz]
         Ncells= np.abs(3.*r*Delta_r*h/l**3)
-        Beq = f['Beq'][ig,ir,iz]
         brms= fmag*Beq
+
         quantity = np.exp(-Delta_r/2./r)*brms/Ncells**(0.5)*l/Delta_r/3.
+        quantity = quantity.to(u.microgauss)
 
     elif qname == r'growth':
-        if iz==0:
-            quantity = 0.0 * f['r'][ig,ir,iz]
-            unit = 1./u.Gyr
+        if z is not None:
+            # Redshift selection
+            iz = mag_run._closest_redshift_idx(z)
+            if iz==0:
+                return 0.0 * get('r').base / u.Gyr
+
+            prev_z = mag_run.redshifts[iz-1]
+
+            Btot1 = sqrt(get('Bp')**2 +
+                         get('Br')**2 +
+                         get('Bzmod')**2)
+            Btot0 = sqrt(get('Bp',redshift=prev_z)**2 +
+                         get('Br',redshift=prev_z)**2 +
+                         get('Bzmod',redshift=prev_z)**2)
+
+            delta_lnB = np.log(Btot1/Btot0)
+            delta_t = mag_run.times[iz] - mag_run.times[iz-1]
+
+            quantity = delta_lnB/delta_t
         else:
-            Btot1 = sqrt(f['Bp'][ig,ir,iz]**2 +
-                         f['Br'][ig,ir,iz]**2 +
-                         f['Bzmod'][ig,ir,iz]**2)
-            Btot0 = sqrt(f['Bp'][ig,ir,iz-1]**2 +
-                         f['Br'][ig,ir,iz-1]**2 +
-                         f['Bzmod'][ig,ir,iz-1]**2)
+            # Profile selection
+            Btot = sqrt(get('Bp')**2 +
+                         get('Br')**2 +
+                         get('Bzmod')**2)
 
-            delta_logB = np.log(Btot1) - np.log(Btot0)
-            delta_t = f['t'][iz] - f['t'][iz-1]
+            quantity = np.empty_like(Btot.base)
+            quantity[:,0] = 0.0*u.Gyr
 
-            quantity = delta_logB/delta_t
-        unit = 1./u.Gyr
+            delta_lnB = np.log(Btot[:,1:]/Btot[:,:-1])
+            delta_t = mag_run.times[1:] - mag_run.times[:-1]
 
+            for prof in delta_lnB:
+                prof /=delta_t
+
+            quantity[:,1:] = delta_lnB
 
     elif qname == r'growth_max':
+        if z is not None:
+            # Redshift selection
+            iz = mag_run._closest_redshift_idx(z)
+            if iz==0:
+                return 0.0 * get('Mstars_disk').base / u.Gyr
 
-        if iz==0:
-            quantity = 0.0 * f['r'][ig,ir,iz]
-            unit = 1./u.Gyr
+            prev_z = mag_run.redshifts[iz-1]
+
+            Bmax1 = get('Bmax')
+            Bmax0 = get('Bmax',redshift=prev_z)
+
+            delta_lnB = np.log(Bmax1/Bmax0)
+            delta_t = mag_run.times[iz] - mag_run.times[iz-1]
+
+            quantity = delta_lnB/delta_t
         else:
-            Btot1 = compute_extra_quantity('Bmax', f, ig,ir,iz)
-            Btot0 = compute_extra_quantity('Bmax', f, ig,ir,iz-1)
+            # Profile selection
+            Bmax = get('Bmax')
 
-            delta_logB = np.log(Btot1) - np.log(Btot0)
-            delta_t = f['t'][iz] - f['t'][iz-1]
+            quantity = np.empty_like(Bmax.base)/u.Gyr
 
-            quantity = delta_logB/delta_t
+            quantity[0] = 0.0
 
-        unit = 1./u.Gyr
+            delta_lnB = np.log(Bmax[1:]/Bmax[:-1])
+            delta_t = mag_run.times[1:] - mag_run.times[:-1]
 
-
+            quantity[1:] = delta_lnB/delta_t
 
     elif qname == 'pmax':
-        quantity, unit = __compute_extra_quantity_max('p', f, ig, iz)
+        quantity = get('p')
+        quantity = __get_profile_max(quantity, gal_id=gal_id, z=z)
 
     elif qname == r'Bmax':
-        quantity, unit = __compute_extra_quantity_max('Btot', f, ig, iz)
-
+        quantity = get('Btot')
+        quantity = __get_profile_max(quantity, gal_id=gal_id, z=z)
 
     elif qname == r'bmax':
-        quantity, unit = __compute_extra_quantity_max('Beq', f, ig, iz)
-        quantity /= 2.
-        unit = units_dict['microgauss']
-
+        quantity = get('Beq')
+        quantity = __get_profile_max(quantity, gal_id=gal_id, z=z)
+        quantity *= mag_run.parameters.dynamo['FMAG']
 
     elif qname == r'max_r':
-        btot = compute_extra_quantity('Btot', f, ig,slice(None),iz)
-        r = f['r'][ig,:,iz]
-
-        print btot.shape, r.shape
-        ok = np.argmax(btot,axis=0)
-        print ok.shape, r.shape
-        quantity = btot[ig,ok]
-        print quantity.shape
-        unit = units_dict['kpc']
+        raise NotImplementedError
 
     else:
         raise ValueError, qname + ' is unknown.'
 
-    if not return_units:
-        return quantity
-    else:
-        return quantity, unit
+    return quantity
 
+
+def __get_profile_max(quantity, gal_id=None, z=None):
+
+    if z is not None:
+        quantity = quantity.max(axis=1)
+    else:
+        quantity = quantity.max(axis=0)
+    return quantity

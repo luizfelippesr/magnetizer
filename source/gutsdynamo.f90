@@ -196,7 +196,7 @@ module equ  !Contains the partial differential equations to be solved
       ! IMPOSE MINIMUM (FLOOR) ON B_PHI DUE TO SMALL-SCALE TURBULENT
       ! FLUCTUATING MAGNETIC FIELD
       if (lFloor) then
-        Bfloor = compute_floor_target_field(r,l,h,Beq,Delta_r_floor)
+        Bfloor = compute_floor_target_field(r,l,h,Beq,delta_r_floor)
 
         Afloor = compute_floor_source_coefficient(h,etat,Uz,Dyn_gen)
       else

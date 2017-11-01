@@ -2,17 +2,24 @@
 from os.path import basename
 import h5py, numpy as np
 import sys
-from astropy.units import Quantity
+import astropy.units as u
 from parameters import Parameters
 import extra_quantities as eq
 
 class MagnetizerRun(object):
     """
     Provides an interface to access a given Magnetizer run.
-
+    
     output_file_path -> path to hdf5 file containing Magnetizer output data.
     input_file_path -> path hdf5 file containing Magnetizer input data.
                        If absent, will assume the same as output_file_path.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
     """
     def __init__(self, output_path, input_path=None,
                  z_tolerance=0.01, verbose=False):
@@ -44,7 +51,7 @@ class MagnetizerRun(object):
         self._hout = houts
         # Uses the first hdf5 as reference
         self.redshifts = self._data[0]['z'][:]
-        self.times = self._data[0]['t'][:]
+        self.times = self._data[0]['t'][:] * u.Gyr
         self.parameters = Parameters(houts[0])
         self._cache = {}
         self._galaxies_cache = {}
@@ -78,8 +85,26 @@ class MagnetizerRun(object):
 
 
     def get(self, quantity, z, position=None, binning=None):
+        """
+        Loads a given quantity at specified redshift
+
+        Parameters
+        ----------
+        quantity :
+            
+        z :
+            
+        position :
+             (Default value = None)
+        binning :
+             (Default value = None)
+
+        Returns
+        -------
+
+        """
         reload(eq) # Allows for on-the-fly changes to this module!
-        iz = self.__closest_redshift_idx(z)
+        iz = self._closest_redshift_idx(z)
         key = (quantity, iz)
 
         # If this quantity at this redshift was not already loaded, load or
@@ -95,7 +120,7 @@ class MagnetizerRun(object):
                     unit = self._data[0][quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
-                    unit = eq.units_dict[unit]
+                    unit = units_dict[unit]
                 else:
                     unit = 1
 
@@ -105,24 +130,18 @@ class MagnetizerRun(object):
                 data = []
                 for i, data_dict in enumerate(self._data):
                       data.append(self._clean(data_dict[quantity],iz,i,profile))
+
+                self._cache[key] = np.concatenate(data)
+
+                if unit is not None:
+                    self._cache[key] = self._cache[key]*unit
             else:
                 if self.verbose:
                     print 'Computing {0} at z={1}'.format(quantity,
                                                           self.redshifts[iz])
-                data = []
-                for i, data_dict in enumerate(self._data):
-                    new_data, unit = eq.compute_extra_quantity(quantity,
-                                                               data_dict,
-                                                               select_z=iz,
-                                                               return_units=True)
-                    profile = len(new_data.shape)==2
 
-                    data.append( self._clean(new_data, iz, i, profile,
-                                             pre_selected_z=True) )
+                self._cache[key] = eq.compute_extra_quantity(quantity,self,z=z)
 
-            self._cache[key] = np.concatenate(data)
-            if unit is not None:
-                self._cache[key] = self._cache[key]*unit
 
         if position is None:
             # Returns the cached quantity
@@ -131,7 +150,7 @@ class MagnetizerRun(object):
             # Returns the cached quantity at selected radius
             rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
             target_pos = int(self.ngrid/rmax_rdisc*position)
-            if isinstance(self._cache[key], Quantity):
+            if isinstance(self._cache[key], u.Quantity):
                 return_data = self._cache[key].base[:,target_pos]*self._cache[key].unit
             else:
                 return_data = self._cache[key][:,target_pos]
@@ -149,6 +168,22 @@ class MagnetizerRun(object):
             return return_list
 
     def get_galaxy(self, quantity, gal_id, ivol=0):
+        """
+        Loads a given quantity for a specific galaxy
+
+        Parameters
+        ----------
+        quantity :
+            
+        gal_id :
+            
+        ivol :
+             (Default value = 0)
+
+        Returns
+        -------
+
+        """
 
         key = (quantity, gal_id, ivol)
         data = self._data[ivol]
@@ -162,7 +197,7 @@ class MagnetizerRun(object):
                     unit = data[quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
-                    unit = eq.units_dict[unit]
+                    unit = units_dict[unit]
                 else:
                     unit = 1
 
@@ -172,20 +207,16 @@ class MagnetizerRun(object):
                 self._galaxies_cache[key] = self._clean_gal(data[quantity],
                                                             gal_id,
                                                             ivol, profile)
+                if unit is not None:
+                    self._galaxies_cache[key] = self._galaxies_cache[key]*unit
+
             else:
                 if self.verbose:
                     print 'Computing {0} for galaxy {1}'.format(quantity, gal_id)
-                new_data, unit = eq.compute_extra_quantity(quantity, data,
-                                                        select_gal=gal_id,
-                                                        return_units=True)
 
-                profile = len(new_data.shape)==2
 
-                self._galaxies_cache[key] = self._clean_gal(new_data, gal_id,
-                                        ivol, profile, pre_selected_gal_id=True)
-
-            if unit is not None:
-                self._galaxies_cache[key] = self._galaxies_cache[key]*unit
+                self._galaxies_cache[key] = eq.compute_extra_quantity(quantity,
+                                                            self, gal_id=gal_id)
 
         return self._galaxies_cache[key]
 
@@ -194,6 +225,17 @@ class MagnetizerRun(object):
                pre_selected_z=False):
         """
         Removes incomplete and invalid data from a dataset.
+
+        Parameters
+        ----------
+        dataset :
+            
+        iz :
+             (Default value = slice(None)
+
+        Returns
+        -------
+
         """
 
         if self._valid is None:
@@ -228,6 +270,23 @@ class MagnetizerRun(object):
                    pre_selected_gal_id=False):
         """
         Removes incomplete and invalid data from a dataset.
+
+        Parameters
+        ----------
+        dataset :
+            
+        gal_id :
+            
+        ivol :
+            
+        profile :
+             (Default value = True)
+        pre_selected_gal_id :
+             (Default value = False)
+
+        Returns
+        -------
+
         """
 
         if profile:
@@ -249,7 +308,10 @@ class MagnetizerRun(object):
                 return np.where(valid, dataset, np.NaN)
 
 
-    def __closest_redshift_idx(self, z):
+    def _closest_redshift_idx(self, z):
+        """
+        Auxiliary function: gets index of closest redshift
+        """
         iz = np.abs(self.redshifts - z).argmin()
         z_actual = self.redshifts[iz]
         if abs(z_actual-z) > self._z_tolerance:
@@ -259,3 +321,18 @@ class MagnetizerRun(object):
         return iz
 
 
+units_dict = {
+              'Gyr' : u.Gyr,
+              'Mpc^-3' : u.Mpc**-3,
+              'Msun' : u.Msun,
+              'Msun/yr' : u.Msun/u.yr,
+              'cm^-3' : u.cm**-3,
+              'erg cm^-3' : u.erg*u.cm**-3,
+              'km/s' : u.km/u.s,
+              'km/s/kpc': u.km/u.s/u.kpc,
+              'kpc' : u.kpc,
+              'kpc km/s' : u.kpc*u.km/u.s,
+              'microgauss' : u.microgauss,
+              'pc' : u.pc,
+              's' : u.s
+             }

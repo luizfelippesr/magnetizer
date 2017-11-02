@@ -14,6 +14,8 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p']):
             error_codes, optional -> list with exit codes considered to be errors.
                                      Default: ['e','g','h','H','s','i','p']
     """
+
+    name = h5file.attrs['Model name']
     status = h5file['Log']['status']
     completed = h5file['Log']['completed'][:]
     runtime = h5file['Log']['runtime'][:]
@@ -41,7 +43,8 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p']):
         # Counts nice galaxies
         if ok:
             nice+=1
-
+    print 'Model name:',name
+    print 'File path:',h5file.filename
     print 'Total number of galaxies', completed.size
     print 'Number of completed galaxies', ngal
     print '\nSummary of errors'
@@ -65,10 +68,11 @@ if __name__ == "__main__"  :
     parser = argparse.ArgumentParser(description='Prints to screen summary '
                   'statistics about errors in a particular Magnetizer output')
 
-    parser.add_argument("MAGNETIZER_OUTPUT",help="Name of the Magnetizer output"
-                        " file to be examined.")
+    parser.add_argument("MAGNETIZER_OUTPUT",help="Name(s) of the Magnetizer"
+                        "output file(s) to be examined.", nargs="+")
 
     args = parser.parse_args()
 
-    with h5py.File(args.MAGNETIZER_OUTPUT,'r') as f:
-        error_stats(f)
+    for path in args.MAGNETIZER_OUTPUT:
+        with h5py.File(path,'r') as f:
+            error_stats(f)

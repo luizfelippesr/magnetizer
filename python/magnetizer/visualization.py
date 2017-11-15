@@ -506,11 +506,26 @@ def closest_indices(zs, zs_target):
     return izs
 
 
-def prepare_mass_bins_list(mag_run, redshifts, **kwargs):
+def prepare_mass_bins_list(mag_run, redshifts,
+                           filter_quantity=None,
+                           filter_threshold=None,
+                           filter_greater=False,
+                           **kwargs):
     mass_bins = []
     redshifts = mag_run.redshifts[closest_indices(mag_run.redshifts, redshifts)]
     for z in redshifts:
-        mass_bins.append(magnetizer.MassBinningObject(mag_run, z=z, **kwargs))
+        if filter_quantity is None:
+            filt = None
+        else:
+            if filter_threshold is None:
+                raise ValueError
+            if not filter_greater:
+                filt = mag_run.get(filter_quantity, z) > filter_threshold
+            else:
+                filt = mag_run.get(filter_quantity, z) < filter_threshold
+
+        mass_bins.append(magnetizer.MassBinningObject(mag_run, extra_filter=filt,
+                                                      z=z, **kwargs))
     return mass_bins
 
 

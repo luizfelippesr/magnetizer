@@ -165,8 +165,9 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
         if z is not None:
             # Redshift selection
             iz = mag_run._closest_redshift_idx(z)
+
             if iz==0:
-                return 0.0 * get('Mstars_disk').base / u.Gyr
+                return np.nan * get('Mstars_disk').base / u.Gyr
 
             prev_z = mag_run.redshifts[iz-1]
 

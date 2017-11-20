@@ -18,12 +18,13 @@ module global_input_parameters
   ! If p_IO_separate_output==True, the use the following for the outputfile
   character (len=80) :: output_file_name = 'magnetized_galaxies_output.hdf5'
   character (len=80) :: input_file_name  = 'magnetized_galaxies_input.hdf5'
-  ! Chunking and compression options
+  ! Chunking options
+  logical :: p_IO_chunking = .true.
+  integer :: p_IO_number_of_galaxies_in_chunks = 200
+  ! Compression options
   ! NB currently, March/2016, the HDF5 library does not support filters
   ! (including compression) when using parallel IO. Therefore this options
   ! have limited use.
-  logical :: p_IO_chunking = .false.
-  integer :: p_IO_number_of_galaxies_in_chunks = 10
   logical :: p_IO_compression = .false. ! requires chunking!
   integer :: p_IO_compression_level = 6
   ! Number of galaxies after which output file is updated
@@ -184,7 +185,7 @@ module global_input_parameters
   ! Ratio between turbulent pressure and turbulent magnetic field pressure
   ! NB if simplified_pressure is on, this correspond to the ratio between
   ! turbulent pressure and _total_ magnetic field pressure
-  double precision :: p_ISM_xi =  0.25!1d0 
+  double precision :: p_ISM_xi =  0.25!1d0
   ! Adiabatic index of the ISM
   double precision :: p_ISM_gamma = 5d0/3d0
   ! Turbulent length (in kpc)

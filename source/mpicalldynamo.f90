@@ -117,7 +117,7 @@ program magnetizer
 
   ! Allocates a arrays to for logging
   nmygals = 0
-  allocate(mygals(ngals))
+  allocate(mygals(ngals*nproc))
   mygals = -17 ! Initializes to bad value
   allocate(allgals(ngals*nproc))
   flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
@@ -135,27 +135,26 @@ program magnetizer
       mygals(nmygals) = igal
     endif
   else
-    ! Before distributing work between workers, master will try to run a single
-    ! galaxy. This helps catching any obvious problem and allows one to find
-    ! out where a possible previous run has stopped.
-    if (rank==master_rank) then
-
-      do igal=1, ngals
-        start_galaxy = IO_start_galaxy(igal)
-        if (start_galaxy) then
-          call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
-          if (error) cycle
+    ! Before distributing work between workers, ALL processes will try to run
+    ! the same galaxy. This helps catching any obvious problem and allows one to
+    ! find out where a possible previous run has stopped.
+    ! Also, it sets the scene for the HDF5 library.
+    do igal=1, ngals
+      start_galaxy = IO_start_galaxy(igal)
+      if (start_galaxy) then
+        call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
+        if (error) cycle
+        if (rank == master_rank) then
           nmygals = nmygals + 1
           mygals(nmygals) = igal
-          exit
         endif
-      enddo
-    endif
-    ! Calculates the number of cycles (under the assumption of
+        exit
+      endif
+    enddo
+    ! Calculates the number of cycles
     ncycles = max(ngals/p_ncheckpoint, 1)
     call message('Total number of cycles',val_int=ncycles, master_only=.true.)
   endif
-
 
   ! ----------
   !   Master
@@ -341,7 +340,7 @@ program magnetizer
 
   call message('Total wall time in seconds =',tfinish-tstart, &
                master_only=.true., info=0)
-  if (.not.lsingle_galaxy_mode) then
+  if (.not.lsingle_galaxy_mode .and. (ngals /= 0)) then
     call message('Wall time per galaxy =', (tfinish-tstart)/ngals, &
                  master_only=.true., info=0)
     call message('Average CPU per galaxy =', (tfinish-tstart)*nproc/ngals, &

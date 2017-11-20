@@ -9,9 +9,9 @@ module dynamo
   use seed_field
   use messages
   use random
-  implicit none 
-  private 
-  
+  implicit none
+  private
+
   integer :: it=0, jt=0
   double precision, allocatable, dimension(:,:) :: f
   double precision, allocatable, dimension(:,:) :: f_snapshot_beginning
@@ -208,18 +208,18 @@ module dynamo
               call make_ts_arrays(jt,this_t,f,Bzmod,alp,rmax)
             endif
           end do ! timesteps loop
-          
+
           ! If the time evolution was solved correctly (no blow-ups), exits
           ! Also exits if in the one Snaphot Debug Mode (we don't want to
           ! increase nsteps in this case).
           if (ok .or. p_oneSnaphotDebugMode) exit
-          
+
           ! Otherwise, the calculation needs to be remade with a smaller
           ! timestep
           call error_message('dynamo_run', 'NANs or unrealistically large '&
                              //'magnetic fields detected, changing time step',&
                              gal_id=gal_id, info=2, code='m')
-          
+
           ! Doubles the number of timesteps
           timestep_ok = set_timestep(reduce_timestep=.true.)
           if (.not. timestep_ok) then
@@ -267,9 +267,9 @@ module dynamo
         if (error) exit
 
       end do  ! snapshots loop
-
       !Writes final simulation output
       call write_and_finish(cpu_time_start, gal_id, this_t)
+
     end subroutine dynamo_run
 
     subroutine write_and_finish(cpu_time_start, gal_id, this_t)

@@ -271,7 +271,7 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
     cbar.ax.xaxis.set_label_position("bottom")
 
 
-    ticks = run_obj.times[::3]
+    ticks = run_obj.times[::3].value
     tlabels = ['{0:.1f}'.format(x) for x in ticks]
     zlabels = ['{0:.1f}'.format(abs(x)) for x in run_obj.redshifts[::3]]
     cbar.set_ticks(ticks)
@@ -404,11 +404,12 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             # Checks whether it has units and strips them away
             unit, datum = get_formated_units(datum, return_base=True, clean=log)
             datum = datum[np.isfinite(datum)]
-            if datum.size<minimum_number_per_bin:
-                continue
 
             if ignore_zero_valued:
                 datum = datum[np.abs(datum)>zero_value_tol]
+
+            if datum.size<minimum_number_per_bin:
+                continue
 
             p15[i][j], p50[i][j], p85[i][j] = np.percentile(datum, [15,50,85])
             ngals[i][j] = datum.size
@@ -485,7 +486,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         idx = closest_indices(mag_run.redshifts,redshifts)
         times = mag_run.times[idx]
 
-        tlabels = ['{0:.1f}'.format(x) for x in times]
+        tlabels = ['{0:.1f}'.format(x) for x in times.value]
         zlabels = ['{0:.1f}'.format(abs(x)) for x in redshifts]
         ax.set_xlim(redshifts.min(),redshifts.max())
         ax.xaxis.set_ticks(redshifts)

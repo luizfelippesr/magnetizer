@@ -2,7 +2,7 @@
 module output
   use IO
   implicit none
-  
+
 contains
   subroutine write_output(gal_id, runtime)
     ! Writes the output
@@ -109,7 +109,12 @@ contains
     call IO_write_dataset('rmax', gal_id,                           &
                           ts_rmax/h0*h0_kpc,                        &
                           units='kpc',                              &
-                          description='Radius of maximum B_phi')
+                          description='Radius of maximum B')
+
+    call IO_write_dataset('Bmax', gal_id,                           &
+                          ts_Bmax* B0_mkG / B0,                     &
+                          units='microgauss',                       &
+                          description='Maximum B')
 
     call IO_write_dataset('alp', gal_id,                            &
                           ts_alp(:,:)*h0_km/h0/t0_s*t0 ,            &
@@ -164,13 +169,13 @@ contains
     endif
 
     call IO_finish_galaxy(gal_id)
-    
+
     ! Writes specific values to screen for a quick check
     call message('ts_Br(1,1)'   ,ts_Br(1,1), info=4)
     call message('ts_Br(1,37)'  ,ts_Br(1,37), info=4)
     call message('ts_Br(n1,1)' ,ts_Br(n1,1), info=4)
     call message('ts_Br(n1,37)',ts_Br(n1,37), info=4)
-    
+
   end subroutine write_output
 
 end module output

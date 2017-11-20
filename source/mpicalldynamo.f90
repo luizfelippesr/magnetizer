@@ -60,7 +60,7 @@ program magnetizer
       print *, 'Usage:'
       print *, trim(command_argument), ' <input_parameters_file> [galaxy number]'
       print *,
-      print *, 'For more details pleas visit: '&
+      print *, 'For more details please visit: '&
              //'https://github.com/luizfelippesr/magnetizer'
       print *,
     endif

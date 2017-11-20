@@ -199,13 +199,13 @@ module dynamo
               ok = .false.
               ! Stores the bogus profiles
               ! NB the magnetic field info is out of date
-              call make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
+              call make_ts_arrays(it,this_t,f,Bzmod,alp)
               exit
             endif
 
             if (p_oneSnaphotDebugMode) then
               ! Then, stores simulation output in arrays containing the time series
-              call make_ts_arrays(jt,this_t,f,Bzmod,alp,rmax)
+              call make_ts_arrays(jt,this_t,f,Bzmod,alp)
             endif
           end do ! timesteps loop
 
@@ -242,7 +242,7 @@ module dynamo
                              gal_id=gal_id, info=2, code='i')
 
           if (.not.p_oneSnaphotDebugMode) &
-            call make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
+            call make_ts_arrays(it,this_t,f,Bzmod,alp)
           last_output = .true.
           ! Resets the f array and adds a seed field
           f = 0.0
@@ -254,7 +254,7 @@ module dynamo
         call estimate_Bzmod(f)
 
         ! Stores simulation output in arrays containing the time series
-        call make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
+        call make_ts_arrays(it,this_t,f,Bzmod,alp)
 
         ! Breaks loop if there are no more snapshots in the input
         if (last_output .or. p_oneSnaphotDebugMode) exit
@@ -284,7 +284,7 @@ module dynamo
 
       if (it == 0) it = init_it ! If a problem happened before entering the
                                 ! snapshots loop, initialize it properly.
-      call make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
+      call make_ts_arrays(it,this_t,f,Bzmod,alp)
 
       call write_output(gal_id, cpu_time_finish - cpu_time_start)
       call reset_input_params()  !Resets iread

@@ -15,6 +15,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   character, allocatable, dimension(:),public :: ts_status_code
   double precision, allocatable, dimension(:),public :: ts_Dt
   double precision, allocatable, dimension(:),public :: ts_rmax
+  double precision, allocatable, dimension(:),public :: ts_Bmax
   double precision, allocatable, dimension(:,:),public :: ts_Br
   double precision, allocatable, dimension(:,:),public :: ts_Bp
   double precision, allocatable, dimension(:,:),public :: ts_alp_m
@@ -51,7 +52,7 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   type(ts_array), dimension(:), allocatable, public :: ts_data
 
 contains
-  subroutine make_ts_arrays(it,this_t,f,Bzmod,alp,rmax)
+  subroutine make_ts_arrays(it,this_t,f,Bzmod,alp)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
     ! N.B. If the grid was extended (i.e. if the galaxy grew in this snapshot)
@@ -62,11 +63,12 @@ contains
     implicit none
     integer, intent(in) :: it
     double precision, intent(in) :: this_t
-    double precision, intent(in) :: rmax
     double precision, dimension(:,:), intent(in) :: f
     double precision, dimension(:), intent(in) :: Bzmod
     double precision, dimension(:), intent(in) :: alp
-
+    double precision, dimension(nx-2*nxghost) :: Btot
+    double precision, dimension(nx-2*nxghost) :: rtmp
+    integer :: max_idx
 
 
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
@@ -76,10 +78,23 @@ contains
     ts_status_code(it) = status_code
 
     ts_Dt(it) = t*t0_Gyr
-    ts_rmax(it) = rmax
 
+    ! Reads and stores the magnetic field
     call rescale_array(f(nxghost+1:nx-nxghost,1), ts_Br(it,:))
     call rescale_array(f(nxghost+1:nx-nxghost,2), ts_Bp(it,:))
+    call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
+
+    ! For convenience, stores the maximum magnetic field value and its position
+    Btot = f(nxghost+1:nx-nxghost,1)**2    &
+          + f(nxghost+1:nx-nxghost,2)**2   &
+          + Bzmod(nxghost+1:nx-nxghost)**2
+    Btot = sqrt(Btot)
+
+    rtmp = r_kpc(nxghost+1:nx-nxghost)
+
+    max_idx = maxloc(Btot, 1)
+    ts_Bmax(it) = Btot(max_idx)
+    ts_rmax(it) = rtmp(max_idx)
 
     if (Dyn_quench) then
       if (.not.Damp) then
@@ -103,7 +118,6 @@ contains
     call rescale_array(n(nxghost+1:nx-nxghost), ts_n(it,:))
     call rescale_array(Beq(nxghost+1:nx-nxghost), ts_Beq(it,:))
     call rescale_array(r_kpc(nxghost+1:nx-nxghost), ts_rkpc(it,:))
-    call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
 
     if (p_extra_rotation_curve_outputs) then
       call rescale_array(Om_h(nxghost+1:nx-nxghost), ts_Om_h(it,:))
@@ -129,7 +143,7 @@ contains
         call rescale_array(alp(nxghost+1:nx-nxghost), ts_alp(it,:))
 
   end subroutine make_ts_arrays
-  
+
   subroutine allocate_ts_arrays()
     ! Initial allocation / initialization
     implicit none
@@ -157,6 +171,8 @@ contains
     allocate(ts_Dt(max_outputs))
     ts_Dt = INVALID
     allocate(ts_rmax(max_outputs))
+    ts_rmax = INVALID
+    allocate(ts_Bmax(max_outputs))
     ts_rmax = INVALID
     allocate(ts_Br(max_outputs,p_nx_ref))
     ts_Br = INVALID
@@ -235,6 +251,7 @@ contains
       deallocate(ts_status_code)
       deallocate(ts_Dt)
       deallocate(ts_rmax)
+      deallocate(ts_Bmax)
       deallocate(ts_Br)
       deallocate(ts_Bp)
       deallocate(ts_alp_m)
@@ -332,6 +349,7 @@ contains
 
     call extend_array_sca(ts_Dt)
     call extend_array_sca(ts_rmax)
+    call extend_array_sca(ts_Bmax)
     ! Vectors
     call extend_array_vec(ts_Br)
     call extend_array_vec(ts_Bp)

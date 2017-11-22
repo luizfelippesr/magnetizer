@@ -100,8 +100,8 @@ class MagnetizerRun(object):
 
         Parameters
         ----------
-        quantity :
-
+        quantity : str
+            Name of the quantiy one is interested. E.g. "Bmax"
 
         z : float
             Redshift

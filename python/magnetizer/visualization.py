@@ -509,6 +509,8 @@ def prepare_mass_bins_list(mag_run, redshifts,
                            filter_quantity=None,
                            filter_threshold=None,
                            filter_greater=False,
+                           fixed_binning_redshift=None,
+                           binning_obj=magnetizer.MassBinningObject,
                            **kwargs):
     mass_bins = []
     redshifts = mag_run.redshifts[closest_indices(mag_run.redshifts, redshifts)]
@@ -522,9 +524,14 @@ def prepare_mass_bins_list(mag_run, redshifts,
                 filt = mag_run.get(filter_quantity, z) > filter_threshold
             else:
                 filt = mag_run.get(filter_quantity, z) < filter_threshold
+        if fixed_binning_redshift is None:
+            bin_obj = binning_obj(mag_run, extra_filter=filt, z=z, **kwargs)
+        else:
+            bin_obj = binning_obj(mag_run, extra_filter=filt,
+                                  z=fixed_binning_redshift, **kwargs)
+            bin_obj.redshift = z # Overwrites the redshift
+        mass_bins.append(bin_obj)
 
-        mass_bins.append(magnetizer.MassBinningObject(mag_run, extra_filter=filt,
-                                                      z=z, **kwargs))
     return mass_bins
 
 

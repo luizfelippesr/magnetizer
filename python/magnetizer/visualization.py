@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-""" Contains a script and functions to produce a "portfolio" of a model
-    output, i.e. a file containing a series of plots showing radial profiles
-    of several quantites for a sample of galaxies. """
+""" Contains several functions to produce visualizations of Magnetizer data. """
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib.backends.backend_pdf import PdfPages

@@ -9,13 +9,23 @@ import extra_quantities as eq
 class MagnetizerRun(object):
     """
     Provides an interface to access a given Magnetizer run.
-    
+
     output_file_path -> path to hdf5 file containing Magnetizer output data.
     input_file_path -> path hdf5 file containing Magnetizer input data.
                        If absent, will assume the same as output_file_path.
 
     Parameters
     ----------
+    output_path:
+
+    input_path:
+        (Default value = None)
+
+    z_tolerance:
+        (Default value = 0.01)
+
+    verbose:
+        (Default value = None)
 
     Returns
     -------
@@ -91,17 +101,28 @@ class MagnetizerRun(object):
         Parameters
         ----------
         quantity :
-            
-        z :
-            
-        position :
-             (Default value = None)
-        binning :
-             (Default value = None)
+
+
+        z : float
+            Redshift
+
+        position : float, optional
+            Number of half-mass radii at which the output will be returned.
+
+        binning : BinningObject, optional
+            Specifies binning to be applied. See BinningObject
 
         Returns
         -------
-
+        data : array or list
+            If `binning` is None, the result is an array containing the
+            values of `quantity` for all (completed) galaxies. If `quantity` is
+            a scalar (e.g. Mstars_disk) or if `position` is not None, the
+            result will be a 1D-array. If `quantity` is a profile (e.g. Bp) and
+            `position` is None, the result will be a 2D-array, containing the
+            profiles of each galaxy.
+            If `binning` is provided, a list containing the results for each bin
+            is returned.
         """
         reload(eq) # Allows for on-the-fly changes to this module!
         iz = self._closest_redshift_idx(z)
@@ -174,9 +195,9 @@ class MagnetizerRun(object):
         Parameters
         ----------
         quantity :
-            
+
         gal_id :
-            
+
         ivol :
              (Default value = 0)
 
@@ -229,7 +250,7 @@ class MagnetizerRun(object):
         Parameters
         ----------
         dataset :
-            
+
         iz :
              (Default value = slice(None)
 
@@ -274,11 +295,11 @@ class MagnetizerRun(object):
         Parameters
         ----------
         dataset :
-            
+
         gal_id :
-            
+
         ivol :
-            
+
         profile :
              (Default value = True)
         pre_selected_gal_id :

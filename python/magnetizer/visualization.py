@@ -111,7 +111,7 @@ def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     # Uses gaussian kernel density estimator to evaluate the PDF
     kernel = stat.gaussian_kde(values)
 
-    x = np.linspace(values_min,values_max, 200)
+    x = np.linspace(values_min,values_max, 300)
     y = kernel.evaluate(x)
 
     ax.plot(x,y, **args)
@@ -123,13 +123,17 @@ def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
             if unit != '':
                 quantitytxt = r'${0}{1}$'.format(quantities_dict[name],unit)
             else:
-                quantitytxt = r'${0}$'.format(quantities_dict[name],unit)
+                quantitytxt = r'${0}$'.format(quantities_dict[name])
+            ylabel = r'$\mathcal{{P}}({0})$'.format(quantities_dict[name])
         else:
             quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[name],
                                                     unit)
+            ylabel = r'$\mathcal{{P}} [ {0} ]$'.format(quantitytxt.replace(
+              '$',''))
     else:
         quantitytxt = name
-    plt.ylabel('PDF')
+        ylabel = 'PDF'
+    plt.ylabel(ylabel)
     plt.xlabel(quantitytxt)
 
 

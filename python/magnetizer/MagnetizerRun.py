@@ -194,16 +194,26 @@ class MagnetizerRun(object):
 
         Parameters
         ----------
-        quantity :
+        quantity : str
+            Name of the quantiy one is interested. E.g. "Bmax"
 
-        gal_id :
+        gal_id : int
+            ID of the galaxy one wants to select. If inspecting closer a galaxy
+            previously shown with `MagnetizerRun.get()`, use
+            `MagnetizerRun.gal_id` to translate the index into an ID.
 
-        ivol :
-             (Default value = 0)
+        ivol : int
+            Index of the output file where the galaxy is to be found (typically,
+            each output file will contain an ivolume). If inspecting closer a
+            galaxy previously shown with `MagnetizerRun.get()`, use
+            `MagnetizerRun.ivol` to translate the index into an ivol. Default: 0
 
         Returns
         -------
-
+        data : array
+            An array contaning the time evolution of the specified quanatity
+            (if a non-scalar quantity is selected, last axis will correspond to
+            different times).
         """
 
         key = (quantity, gal_id, ivol)
@@ -226,8 +236,8 @@ class MagnetizerRun(object):
                     print 'Loading {0} for galaxy {1}'.format(quantity, gal_id)
 
                 self._galaxies_cache[key] = self._clean_gal(data[quantity],
-                                                            gal_id,
-                                                            ivol, profile)
+                                                            gal_id, ivol,
+                                                            quantity, profile)
                 if unit is not None:
                     self._galaxies_cache[key] = self._galaxies_cache[key]*unit
 
@@ -287,7 +297,7 @@ class MagnetizerRun(object):
             return np.where(valid[:,0,iz], dataset[completed,iz], np.NaN)
 
 
-    def _clean_gal(self, dataset, gal_id, ivol, profile=True,
+    def _clean_gal(self, dataset, gal_id, ivol, quantity, profile=True,
                    pre_selected_gal_id=False):
         """
         Removes incomplete and invalid data from a dataset.
@@ -321,11 +331,12 @@ class MagnetizerRun(object):
             # Uses the disk stellar mass as proxy for a valid profile
             # (with some tolerance)
             valid = self._data[ivol]['Mstars_disk'][gal_id, :] > -0.1
+            if quantity not in self._hin:
+                # This deals with quantities as Bmax
+                valid *= self._data[ivol]['h'][gal_id, 0, :] > 0
             if not pre_selected_gal_id:
                 return np.where(valid, dataset[gal_id,:], np.NaN)
             else:
-                # This deals with quantities as Bmax
-                valid *= self._data[ivol]['h'][gal_id, 0, :] > 0
                 return np.where(valid, dataset, np.NaN)
 
 

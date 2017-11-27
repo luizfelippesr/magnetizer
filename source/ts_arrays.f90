@@ -84,18 +84,6 @@ contains
     call rescale_array(f(nxghost+1:nx-nxghost,2), ts_Bp(it,:))
     call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
 
-    ! For convenience, stores the maximum magnetic field value and its position
-    Btot = f(nxghost+1:nx-nxghost,1)**2    &
-          + f(nxghost+1:nx-nxghost,2)**2   &
-          + Bzmod(nxghost+1:nx-nxghost)**2
-    Btot = sqrt(Btot)
-
-    rtmp = r_kpc(nxghost+1:nx-nxghost)
-
-    max_idx = maxloc(Btot, 1)
-    ts_Bmax(it) = Btot(max_idx)
-    ts_rmax(it) = rtmp(max_idx)
-
     if (Dyn_quench) then
       if (.not.Damp) then
         call rescale_array(f(nxghost+1:nx-nxghost,3), ts_alp_m(it,:))
@@ -135,6 +123,19 @@ contains
       call rescale_array(P2(nxghost+1:nx-nxghost), ts_P2(it,:))
     endif
 
+    ! For convenience, computes and stores maximum magnetic field value, and the
+    ! position of the maximum
+    Btot = f(nxghost+1:nx-nxghost,1)**2    &
+          + f(nxghost+1:nx-nxghost,2)**2   &
+          + Bzmod(nxghost+1:nx-nxghost)**2
+    Btot = sqrt(Btot)
+
+    call rescale_array(Btot, ts_Btot(it,:))
+
+    rtmp = r_kpc(nxghost+1:nx-nxghost)
+    max_idx = maxloc(Btot, 1)
+    ts_Bmax(it) = Btot(max_idx)
+    ts_rmax(it) = rtmp(max_idx)
 
     ! alp is computed in the gutsdynamo module (annoyingly differently from
     ! anything else). Therefore, one needs to be careful. This is a good
@@ -173,7 +174,7 @@ contains
     allocate(ts_rmax(max_outputs))
     ts_rmax = INVALID
     allocate(ts_Bmax(max_outputs))
-    ts_rmax = INVALID
+    ts_Bmax = INVALID
     allocate(ts_Br(max_outputs,p_nx_ref))
     ts_Br = INVALID
     allocate(ts_Bp(max_outputs,p_nx_ref))

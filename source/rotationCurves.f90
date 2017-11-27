@@ -224,10 +224,9 @@ contains
     double precision, intent(in) :: r_halo, v_halo, nfw_cs1, baryon_fraction
     double precision, intent(in) :: r_bulge, v_bulge, r_disk, v_disk, rmin
     double precision, intent(in)  :: r
-    double precision :: v, y, B, v2, A, c, r0
     real(fgsl_double), target, dimension(10) :: parameters_array
     double precision, parameter :: v2_tol = -1d0 ! (km/s)^2
-    double precision :: fun_min
+    double precision :: fun_min, v, r0
     type(c_ptr) :: params_ptr
     integer, parameter :: MAX_INTERVAL_EXPONENT=10
     logical :: find_root_success
@@ -279,7 +278,7 @@ contains
     real(c_double) :: halo_velocity_contracted_fun
     real(fgsl_double) :: r, r_halo, v_halo, nfw_cs1, rmin
     real(fgsl_double) :: r_bulge, v_bulge, r_disk, v_disk, f_b
-    real(fgsl_double) :: V02, Vr, Vd2, Vb2
+    real(fgsl_double) :: V02, Vd2, Vb2
     real(fgsl_double), dimension(1) :: Omega_tmp
     real(fgsl_double), pointer, dimension(:) :: p
 

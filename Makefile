@@ -14,7 +14,9 @@ endif
 FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
 FCFLAGS_TEST=-g -Wall
-FCFLAGS_PROD=-O3
+FCFLAGS_PROD=-O2 -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-loop-vectorize -ftree-loop-distribution -ftree-loop-distribute-patterns -ftree-slp-vectorize -fvect-cost-model -fpeel-loops -fipa-cp-clone
+# The difference between the long list of arguments above and -O3 is -finline-functions
+# option, which at the moment (Nov/2017) leads to problems
 
 
 help:

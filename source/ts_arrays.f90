@@ -130,8 +130,6 @@ contains
           + Bzmod(nxghost+1:nx-nxghost)**2
     Btot = sqrt(Btot)
 
-    call rescale_array(Btot, ts_Btot(it,:))
-
     rtmp = r_kpc(nxghost+1:nx-nxghost)
     max_idx = maxloc(Btot, 1)
     ts_Bmax(it) = Btot(max_idx)

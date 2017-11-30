@@ -63,10 +63,15 @@ contains
     ! Computes the profile associated with each component
     call disk_rotation_curve(r_kpc, r_disk, r_disk_min, v_disk, Om_d)
     call bulge_rotation_curve(r_kpc, r_bulge, v_bulge, Om_b)
-    baryon_fraction = (Mstars_disk+Mstars_bulge+Mgas_disk)/Mhalo
-    call halo_rotation_curve(r_kpc, baryon_fraction, r_halo, v_halo, nfw_cs1, &
-                             r_bulge, v_bulge, r_disk, v_disk, r_disk_min, &
-                             Om_h, contract=p_halo_contraction)
+
+    if (is_central_galaxy .or. (.not. p_ignore_satellite_DM_haloes)) then
+      baryon_fraction = (Mstars_disk+Mstars_bulge+Mgas_disk)/Mhalo
+      call halo_rotation_curve(r_kpc, baryon_fraction, r_halo, v_halo, nfw_cs1, &
+                               r_bulge, v_bulge, r_disk, v_disk, r_disk_min, &
+                               Om_h, contract=p_halo_contraction)
+    else
+      Om_h = 0.0
+    endif
 
     ! Combines the various components
     Om_kmskpc = sqrt( Om_d**2 + Om_b**2 + Om_h**2 )
@@ -118,10 +123,8 @@ contains
     endif
 
 
-    ! Solves for density and height
-    if (.not.p_use_legacy_cubic_solver) then
-      ! Computes h and rho solving for hydrostatic equilibrium
-      call solve_hydrostatic_equilibrium_numerical(abs(r_kpc), B_actual, &
+    ! Computes for density and height solving for hydrostatic equilibrium
+    call solve_hydrostatic_equilibrium_numerical(abs(r_kpc), B_actual, &
                                                    Om_kmskpc, G_kmskpc, &
                                                    Om_h, G_h, &
                                                    Om_b, G_b, &
@@ -130,10 +133,6 @@ contains
                                                    Sigma_star_out=Sigma_star, &
                                                    Sigma_d_out=Sigma_d, &
                                                    nghost=nxghost)
-    else
-        call solve_hydrostatic_equilibrium_cubic(r_disk, Mgas_disk, Mstars_disk, &
-                            abs(r_kpc), B_actual, rho_cgs, h_kpc, Rm_out=Rm)
-    endif
 
     ! Traps possible errors in the calculation of the scale height
     if (any(h_kpc<0)) then

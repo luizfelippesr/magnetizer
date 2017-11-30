@@ -228,13 +228,12 @@ module global_input_parameters
   logical :: p_enable_P2 = .true.
   ! Assumes constant scaleheight for r<rreg
   logical :: p_truncates_within_rreg = .false.
-  ! Sets the regularisation radiso for the rotation curves
+  ! Sets the regularisation radius for the rotation curves
   double precision :: p_rreg_to_rdisk = 0.1
 
-  ! Ignores the radial correction to the gravitational potential (P2 in
-  ! the paper) and solves the related cubic equation for the scaleheight.
-  ! Otherwise, GSL's Brent's method root finder will be used.
-  logical :: p_use_legacy_cubic_solver = .false.
+  ! Ignore the DM haloes of satellites for the pressure and rotation curve
+  ! calculations
+  logical :: p_ignore_satellite_DM_haloes = .true.
 
   ! Minimum density floor (in g/cm^3)
   double precision :: p_minimum_density = 1d-30 ! g cm^-3
@@ -269,7 +268,7 @@ module global_input_parameters
     p_allow_positive_shears, p_use_fixed_turbulent_to_scaleheight_ratio, &
     p_turbulent_to_scaleheight_ratio, p_simplified_pressure, &
     p_rreg_to_rdisk, p_rdisk_min, Mgas_disk_min, rmin_over_rmax, &
-    p_use_legacy_cubic_solver, p_enable_P2, p_truncates_within_rreg, &
+    p_ignore_satellite_DM_haloes, p_enable_P2, p_truncates_within_rreg, &
     p_minimum_density, p_sech2_profile, p_use_Pdm, p_use_Pbulge, &
     p_halo_contraction, p_extra_rotation_curve_outputs, &
     p_extra_pressure_outputs, p_Pdm_numerical, p_Pbulge_numerical, &

@@ -31,7 +31,7 @@ module dynamo
       logical :: next_output
       integer :: fail_count, rank_actual
       double precision, dimension(nx) :: Btmp
-      double precision :: this_t, t_last_sign_choice
+      double precision :: this_t
       elliptical = .false. ;  ok = .true.
 
       call set_random_seed(gal_id, p_random_seed)

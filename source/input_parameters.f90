@@ -22,7 +22,7 @@ module input_params
   double precision :: t=0,first=0.d0 !Timestep variables (lfsr: this looks a bit dangerous..)
 
   double precision, private :: time_between_inputs=0
-  
+
   ! Galaxy parameters
   double precision, protected :: t_Gyr
   double precision, protected :: r_max_kpc_history
@@ -35,9 +35,10 @@ module input_params
   double precision, protected :: r_halo, v_halo, nfw_cs1
   double precision, protected :: Mstars_disk, Mgas_disk, SFR
   double precision, protected :: Mhalo, Mstars_bulge
+  logical, protected :: is_central_galaxy
 
   ! Maximum number of columns in the galaxy input files
-  integer, private, parameter :: number_of_columns=13
+  integer, private, parameter :: number_of_columns=14
   ! All galaxy data
   double precision, allocatable, dimension(:,:),private :: galaxy_data
   double precision, allocatable, dimension(:), private :: output_times
@@ -148,6 +149,7 @@ module input_params
     call IO_read_dataset_scalar('SFR', gal_id, galaxy_data(:,10))
     call IO_read_dataset_scalar('Mhalo', gal_id, galaxy_data(:,11))
     call IO_read_dataset_scalar('Mstars_bulge', gal_id, galaxy_data(:,12))
+    call IO_read_dataset_scalar('central', gal_id, galaxy_data(:,13))
 
     ! Determines the maximum radius for this galaxy over the whole history
     r_max_kpc_history = maxval(galaxy_data(:,1)) * p_rmax_over_rdisk
@@ -232,6 +234,7 @@ module input_params
     SFR = galaxy_data(iread,10)
     Mhalo = galaxy_data(iread,11)
     Mstars_bulge = galaxy_data(iread,12)
+    is_central_galaxy = galaxy_data(iread,13) > 0.1d0 ! I.e. different from 0
     ! Temporarily setting v_sol_kms to the turbulent speed
     v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     l_sol_kpc = p_ISM_turbulent_length

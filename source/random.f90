@@ -17,7 +17,6 @@ contains
     logical, optional, intent(in) :: use_array
     integer, allocatable, dimension(:) :: seed
     integer :: i, n
-    double precision :: p
 
     ! Discovers the size of the seed array and allocates it
     call random_seed(size = n)

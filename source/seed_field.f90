@@ -9,7 +9,7 @@ module seed_field  !Set initial conditions
   contains
     subroutine init_seed_field(f)
       integer :: i,var
-      double precision, dimension(nx) :: Bseed, Ncells
+      double precision, dimension(nx) :: Bseed
       double precision, dimension(:,:), intent(inout) :: f
       double precision :: r1
       ! Initializes the seed field to a fraction of the equipartition field

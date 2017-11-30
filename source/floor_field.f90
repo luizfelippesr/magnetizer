@@ -72,7 +72,6 @@ contains
     double precision, intent(in), dimension(:) ::  h, etat, Uz, Dyn_gen
     double precision, dimension(size(h)) :: A_floor
     double precision, dimension(size(h)) :: R_U, Dyn_crit
-      integer :: i
 
     !Dimensionless outflow parameter
     R_U = Uz*h/etat

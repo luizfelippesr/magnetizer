@@ -19,9 +19,9 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
     ----------
     qname : string
         code-name of the quantity
-        
+
     mag_run : MagnetizerRun
-        
+
     gal_id : integer
         index of the required galaxy. Having this different from None
         signals that the redshift evolution of a given galaxy should be

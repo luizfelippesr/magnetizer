@@ -20,7 +20,7 @@ program magnetizer
   logical :: lresuming_run = .false.
   character(len=8) :: date
   double precision :: tstart,tfinish
-  integer :: rank, nproc, ierr, rc, length, ncycles, flush_signal
+  integer :: rank, nproc, ierr, rc, ncycles, flush_signal
   integer, parameter :: finished_tag = 0
   integer, parameter :: newjob_tag = 17
   integer, dimension(MPI_STATUS_SIZE) :: status

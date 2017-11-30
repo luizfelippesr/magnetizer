@@ -29,8 +29,6 @@ module pressureEquilibrium
   double precision :: i_R_to_Rsdm, i_hd_to_RsDM
   double precision :: i_R_to_Rb,   i_hd_to_Rb
   double precision :: i_hd_to_hm, i_hd_to_hstar
-  double precision, dimension(:), pointer :: pOm_h, pG_h
-  !double precision, dimension(:), pointer :: pOm_h_e, pG_h_e
 
   type            (fgsl_function             ) :: integrandFunction
   type            (fgsl_integration_workspace) :: integrationWorkspace
@@ -71,7 +69,7 @@ contains
     double precision, dimension(size(r)) :: Rm
     double precision :: rs, rs_g
     !
-    real(fgsl_double) :: minimum_h, maximum_h, guess_h, tmp
+    real(fgsl_double) :: minimum_h, maximum_h, guess_h
     real(fgsl_double) :: pressure_equation_min, pressure_equation_max
     real(fgsl_double), target, dimension(11) :: parameters_array, parameters_array_alt
     integer :: i, i_rreg, nghost_actual, error_count
@@ -109,12 +107,6 @@ contains
     ! Sets up a guessed initial search interval for r=0
     minimum_h = 1d-3*r_disk
     maximum_h = 2d0*r_disk
-
-    ! Sets global pointers to acess Omega and Shear profiles
-    !pOm_h => Om_h
-    !pOm_h_e => Om_h_e
-    !pG_h => G_h
-    !pG_h_e => G_h_e
 
     ! Trapping possible errors
     i_rreg = -1
@@ -355,7 +347,7 @@ contains
     rs_g_nonSI = p_gasScaleRadiusToStellarScaleRadius_ratio * rs_nonSI ! kpc
     rs = rs_nonSI * kpc_SI ! m
     A = (p_ISM_kappa/3d0*(1d0+2d0*p_ISM_xi) + 1d0/p_ISM_gamma)
-    
+
     ! Nicknames
     bm = p_molecularHeightToRadiusScale
     bs = p_stellarHeightToRadiusScale
@@ -368,7 +360,7 @@ contains
     if (rs_g_nonSI==0 .or. rs_nonSI==0) then
       stop 'solve_hydrostatic_equilibrium: Fatal error. Disk of negligible size'
     endif
-    
+
     Sigma_g_nonSI = exp_surface_density(rs_g_nonSI, abs(r), M_g)
     Sigma_star_nonSI = exp_surface_density(rs_nonSI, abs(r), M_star)
 
@@ -528,7 +520,6 @@ contains
     double precision, parameter :: rb_to_r50 = (sqrt(2.0d0)-1.0d0)
     double precision, parameter :: Mstars_bulge_min = 1d3 ! Msun
     double precision, parameter :: km_SI = 1d3
-    integer :: i, i_start, j
 
     ! Computes missing scale heights (in kpc)
     h_star = r_disk * rs_to_r50 * p_stellarHeightToRadiusScale
@@ -622,6 +613,8 @@ contains
                             info=0)
         stop
       endif
+    else
+      Pdm = 0d0
     endif
     ! Finishes calculation
     P = Pd + Pm + Pstars + Pbulge + Pdm
@@ -653,7 +646,7 @@ contains
   elemental function computes_midplane_ISM_pressure_P2(Sigma_d, &
                                                           Om, S, h_d) result(P)
     double precision, intent(in) :: Sigma_d, Om, S, h_d
-    double precision :: P, Sigma_d_SI, Om_SI, S_SI, h_d_SI
+    double precision :: P, Sigma_d_SI
     double precision, parameter :: km_SI = 1d3
     ! Computes the non-local contribution to the ISM pressure at
     ! the midplane from the rotation curve

@@ -133,10 +133,7 @@ module equ  !Contains the partial differential equations to be solved
       double precision, dimension(nx) :: dBpdr,d2Bpdr2
       double precision, dimension(nx) :: dalp_mdr, d2alp_mdr2
       double precision, dimension(nx) :: detatdr
-      double precision, dimension(nx) :: Bsqtot, Dyn_gen
-      double precision, dimension(nx) :: Dyn_crit, Dtilde, R_U
-      double precision, dimension(nx) :: brms, Bfloor
-      double precision, dimension(nx) :: Afloor, Ncells
+      double precision, dimension(nx) :: Bsqtot, Dyn_gen, Bfloor, Afloor
       ! Other
       double precision, dimension(nx), target :: zeros_array
 
@@ -156,11 +153,16 @@ module equ  !Contains the partial differential equations to be solved
         if (Dyn_quench) then
           Er => f(:,5)
           Ep => f(:,6)
-          alp_m=f(:,7)
+          alp_m = f(:,7)
+        else
+          Er => zeros_array
+          Ep => zeros_array
         endif
       else
         Fr => zeros_array
         Fp => zeros_array
+        Er => zeros_array
+        Ep => zeros_array
         if (Dyn_quench) then
           alp_m=f(:,3)
         endif
@@ -281,7 +283,7 @@ module equ  !Contains the partial differential equations to be solved
                    !Ohmic vertical diffusion
                    +Rm_inv*etat*(-pi**2/4/h**2*Br           &
                    !Ohmic radial diffusion
-                   +lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2))                     
+                   +lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2))
                    ! Following commented out for simplicity
                    !-lambda*Ur*Br/r -lambda*Ur*dBrdr
 
@@ -307,7 +309,7 @@ module equ  !Contains the partial differential equations to be solved
                    !Turbulent radial diffusion
                    +ctau*etat*lambda**2*(-Br/r**2 +dBrdr/r +d2Brdr2) &
                    !Damping term
-                   -Fr)                 
+                   -Fr)
                    !Following commented out for now but may be useful later
                    !+ctau*( detatdz*dBrdz -detatdz*lambda*dBzdr)
 
@@ -330,7 +332,7 @@ module equ  !Contains the partial differential equations to be solved
 !                    #############
         if (.not.Alp_squared) then
           ! dFp/dt   Remove alpha^2 effect if turned off
-          dfdt(:,4)= dfdt(:,4) +tau**(-1)*2d0/pi/h*ctau*alp*Br           
+          dfdt(:,4)= dfdt(:,4) +tau**(-1)*2d0/pi/h*ctau*alp*Br
         endif
         if (Dyn_quench) then
           ! dEr/dt
@@ -347,7 +349,7 @@ module equ  !Contains the partial differential equations to be solved
                      !alpha part of Emf.B (phi-component)
                       ctau*alp*Bp                                    &
                      !etat part of Emf.B (phi-component)
-                     +ctau*etat*pi/2/h*Br*(1d0 +1d0/2/pi**(3d0/2)*abs(Dyn_gen)**(1d0/2)) & 
+                     +ctau*etat*pi/2/h*Br*(1d0 +1d0/2/pi**(3d0/2)*abs(Dyn_gen)**(1d0/2)) &
                      !Damping term
                      -Ep)
 

@@ -26,7 +26,6 @@ module input_params
   ! Galaxy parameters
   double precision, protected :: t_Gyr
   double precision, protected :: r_max_kpc_history
-  double precision, protected :: R_kappa
   double precision, protected :: l_sol_kpc, r_l_kpc
   double precision, protected :: v_sol_kms, r_v_kpc
   double precision, protected :: Uz_sol_kms, r_Uz_kpc
@@ -238,10 +237,6 @@ module input_params
     ! Temporarily setting v_sol_kms to the turbulent speed
     v_sol_kms = p_ISM_sound_speed_km_s * p_ISM_kappa
     l_sol_kpc = p_ISM_turbulent_length
-
-!     DIMENSIONLESS PARAMETERS THAT MUST BE SPECIFIED BUT WILL NOT NORMALLY VARY FROM GALAXY TO GALAXY
-!     DIFFUSIVE MAGNETIC HELICITY FLUX (DEFAULTS)
-    R_kappa=         1.0d0 !Ratio kappa_t/eta_t of turbulent diffusivities of alpha_m and B
 
   endsubroutine set_input_params
 end module input_params

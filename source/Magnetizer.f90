@@ -1,6 +1,5 @@
+!# Magnetizer
 !# Copyright (C) 2018  Luiz Felippe S. Rodrigues, Luke Chamandy
-!#
-!# This file is part of Magnetizer.
 !#
 !# Magnetizer is free software: you can redistribute it and/or modify
 !# it under the terms of the GNU General Public License as published by

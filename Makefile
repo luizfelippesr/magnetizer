@@ -45,8 +45,8 @@ TST:
 	@echo ''
 	$(eval FCFLAGS += $(FCFLAGS_TEST))
 
-main: $(OBJ) ${builddir}/mpicalldynamo.o
-	$(FC) $^ $(FCFLAGS) -o magnetize_galform.exe
+main: $(OBJ) ${builddir}/Magnetizer.o
+	$(FC) $^ $(FCFLAGS) -o Magnetizer.exe
 
 # Test programs
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
@@ -88,7 +88,7 @@ $(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o ${builddir}/ts
 $(srcdir)/output.f90: ${builddir}/IO_hdf5.o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o
 $(srcdir)/IO_hdf5.f90: ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o ${builddir}/grid.o
-$(srcdir)/mpicalldynamo.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o
+$(srcdir)/Magnetizer.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
 $(srcdir)/floor_field.f90: ${builddir}/grid.o ${builddir}/global_input_parameters.o
 $(srcdir)/seed_field.f90: ${builddir}/grid.o ${builddir}/profiles.o ${builddir}/global_input_parameters.o

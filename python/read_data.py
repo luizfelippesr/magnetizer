@@ -31,7 +31,7 @@ def add_or_create(idx, quantity_name, dictionary, quantity, size,
 
     return
 
-def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
+def read_time_data(sam_output_filepath, maximum_final_B_over_T=None,
                    max_z = 1000, minimum_final_stellar_mass=1e6,
                    maximum_final_stellar_mass=1e14, minimum_final_gas_mass=1e5,
                    number_of_galaxies=100, empirical_disks=True,
@@ -89,6 +89,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
 
     target_IDs = dict()
     IDs = []
+    sampling_redshift = []
 
     # Loops over redshifs
     for zidx in z_indices[:]:
@@ -171,22 +172,25 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
         if (zidx == 0) or (sample_all_z and zidx!=z_indices[-1]):
             if zidx != 0 :
                 number_of_galaxies = number_of_galaxies_high_z
-            print number_of_galaxies
+
             # Pre-loads parts of the HDF5 file to RAM
             # (this converts the 'HDF5 dataset' into a numpy array)
             mstars_disk = fout['mstars_disk'][:]
             mcold = fout['mcold'][:]
-            mstars_bulge = fout['mstars_bulge'][:]
-            mcold_burst = fout['mcold_burst'][:]
-            # Computes bulge to total mass ratio
-            BoT = (mstars_bulge + mcold_burst)/(mstars_disk + mcold
-                                                + mstars_bulge + mcold_burst)
+            mstars_bulge = fout['mstars_bulge']
+            # Computes bulge to total mass ratio, if required
+            if maximum_final_B_over_T is not None:
+                mcold_burst = fout['mcold_burst'][:]
+                mstars_bulge = mstars_bulge[:]
+                BoT = (mstars_bulge + mcold_burst)/(mstars_disk + mcold
+                                                    + mstars_bulge + mcold_burst)
             # Selects galaxies with a minimum stellar mass, gass mass
             # and the correct bulge to total mass ratio
             ok = mstars_disk > minimum_final_stellar_mass
             ok *= mstars_disk < maximum_final_stellar_mass
             ok *= mcold > minimum_final_gas_mass
-            ok *= BoT < maximum_final_B_over_T
+            if maximum_final_B_over_T is not None:
+                ok *= BoT < maximum_final_B_over_T
 
             # Constructs an array of valid indices
             new_indices= np.where(ok)[0]
@@ -212,6 +216,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
 
                 ID = GalaxyIDs[idx]
                 IDs.append(ID)
+                sampling_redshift.append(zout_array[zidx])
 
                 # Stores the ID of the galaxy in the next earlier redshift
                 # (actually, the "most massive progenitor")
@@ -230,7 +235,10 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=0.5,
                                   size=nzs,
                                   fill_value=fill_value)
     f.close()
-    data_dict['IDs'] = sorted(IDs)
+
+    sortIDs = np.argsort(IDs)
+    data_dict['IDs'] = np.array(IDs)[sortIDs]
+    data_dict['sample_z'] = np.array(sampling_redshift)[sortIDs]
     return data_dict
 
 

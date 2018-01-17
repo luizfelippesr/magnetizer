@@ -87,7 +87,7 @@ Input files can be generated from a Galform (and later other SAMs/sims) run
 using the prepare_input.py. For information about this command's
 usage/arguments, please check
 ```
-./scripts/prepare_input.py --help
+./python/prepare_input.py --help
 ```
 An example Galform output can be found at `scripts/test_SAM_output/galaxies.hdf5`.
 
@@ -96,7 +96,7 @@ An example Galform output can be found at `scripts/test_SAM_output/galaxies.hdf5
 If one is interested in generating a synthetic example, usually for the purposes
 of *testing*, it is possible to do it using the command
 ```
-./scripts/generate_galform_output_from_txt.py <your_galaxy_properties_table.txt
+./python/generate_galform_output_from_txt.py <your_galaxy_properties_table.txt
 ```
 Again, run it with `--help` to get usage instructions.
 
@@ -106,7 +106,7 @@ the mass of gas: the present day SFR is assumed to be constant and the stellar
 masses and gas masses change in time according to it.
 
 An example galaxy properties table containing data from M31 and Milky Way can be
-found in `scripts/example_galaxies.txt`.
+found in `python/example_galaxies.txt`.
 
 
 ### Parameter files ###

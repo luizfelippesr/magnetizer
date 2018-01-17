@@ -30,7 +30,7 @@ MPC2M=3.0856775807e22 # The number of metres in a Mpc
 G=G_SI*MSOLAR/MPC2M/(KM2M**2) # The gravitational constant
                               # in units of (km/s)^2 Mpc/Msun.
 description_dictionary = {
-        'ID': 'Galaxy ID or name.',
+        'IDs': 'Galaxy ID or name.',
         'z':'Redshift',
         't':'Time since the Big Bang.',
         'SFR' : 'Star formation rate',
@@ -49,7 +49,8 @@ description_dictionary = {
         'central': 'Whether the galaxy is a central (1) or a satellite (0).',
         'GalaxyID':'Together with the redshift, this can be used '
                     'to locate a galaxy within Galform\'s output.',
-        'last_burst':'Time since the last burst of star formation (Gyr)'
+        'last_burst':'Time since the last burst of star formation (Gyr)',
+        'sample_z':'Redshift used for sampling the galaxies.'
         }
 
 dataset_names = {'rdisk' : 'r_disk',
@@ -132,16 +133,18 @@ def prepares_hdf5_input(data_dict, output_file):
         if name in units_dictionary:
             input_grp['r_halo'].attrs['Units'] = units_dictionary['r_halo']
 
-    for name in ('t', 'z'):
+    for name in ('t', 'z', 'sample_z', 'IDs'):
         add_dataset(input_grp, name, data_dict[name])
         input_grp[name].attrs['Description'] = description_dictionary[name]
         if name in units_dictionary:
             input_grp[name].attrs['Units'] = units_dictionary[name]
 
+
     ngals, nzs = input_grp['r_disk'].shape
     h5file.attrs['Number of galaxies'] = ngals
     h5file.attrs['Number of snapshots'] = nzs
 
+    h5file.close()
 
 
 if __name__ == "__main__"  :

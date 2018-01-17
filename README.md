@@ -60,7 +60,7 @@ file, `example/example_SAM_input.hdf5`.
 The magnetizer can also be run in the _single galaxy mode_ (which is
 particularly useful for debugging) by simply specifying the galaxy number i.e.
 ```
-./magnetize_galform.exe <parameters_file> <igal>
+./Magnetizer.exe <parameters_file> <igal>
 ```
 note that the output file will contain only this galaxy.
 

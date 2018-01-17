@@ -40,7 +40,7 @@ instructions), the code can be compiled by simply typing `make`
 (or `make -j <number of processors>` if you would like to save time using
 multiple processors) and run using:
 ```
-./magnetize_galform.exe <parameters_file>
+mpirun ./Magnetizer.exe <parameters_file>
 ```
 The parameter file (more details in the dedicated section below) must include
 the path to the HDF5 input file, containing the time-evolving galaxy properties.

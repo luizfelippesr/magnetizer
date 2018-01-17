@@ -88,6 +88,8 @@ class MagnetizerRun(object):
         self.ngals, self.ngrid, self.nz = self._data[0]['h'].shape
 
         self.gal_id = []
+        self.gal_id_orig = []
+        self.sample_z = []
         self.ivol = []
         self._completed = []
         for i, data_dict in enumerate(self._data):
@@ -101,10 +103,14 @@ class MagnetizerRun(object):
             ivol = np.ones_like(gal_id)*i # Later this will be substituted
                                           # by the actual ivolume
             self.gal_id.append(gal_id)
+            self.gal_id_orig.append(data_dict['IDs'])
+            self.sample_z.append(data_dict['sample_z'])
             self.ivol.append(ivol)
 
-        self.gal_id = np.concatenate(self.gal_id)
-        self.ivol = np.concatenate(self.ivol)
+        for name in ('gal_id','gal_id_orig','sample_z','ivol'):
+            # Concatenates list attributes
+            attrlist = getattr(self, name)
+            setattr(self,name, np.concatenate(attrlist))
 
         # Place-holders used elsewhere
         self._valid = None

@@ -171,9 +171,9 @@ if __name__ == "__main__"  :
                         'extract from the SAM_OUTPUT file for each redshift'
                         '(except z=0). Default: same as number_of_galaxies.')
 
-    parser.add_argument('-BoT', "--maximum_B_over_T", default=0.75,
+    parser.add_argument('-BoT', "--maximum_B_over_T", default=None,
                         help='Maximum bulge to total mass ratio.'
-                        ' Default: 0.5.')
+                        ' Default: 1.0')
 
     parser.add_argument('-ms', "--minimum_stellar_mass", default=1e7,
                         help="Minimum disk stellar mass at z=0 (in Msun)."
@@ -211,9 +211,13 @@ if __name__ == "__main__"  :
     else:
         nz = int(float(nz))
 
+    maximum_final_B_over_T=args.maximum_B_over_T
+    if maximum_final_B_over_T is not None:
+        maximum_final_B_over_T=float(maximum_final_B_over_T)
+
     data_dict = read_time_data(args.SAM_OUTPUT,
                                max_z = float(args.max_redshift),
-                               maximum_final_B_over_T=float(args.maximum_B_over_T),
+                               maximum_final_B_over_T=maximum_final_B_over_T,
                                minimum_final_stellar_mass=float(args.minimum_stellar_mass),
                                maximum_final_stellar_mass=float(args.maximum_stellar_mass),
                                minimum_final_gas_mass=float(args.minimum_gas_mass),

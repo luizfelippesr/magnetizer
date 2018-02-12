@@ -103,14 +103,22 @@ class MagnetizerRun(object):
             ivol = np.ones_like(gal_id)*i # Later this will be substituted
                                           # by the actual ivolume
             self.gal_id.append(gal_id)
-            self.gal_id_orig.append(data_dict['IDs'])
-            self.sample_z.append(data_dict['sample_z'])
             self.ivol.append(ivol)
 
-        for name in ('gal_id','gal_id_orig','sample_z','ivol'):
+            if 'sample_z' in data_dict: # Backwards compatibility
+                self.gal_id_orig.append(data_dict['IDs'])
+                self.sample_z.append(data_dict['sample_z'])
+
+        for name in ('gal_id','ivol'):
             # Concatenates list attributes
             attrlist = getattr(self, name)
             setattr(self,name, np.concatenate(attrlist))
+
+        if 'sample_z' in data_dict: # Backwards compatibility
+            for name in ('gal_id_orig','sample_z'):
+                # Concatenates list attributes
+                attrlist = getattr(self, name)
+                setattr(self,name, np.concatenate(attrlist))
 
         # Place-holders used elsewhere
         self._valid = None
@@ -298,7 +306,7 @@ class MagnetizerRun(object):
         if ivol not in self._valid:
             # Pre-loads heights, which will be used to distinguish between valid
             # and invalid outputs.
-            self._valid[ivol] = self._data[ivol]['h'][self._completed[ivol], :, :] > 0
+            self._valid[ivol]=self._data[ivol]['h'][self._completed[ivol],:,:]>0
 
         valid = self._valid[ivol]
         completed = self._completed[ivol]

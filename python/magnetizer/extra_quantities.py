@@ -30,7 +30,35 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
     Computes extra Magnetizer quantites.
 
     This function needs to be called with either gal_id or z different
-    from None
+    from None - i.e. the extra quantity qname will be computed for a given
+    galaxy at various redshifts or for various galaxies at a single redshift.
+
+    Available quantities are:
+    * '|Bp|'/'|Br|'/'|Bz|' - Absolute value of a B component
+    * 'Btot' - Total magnetic field strength
+    * r'Bmax' - Maximum field strength
+    * r'b' - Turbulent magnetic field strength
+    * r'growth' - Growth rate of the B (assuming no radial variation)
+    * r'growth_max' - Growth rate of the maximum field strength
+    * r'Bfloor' - Target strength of the floor (independently estimated)
+    * 'V' - Rotation curve
+    * 'D' - Dynamo number
+    * 'Dc'/'D_'Dcrit' - critical dynamo number
+    * r'D_Dc' - D/Dc
+    * 'R_u' - Reynolds number associated with vertical outflow
+    * 'p' - Magnetic pitch angle
+    * r'B_Beq' - |B|/B_eq
+    * r'\tau\Omega'
+    * 'q'
+    * 'l/h'
+    * 'h/r'
+
+    Also, for convenience: any quantity, Q, can be computed at the radius of
+    the maximum field strength [i.e. Q(rmax) where B(rmax)=Bmax]
+    using 'Q_at_Bmax'.
+
+
+
 
     Parameters
     ----------
@@ -208,21 +236,26 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
 
             quantity[1:] = delta_lnB/delta_t
 
-    elif qname == 'pmax':
-        quantity = get('p')
-        quantity = __get_profile_max(quantity, gal_id=gal_id, z=z)
-
     elif qname == r'Bmax':
         quantity = get('Btot')
         quantity = __get_profile_max(quantity, gal_id=gal_id, z=z)
 
-    elif qname == r'bmax':
+    elif qname == r'b':
         quantity = get('Beq')
-        quantity = __get_profile_max(quantity, gal_id=gal_id, z=z)
         quantity *= mag_run.parameters.dynamo['FMAG']
 
-    elif qname == r'max_r':
-        raise NotImplementedError
+    elif '_at_Bmax' in qname:
+        # Extracts the name of the quantity
+        match = re.match(r'(.+)_at_Bmax', qname)
+        q = match.group(1)
+        # Gets the quantity in the radius where B is maximum
+        quantity = __get_profile_max_position(get(q), get('Btot'),
+                                              gal_id=gal_id, z=z)
+    elif qname == r'Bmax_Beq':
+        Bmax = get('Bmax')
+        Beq = get('Beq_at_Bmax')
+
+        quantity = Bmax/Beq
 
     else:
         raise ValueError, qname + ' is unknown.'
@@ -236,4 +269,16 @@ def __get_profile_max(quantity, gal_id=None, z=None):
         quantity = quantity.max(axis=1)
     else:
         quantity = quantity.max(axis=0)
+    return quantity
+
+
+def __get_profile_max_position(quantity, quantity_max, gal_id=None, z=None):
+
+    if z is not None:
+        max_indices = np.argmax(quantity_max,axis=1)
+        max_indices += np.arange(quantity_max.shape[0])*quantity_max.shape[1]
+        quantity = quantity.flatten()[max_indices]
+    else:
+        #TODO
+        raise NotImplementedError
     return quantity

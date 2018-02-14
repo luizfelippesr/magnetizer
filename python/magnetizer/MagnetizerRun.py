@@ -27,26 +27,47 @@ class MagnetizerRun(object):
     """
     Provides an interface to access a given Magnetizer run.
 
-    output_file_path -> path to hdf5 file containing Magnetizer output data.
-    input_file_path -> path hdf5 file containing Magnetizer input data.
-                       If absent, will assume the same as output_file_path.
-
     Parameters
     ----------
     output_path:
-
+        Path to hdf5 file containing Magnetizer output data (or, optionally,
+        also the input, see input_path).
     input_path:
-        (Default value = None)
-
+        Path to hdf5 file containing Magnetizer input data. If None,
+        assumes the same as output_file_path. Default: None
     z_tolerance:
-        (Default value = 0.01)
-
+        Level of tolerance in redshift to be used when MagnetizerRun.get(quantity, z)
+        is invoked. Default: 0.01
     verbose:
-        (Default value = None)
+        Verboses use of object methods. Default: False
 
-    Returns
-    -------
-
+    Attributes
+    ----------
+    verbose : bool
+        verbosity
+    redshifts : array
+        Redshift available in this run
+    times : array
+        Times available in this run
+    parameters : parameters.Parameters
+        Object containing parameters used in the present run.
+    name : str
+        Name of the present run.
+    ngals : int
+        Number of galaxies
+    ngrid : int
+        Number of grid points in the profiles
+    nz : int
+        Number of reshifts
+    gal_id : array
+        Identifiers for each galaxy (consistent with the the main Magnetizer
+        program's gal_ids)
+    gal_id_orig : array
+        Galform's GalaxyID associated with each galaxy.
+    sample_z : array
+        Redshift at which each galaxy was selected to be included in the sample
+    ivol : array
+        Number associated with the file from each galaxy was read.
     """
     def __init__(self, output_path, input_path=None,
                  z_tolerance=0.01, verbose=False):
@@ -133,13 +154,10 @@ class MagnetizerRun(object):
         ----------
         quantity : str
             Name of the quantiy one is interested. E.g. "Bmax"
-
         z : float
             Redshift
-
         position : float, optional
             Number of half-mass radii at which the output will be returned.
-
         binning : BinningObject, optional
             Specifies binning to be applied. See BinningObject
 

@@ -20,15 +20,15 @@ module IO
   use hdf5
   use messages
   implicit none
-  
+
   interface IO_write_dataset ! Overload the IO_write_dataset function
     module procedure IO_write_dataset_scalar
     module procedure IO_write_dataset_vector
     module procedure IO_write_dataset_code
   end interface
-  
+
   private
-  
+
   ! Number of galaxies
   integer :: gals_number, grid_points
 
@@ -46,13 +46,13 @@ module IO
   integer(hid_t) :: output_group_id  ! hdf5 group identifier
   integer(hid_t) :: input_group_id   ! hdf5 group identifier
   integer(hid_t) :: log_group_id
-  
+
   ! The following store dataset names and ids
   character(len=15), dimension(max_number_of_datasets) :: dset_names = ''
   integer(hid_t), dimension(max_number_of_datasets) :: dset_ids
   integer(hid_t), dimension(max_number_of_datasets) :: dataspace_ids
   integer(hid_t), dimension(max_number_of_datasets) :: memspace_ids
-  
+
   integer :: ndsets = 0 ! number of datasets
   logical :: Initialized = .false. ! Initialisation flag
   logical :: lchunking, lcompression, lseparate_output
@@ -172,9 +172,9 @@ contains
 
     Initialized = .true.
     return
-    
+
   end subroutine IO_start
-  
+
 
   logical function IO_start_galaxy(gal_id)
     ! Returns true if the galaxy has a completion flag
@@ -284,7 +284,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
     logical :: is_log_actual
-    
+
     if (present(is_log)) then
       is_log_actual = is_log
     else
@@ -435,9 +435,9 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     endif
 
     return
-    
+
   end subroutine IO_write_dataset_vector
-    
+
   subroutine IO_write_dataset_code(dataset_name, gal_id, data, &
                                      units, description, is_log)
     ! Writes a dataset to disk - scalar version
@@ -507,15 +507,15 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
 
 
   subroutine IO_finish_galaxy(gal_id)
-    ! Finishes IO 
+    ! Finishes IO
     ! At the moment, this is a dummy
     integer, intent(in) :: gal_id
 
     call message('Finished writing datasets',gal_id=gal_id, info=2)
 
   end subroutine IO_finish_galaxy
-  
-  
+
+
   subroutine IO_end(date)
     ! Finishes IO (closing everything)
     integer :: i, error
@@ -565,8 +565,8 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     ! Resets initialisation flag
     Initialized =.false.
 
-  end subroutine IO_end  
-  
+  end subroutine IO_end
+
   subroutine IO_flush()
     integer :: error
     call message('Flushing HDF5 file(s).', info=3)
@@ -757,6 +757,8 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     logical :: scalar_actual
     integer :: idx
     integer :: rank, error
+    integer(hsize_t), parameter :: REDSHIFTS_PER_CHUNK = 1
+
 
     ! Increments ndsets and sets idx
     ndsets = ndsets+1
@@ -789,14 +791,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
       ! thus, 2 dimensions: galaxy id and time
       rank = 2
       if (lchunking) &
-          chunkdim_sca = [ dimsf_sca(1), min(dimsf_sca(2), chunksize) ]
+          chunkdim_sca = [ REDSHIFTS_PER_CHUNK, min(dimsf_sca(2), chunksize) ]
       call H5Screate_simple_f(rank, dimsf_sca, dataspace, error)
       call check(error)
     else
       ! 3 dimensions: galaxy id, time and radius
       rank = 3
       if (lchunking) chunkdim_vec = &
-              [ dimsf_vec(1), dimsf_vec(2)/2, min(dimsf_vec(3), chunksize) ]
+              [ REDSHIFTS_PER_CHUNK, dimsf_vec(2), min(dimsf_vec(3), chunksize) ]
       call H5Screate_simple_f(rank, dimsf_vec, dataspace, error)
       call check(error)
     endif
@@ -866,13 +868,13 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log)
     character(len=*), intent(in) :: dset_name
     integer :: idx
     integer :: i
-    
+
     do i=1,ndsets
       if (dset_name==trim(dset_names(i))) then
         idx = i
         return
       endif
-    end do    
+    end do
     idx = -1
     return
   end function find_dset

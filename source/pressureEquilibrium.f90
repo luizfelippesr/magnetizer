@@ -73,7 +73,7 @@ contains
     !         Rm_out -> Molecular to atomic gas ratio profile (n-array)
     !
     use input_constants
-    use root_finder, only: FindRoot
+    use root_finder, only: FindRoot, FindRoot_deriv
     use messages, only: error_message
     double precision, dimension(:), intent(in) :: r, B, Om, G
     double precision, dimension(:), target, intent(in) :: Om_h, G_h
@@ -91,7 +91,7 @@ contains
     real(fgsl_double), target, dimension(11) :: parameters_array, parameters_array_alt
     integer :: i, i_rreg, nghost_actual, error_count
     type(c_ptr) :: params_ptr, params_ptr_alt
-    double precision, parameter :: GUESS_INTERVAL = 20
+    double precision, parameter :: GUESS_INTERVAL = 25
     integer, parameter :: ERROR_COUNT_MAX = 3
     logical :: success
 
@@ -179,27 +179,11 @@ contains
           return
         endif
       else
-        ! Otherwise, tries again with a larger interval (i.e. a second chance)
-        minimum_h = minimum_h/2d0
-        maximum_h = maximum_h*2d0
-
-        pressure_equation_min = pressure_equation(minimum_h, params_ptr)
-        pressure_equation_max = pressure_equation(maximum_h, params_ptr)
-
-        if (sign(1d0,pressure_equation_min) /= sign(1d0,pressure_equation_max)) then
-          h_d(i) = FindRoot(pressure_equation, params_ptr, &
-                            [minimum_h, maximum_h], success)
-          if (.not.success) then
-            ! If unable to find a root, despite having a change in sign,
-            ! just give up and use negative scaleheights to propagate the
-            ! problem to the profile module
-            h_d = -1
-            rho_d = 0d0
-            return
-          endif
-
-        else
-          ! If the second chance fails, reports the error
+        ! Otherwise, tries with a secant root finder
+        h_d(i) = FindRoot_deriv(pressure_equation, params_ptr, guess_h, 1d-6, &
+                                success)
+        if (.not.success) then
+          ! If the second method fails
           if (error_count<ERROR_COUNT_MAX) then
             ! If it only happened a few times, apply a rough patch
             call error_message('solve_hydrostatic_equilibrium_numerical',        &
@@ -209,8 +193,9 @@ contains
             h_d(i) = h_d(i-1)
             error_count = error_count + 1
           else
-            ! If after many tries, still unable to find an interval with a
-            ! sign change, give up!
+            ! If after many tries, still unable to find a root:
+            ! give up and use negative scaleheights to propagate the problem
+            ! to the profile module
             h_d = -1
             rho_d = 0d0
             return
@@ -225,7 +210,7 @@ contains
         guess_h = h_d(i)*exp( (r(i+1)-r(i))/rs )
         ! The root is assumed to be within GUESS_INTERVAL% of the guess value
         maximum_h = guess_h*(1d0+GUESS_INTERVAL/100.)
-        minimum_h = guess_h*(1d0+GUESS_INTERVAL/100.)
+        minimum_h = guess_h*(1d0-GUESS_INTERVAL/100.)
       end if
 
       if (rho_d(i) < p_minimum_density) then

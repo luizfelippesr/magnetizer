@@ -46,7 +46,7 @@ contains
     real(FGSL_double) :: abserr
 
     stdfunc = FGSL_function_init(Faux, params)
-    status = FGSL_deriv_central(stdfunc, x, 1d-9, dfunc, abserr)
+    status = FGSL_deriv_central(stdfunc, x, step_aux, dfunc, abserr)
   end function
 
   subroutine fdfunc(x, params, y, dy) bind(c)
@@ -233,7 +233,8 @@ contains
     type(FGSL_function_fdf) :: stdfunc_fdf
     type(FGSL_error_handler_t) :: default_errh, my_errh
 
-    Faux => template_function
+    Faux => func
+    step_aux = step
 
     my_errh = FGSL_error_handler_init(err_sub)
     default_errh = FGSL_set_error_handler(my_errh)

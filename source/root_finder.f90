@@ -136,7 +136,7 @@ contains
     integer, optional :: max_it
     real(FGSL_double), parameter :: ABS_TOL = 0_FGSL_double
     real(FGSL_double), parameter :: REL_TOL = 1.0e-7_FGSL_double
-    integer(FGSL_int) :: itmax = 50
+    integer(FGSL_int) :: itmax = 200
     real(FGSL_double) :: root, xlo, xhi
     character(kind=FGSL_char,len=FGSL_strmax) :: name
     integer :: i
@@ -221,8 +221,8 @@ contains
     real(FGSL_double), dimension(2) :: interval
     integer, optional :: max_it
     real(FGSL_double), parameter :: ABS_TOL = 0_FGSL_double
-    real(FGSL_double), parameter :: REL_TOL = 1.0e-7_FGSL_double
-    integer(FGSL_int) :: itmax = 50
+    real(FGSL_double), parameter :: REL_TOL = 1.0e-5_FGSL_double
+    integer(FGSL_int) :: itmax = 200
     real(FGSL_double) :: ri, root, xlo, xhi
 
     character(kind=FGSL_char,len=FGSL_strmax) :: name
@@ -261,7 +261,7 @@ contains
         status = FGSL_root_fdfsolver_iterate(root_fdfslv)
         if (status /= FGSL_success .or. i > itmax) then
           if (present(success)) success = .false.
-          write(6, *) 'FindRoot: Failed to converge or iterate'
+          write(6, *) 'FindRoot_deriv: Failed to converge or iterate'
           exit
         end if
         ri = root

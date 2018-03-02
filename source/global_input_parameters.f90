@@ -253,7 +253,7 @@ module global_input_parameters
 
   ! Ignore the DM haloes of satellites for the pressure and rotation curve
   ! calculations
-  logical :: p_ignore_satellite_DM_haloes = .true.
+  logical :: p_ignore_satellite_DM_haloes = .false.
 
   ! Minimum density floor (in g/cm^3)
   double precision :: p_minimum_density = 1d-30 ! g cm^-3

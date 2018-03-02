@@ -72,7 +72,7 @@ module input_params
     logical, intent(in), optional :: reduce_timestep
     double precision, dimension(:), optional :: h,v,etat
     logical :: reduce_ts, success
-    double precision :: minh
+    double precision :: minh, nsteps_f
     integer :: i
 
     success = .true.
@@ -95,7 +95,9 @@ module input_params
         if (abs(maxval(v)) > 1d-20 .and. abs(maxval(etat)) > 1d-20) then
           dt = minval([ p_courant_v * dx/lambda/maxval(v), &
                         p_courant_eta * minh**2/maxval(etat) ])
-          nsteps = int(tsnap/dt)
+          nsteps_f = tsnap/dt
+          ! Avoids overflow in casting
+          nsteps = int(min(1e9, nsteps_f))
         else
           call message('set_timestep: max(v) or max(etat) is negligible', &
                        info=1, gal_id=current_gal_id)

@@ -92,7 +92,7 @@ contains
     integer :: i, i_rreg, nghost_actual, error_count
     type(c_ptr) :: params_ptr, params_ptr_alt
     double precision, parameter :: GUESS_INTERVAL = 25
-    integer, parameter :: ERROR_COUNT_MAX = 3
+    integer, parameter :: ERROR_COUNT_MAX = 4
     logical :: success
 
     if (present(nghost)) then
@@ -124,6 +124,7 @@ contains
     ! Sets up a guessed initial search interval for r=0
     minimum_h = 1d-3*r_disk
     maximum_h = 2d0*r_disk
+    guess_h = 0.050
 
     ! Trapping possible errors
     i_rreg = -1
@@ -182,15 +183,20 @@ contains
         ! Otherwise, tries with a secant root finder
         h_d(i) = FindRoot_deriv(pressure_equation, params_ptr, guess_h, 1d-6, &
                                 success)
-        if (.not.success) then
+        if (.not.success .or. h_d(i)<0 ) then
           ! If the second method fails
-          if (error_count<ERROR_COUNT_MAX) then
+          if (error_count<ERROR_COUNT_MAX .and. i>nghost_actual+2+2) then
             ! If it only happened a few times, apply a rough patch
+            ! (unless this is one of the first points)
             call error_message('solve_hydrostatic_equilibrium_numerical',        &
-                              'Initial guess does NOT include a change of sign.'&
-                              // ' Unable to find the root (i.e. h and rho).'   &
-                              // ' Will continue using previous h value.', code='P')
-            h_d(i) = h_d(i-1)
+                               'Initial guess does NOT include a change of sign.'&
+                               // ' Unable to find the root (i.e. h and rho).'   &
+                               // ' Extrapolating from previous values.',        &
+                              code='P')
+            ! Assumes exponential growth and extrapolates if finds a problem
+            h_d(i) = (log(h_d(i-1))-log(h_d(i-2)))/(r(i-1)-r(i-2))*(r(i)-r(i-1))
+            h_d(i) = h_d(i) + log(h_d(i-1))
+            h_d(i) = exp(h_d(i))
             error_count = error_count + 1
           else
             ! If after many tries, still unable to find a root:
@@ -661,7 +667,7 @@ contains
 
     Sigma_d_SI = (Sigma_d*Msun_SI/kpc_SI/kpc_SI)
 
-    P = Om *(Om + S) * (km_SI/kpc_SI)**2
+    P = - Om *(Om + S) * (km_SI/kpc_SI)**2
     P = P * Sigma_d_SI * h_d * kpc_SI * convertPressureSItoGaussian
 
   end function computes_midplane_ISM_pressure_P2

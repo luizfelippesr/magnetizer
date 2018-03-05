@@ -245,7 +245,7 @@ module global_input_parameters
   ! (alternatively, P_B uses the actual B from the dynamo calculation).
   logical :: p_simplified_pressure = .true.
   ! Includes the rotation curve correction in the calculation of the midplane pressure
-  logical :: p_enable_P2 = .true.
+  logical :: p_enable_P2 = .false.
   ! Assumes constant scaleheight for r<rreg
   logical :: p_truncates_within_rreg = .false.
   ! Sets the regularisation radius for the rotation curves

@@ -12,18 +12,18 @@ module tsDataObj
     character(len=NAMESIZE) :: name
     logical :: output
     logical :: scalar
-    double precision, allocatable, dimension(:,:) :: value
+    double precision, pointer, dimension(:,:) :: value
   end type ts_array
 
   type, public :: ts_data
     ! Defines the ts_data class
-    type(ts_array), dimension(:), allocatable :: data
+    type(ts_array), dimension(:), pointer :: data
   contains
     procedure :: reset => reset_ts_arrays
     procedure :: get => get_ts_values
     procedure :: get_ts => get_ts_array
     procedure :: is_scalar => is_ts_scalar
-!     procedure :: set => set_ts_values
+    procedure :: set => set_ts_values
   end type ts_data
 
   interface ts_data
@@ -34,7 +34,7 @@ contains
   function new_ts_data(globals, profiles, nz, nx)
     implicit none
     character(len=NAMESIZE), dimension(:), intent(in) :: globals, profiles
-    type(ts_data) new_ts_data
+    type(ts_data), target :: new_ts_data
     integer, intent(in) :: nz, nx
     integer :: i, j, nglobals, nprofiles
 
@@ -61,18 +61,19 @@ contains
 
   function get_ts_array(self, name) result(ts)
     class(ts_data), intent(in) :: self
-    type(ts_array) :: ts
+    type(ts_array), pointer :: ts
     character(len=*), intent(in) :: name
     integer :: i
 
     do i=1, size(self%data)
       if (trim(name) == trim(self%data(i)%name)) then
-        ts = self%data(i)
+        ts => self%data(i)
         return
       endif
     enddo
 
   end function get_ts_array
+
 
   function get_ts_values(self, name) result(values)
     class(ts_data), intent(in) :: self
@@ -86,6 +87,17 @@ contains
     allocate(values(dshape(1),dshape(2)))
     values = ts%value
   end function get_ts_values
+
+
+  subroutine set_ts_values(self, name, vals)
+    class(ts_data), intent(inout) :: self
+    character(len=*), intent(in) :: name
+    double precision, dimension(:,:) :: vals
+    type(ts_array), pointer :: ts
+
+    ts => self%get_ts(name)
+    ts%value = vals
+  end subroutine set_ts_values
 
 
   logical function is_ts_scalar(self, name)
@@ -108,43 +120,3 @@ contains
   end subroutine reset_ts_arrays
 
 end module tsDataObj
-
-program test_tsDataObj
-  use tsDataObj
-  implicit none
-    integer, parameter :: NAMESIZE = 15
-  character(len=NAMESIZE), dimension(3) :: profiles
-  character(len=NAMESIZE), dimension(2) :: globals
-  type(ts_data) :: ts_teste
-  type(ts_array) :: ts
-  double precision, dimension(3,2) :: teste
-  double precision, dimension(3,1) :: testes
-
-  globals = ['a              ','b              ']
-  profiles = ['    AAAAA      ','    BBBBBB     ','teste          ']
-  ts_teste = ts_data(globals, profiles,3,2)
-!   call ts_teste%initialize(3,6)
-!   call ts_teste%reset
-!   call ts_teste%initialize(3,2)
-
-!   ts = ts_teste%get('scalar')
-!   print *, ts%name
-!   print *, ts%scalar
-!   print *, ts%value
-!   print *, shape(ts%value)
-!   print *, '--------------------'
-  testes = ts_teste%get('a')
-  print *, 'a'
-  print *, testes
-  print *, shape(testes)
-  print *, ts_teste%is_scalar('a')
-  print *, '--------------------'
-  teste = ts_teste%get('teste')
-  print *, 'teste'
-  print *, teste
-  print *, shape(teste)
-  print *, ts_teste%is_scalar('a')
-  print *, '--------------------'
-
-
-end program test_tsDataObj

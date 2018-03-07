@@ -18,7 +18,9 @@ module tsDataObj
   type, public :: ts_data
     ! Defines the ts_data class
     type(ts_array), dimension(:), pointer :: data
+    logical :: initialized
   contains
+    procedure :: initialize => initialize_ts_arrays
     procedure :: reset => reset_ts_arrays
     procedure :: get => get_ts_values
     procedure :: get_ts => get_ts_array
@@ -31,13 +33,13 @@ module tsDataObj
   end interface
 
 contains
-  function new_ts_data(globals, profiles, nz, nx)
+  function new_ts_data(globals, profiles)
     implicit none
     character(len=NAMESIZE), dimension(:), intent(in) :: globals, profiles
     type(ts_data), target :: new_ts_data
-    integer, intent(in) :: nz, nx
     integer :: i, j, nglobals, nprofiles
 
+    new_ts_data%initialized = .false.
     nglobals = size(globals)
     nprofiles = size(profiles)
 
@@ -45,19 +47,33 @@ contains
     do i=1,nglobals
       new_ts_data%data(i)%scalar = .true.
       new_ts_data%data(i)%name = globals(i)
-      allocate(new_ts_data%data(i)%value(nz,1))
-      new_ts_data%data(i)%value = INVALID
     enddo
 
     do i=1,nprofiles
       j = i + nglobals
       new_ts_data%data(j)%scalar = .false.
       new_ts_data%data(j)%name = profiles(i)
-      allocate(new_ts_data%data(j)%value(nz, nx))
-      new_ts_data%data(j)%value = INVALID
     enddo
-
   end function new_ts_data
+
+
+  subroutine initialize_ts_arrays(self,nz, nx)
+    implicit none
+    class(ts_data), intent(inout) :: self
+    integer, intent(in) :: nz, nx
+    integer :: i
+
+    do i=1,size(self%data)
+      if (self%data(i)%scalar) then
+        allocate(self%data(i)%value(nz,1))
+      else
+        allocate(self%data(i)%value(nz, nx))
+      endif
+      self%data(i)%value = INVALID
+    enddo
+    self%initialized = .true.
+  end subroutine initialize_ts_arrays
+
 
   function get_ts_array(self, name) result(ts)
     class(ts_data), intent(in) :: self

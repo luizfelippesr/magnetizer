@@ -126,12 +126,16 @@ contains
     call IO_write_dataset('rmax', gal_id,                           &
                           ts_rmax/h0*h0_kpc,                        &
                           units='kpc',                              &
-                          description='Radius of maximum B')
+                          description='Radius of maximum |B|')
 
     call IO_write_dataset('Bmax', gal_id,                           &
                           ts_Bmax* B0_mkG / B0,                     &
                           units='microgauss',                       &
                           description='Maximum B')
+
+    call IO_write_dataset('Bmax_idx', gal_id,                       &
+                          ts_Bmax_idx,                              &
+                          description='Index of maximum |B|')
 
     call IO_write_dataset('alp', gal_id,                            &
                           ts_alp(:,:)*h0_km/h0/t0_s*t0 ,            &

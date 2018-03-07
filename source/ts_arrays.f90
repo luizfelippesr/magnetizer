@@ -28,11 +28,12 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   public make_ts_arrays, reset_ts_arrays
 
   double precision, parameter :: INVALID = -99999d0
-  double precision, allocatable, dimension(:),public :: ts_t_Gyr
+  double precision, allocatable, dimension(:), public :: ts_t_Gyr
   character, allocatable, dimension(:),public :: ts_status_code
-  double precision, allocatable, dimension(:),public :: ts_Dt
-  double precision, allocatable, dimension(:),public :: ts_rmax
-  double precision, allocatable, dimension(:),public :: ts_Bmax
+  double precision, allocatable, dimension(:), public :: ts_Dt
+  double precision, allocatable, dimension(:), public :: ts_rmax
+  double precision, allocatable, dimension(:), public :: ts_Bmax
+  double precision, allocatable, dimension(:), public :: ts_Bmax_idx
   double precision, allocatable, dimension(:,:),public :: ts_Br
   double precision, allocatable, dimension(:,:),public :: ts_Bp
   double precision, allocatable, dimension(:,:),public :: ts_alp_m
@@ -63,6 +64,8 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   ! The following would be much better than this multitude of public arrays:
   type ts_array
     character(len=10) :: name
+    logical :: output
+    logical :: scalar
     double precision, allocatable, dimension(:,:) :: value
   end type
 
@@ -83,9 +86,9 @@ contains
     double precision, dimension(:,:), intent(in) :: f
     double precision, dimension(:), intent(in) :: Bzmod
     double precision, dimension(:), intent(in) :: alp
-    double precision, dimension(nx-2*nxghost) :: Btot
-    double precision, dimension(nx-2*nxghost) :: rtmp
-    integer :: max_idx
+    double precision, dimension(p_nx_ref) :: Btot
+    double precision, dimension(p_nx_ref) :: rtmp
+    integer :: Bmax_idx
 
 
     if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
@@ -142,16 +145,14 @@ contains
 
     ! For convenience, computes and stores maximum magnetic field value, and the
     ! position of the maximum
-    Btot = f(nxghost+1:nx-nxghost,1)**2    &
-          + f(nxghost+1:nx-nxghost,2)**2   &
-          + Bzmod(nxghost+1:nx-nxghost)**2
+    Btot = (ts_Br(it,:))**2 + (ts_Bp(it,:))**2 + (ts_Bzmod(it,:))**2
     Btot = sqrt(Btot)
 
-    rtmp = r_kpc(nxghost+1:nx-nxghost)
-    max_idx = maxloc(Btot, 1)
-    ts_Bmax(it) = Btot(max_idx)
-    ts_rmax(it) = rtmp(max_idx)
+    Bmax_idx = maxloc(Btot, 1)
 
+    ts_Bmax(it) = Btot(Bmax_idx)
+    ts_rmax(it) = ts_rkpc(it,Bmax_idx)
+    ts_Bmax_idx(it) = Bmax_idx
     ! alp is computed in the gutsdynamo module (annoyingly differently from
     ! anything else). Therefore, one needs to be careful. This is a good
     ! candidate for some code refactoring.
@@ -190,6 +191,8 @@ contains
     ts_rmax = INVALID
     allocate(ts_Bmax(max_outputs))
     ts_Bmax = INVALID
+    allocate(ts_Bmax_idx(max_outputs))
+    ts_Bmax_idx = INVALID
     allocate(ts_Br(max_outputs,p_nx_ref))
     ts_Br = INVALID
     allocate(ts_Bp(max_outputs,p_nx_ref))
@@ -268,6 +271,7 @@ contains
       deallocate(ts_Dt)
       deallocate(ts_rmax)
       deallocate(ts_Bmax)
+      deallocate(ts_Bmax_idx)
       deallocate(ts_Br)
       deallocate(ts_Bp)
       deallocate(ts_alp_m)
@@ -366,6 +370,7 @@ contains
     call extend_array_sca(ts_Dt)
     call extend_array_sca(ts_rmax)
     call extend_array_sca(ts_Bmax)
+    call extend_array_sca(ts_Bmax_idx)
     ! Vectors
     call extend_array_vec(ts_Br)
     call extend_array_vec(ts_Bp)

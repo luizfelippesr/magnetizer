@@ -249,12 +249,19 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
         match = re.match(r'(.+)_at_Bmax', qname)
         q = match.group(1)
         # Gets the quantity in the radius where B is maximum
-        quantity = __get_profile_max_position(get(q), get('Btot'),
+        quantity = __get_profile_max_position(get(q), get('Btot_max_indices'),
                                               gal_id=gal_id, z=z)
+
+    elif '_max_indices' in qname:
+        # Extracts the name of the quantity
+        match = re.match(r'(.+)_max_indices', qname)
+        qname = match.group(1)
+        q = get(qname)
+        quantity = np.argmax(q,axis=1)
+
     elif qname == r'Bmax_Beq':
         Bmax = get('Bmax')
         Beq = get('Beq_at_Bmax')
-
         quantity = Bmax/Beq
 
     else:
@@ -272,12 +279,11 @@ def __get_profile_max(quantity, gal_id=None, z=None):
     return quantity
 
 
-def __get_profile_max_position(quantity, quantity_max, gal_id=None, z=None):
+def __get_profile_max_position(quantity, max_indices, gal_id=None, z=None):
 
     if z is not None:
-        max_indices = np.argmax(quantity_max,axis=1)
-        max_indices += np.arange(quantity_max.shape[0])*quantity_max.shape[1]
-        quantity = quantity.flatten()[max_indices]
+        indices = max_indices + np.arange(quantity.shape[0])*quantity.shape[1]
+        quantity = quantity.flatten()[indices]
     else:
         #TODO
         raise NotImplementedError

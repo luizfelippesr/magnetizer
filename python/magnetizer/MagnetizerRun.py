@@ -29,16 +29,20 @@ class MagnetizerRun(object):
 
     Parameters
     ----------
-    output_path:
+    output_path : str or list
         Path to hdf5 file containing Magnetizer output data (or, optionally,
-        also the input, see input_path).
-    input_path:
-        Path to hdf5 file containing Magnetizer input data. If None,
-        assumes the same as output_file_path. Default: None
-    z_tolerance:
+        also the input, see input_path). If a list of filenames is provided, the
+        contents of all the files are concatenated on demand.
+    input_path : str or list
+        Path to hdf5 file containing Magnetizer input data. If a list of
+        filnames is provided, the contents of all the files are used, as in the
+        output_path case (N.B make sure the lists output_path and input_path
+        are compatible). If None, assumes the same as output_file_path.
+        Default: None
+    z_tolerance : float
         Level of tolerance in redshift to be used when MagnetizerRun.get(quantity, z)
         is invoked. Default: 0.01
-    verbose:
+    verbose: bool
         Verboses use of object methods. Default: False
 
     Attributes

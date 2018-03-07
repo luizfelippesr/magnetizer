@@ -373,7 +373,54 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
                             target_redshifts=None, bin_objs=None,
                             minimum_number_per_bin=5, keypos=None,
                             ignore_zero_valued=False, zero_value_tol = 1e-4,
-                            log=True, color='#d95f0e', log0=None, **kwargs):
+                            log=True, color='#d95f0e', log0=None,
+                            colors = ['#1f78b4','#33a02c','#b2df8a',
+                                      '#fb9a99','#fdbf6f','#cab2d6'],
+                            single_panel = False, show_t=False,
+                            **kwargs):
+    """
+    Plots the redshift evolution of the 25th, 50th and 85 percentiles of a
+    given quantity. This can be a single panel or a set of panels showing
+    different mass bins.
+
+    Parameters
+    ----------
+    quantity : str
+        Name of the quantity to be plotted (e.g. 'Br').
+    mag_run : MagnetizerRun
+        A MagnetizerRun object containing the run.
+    position : float
+        For radial dependent quantities, plot_redshift_evolution will show the
+        redshift evolution at a radius r=`position`*r_disk, where r_disk is the
+        half-mass radius of the disc. For scalar/global galaxy properties
+        (e.g. Mgas_disk) this parameter must be set to None.
+    target_redshifts: array_like
+        If present, specifies which redshifts should be used for the plot.
+    bin_objs : BinningObject or list
+        If a BinningObject is specified, use it to construct different panels
+        for each of the redshifts in the target_redshifts parameter.
+        If a list of BinningObjects is specified, use the redshift associated
+        with each BinningObject.
+    minimum_number_per_bin : int
+        Minimum number of galaxies per bin (smaller number are not plotted).
+        Default: 5
+    ignore_zero_valued : bool
+        Ignore galaxies where the `quantity` is less than zero_value_tol.
+        Default: False
+    zero_value_tol : float
+        See ignore_zero_valued. Default: 1e-4
+    log : bool
+        Plots the log of the percentiles. Default: True
+    color : str
+        Color of the lines and shades (same colour for all the panels).
+    single_panel : bool
+        Plots different bins in the same panel.
+    colors : list
+        List of colours to use, if in single_panel mode.
+    show_t : bool
+        Shows an extra x-axis with the time coordinate.
+    """
+
 
     single_binning = no_binning = False
 
@@ -436,7 +483,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
 
 
     for i in range(nbins):
-        if (nbins==1):
+        if (nbins==1 or single_panel):
             ax = plt.subplot(1,1,1)
         else:
             ax = plt.subplot(math.ceil(float(nbins)/2),2,i+1)
@@ -459,6 +506,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             else:
                 bins = bin_dict[zs[0]].bins
 
+        if single_panel:
+            color = colors[i]
 
         plt.plot(zs, p50[i], color=color, **kwargs)
         plt.plot(zs, p15[i], color=color, linestyle=':')
@@ -480,7 +529,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         plt.ylabel(quantitytxt)
         plt.xlabel('$z$')
 
-        if not no_binning:
+        if not (no_binning or single_panel):
             masstxt = '${0}< \log(M_\star/M_\odot) <{1}$'.format(
               np.log10(bins[i][0].base), np.log10(bins[i][1].base))
             if keypos is None:
@@ -505,17 +554,19 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         idx = closest_indices(mag_run.redshifts,redshifts)
         times = mag_run.times[idx]
 
-        tlabels = ['{0:.1f}'.format(x) for x in times.value]
-        zlabels = ['{0:.1f}'.format(abs(x)) for x in redshifts]
-        ax.set_xlim(redshifts.min(),redshifts.max())
-        ax.xaxis.set_ticks(redshifts)
-        ax.xaxis.set_ticklabels(zlabels)
+        if show_t:
+            tlabels = ['{0:.1f}'.format(x) for x in times.value]
+            zlabels = ['{0:.1f}'.format(abs(x)) for x in redshifts]
+            ax.set_xlim(redshifts.min(),redshifts.max())
+            ax.xaxis.set_ticks(redshifts)
+            ax.xaxis.set_ticklabels(zlabels)
 
-        ax2 = ax.twiny()
-        ax2.set_xlim(redshifts.min(),redshifts.max())
-        ax2.xaxis.set_ticks(redshifts)
-        ax2.xaxis.set_ticklabels(tlabels)
-        ax2.set_xlabel(r"$t\;[\rm Gyr]$")
+            ax2 = ax.twiny()
+            ax2.set_xlim(redshifts.min(),redshifts.max())
+            ax2.xaxis.set_ticks(redshifts)
+            ax2.xaxis.set_ticklabels(tlabels)
+            ax2.set_xlabel(r"$t\;[\rm Gyr]$")
+
     return ngals
 
 
@@ -533,6 +584,15 @@ def prepare_mass_bins_list(mag_run, redshifts,
                            fixed_binning_redshift=None,
                            binning_obj=magnetizer.MassBinningObject,
                            **kwargs):
+    """
+    Prepares a list of `MassBinningObject`s computed at each redshift.
+
+    Parameters
+    ----------
+    mag_run
+
+
+    """
     mass_bins = []
     redshifts = mag_run.redshifts[closest_indices(mag_run.redshifts, redshifts)]
     for z in redshifts:

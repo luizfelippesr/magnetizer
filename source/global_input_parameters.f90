@@ -51,13 +51,18 @@ module global_input_parameters
   ! (nproc+int(nproc/p_master_skip)) galaxies.
   logical :: p_master_works_too = .true.
   double precision :: p_master_skip = 2
+  ! Sets which quantities should be added to the output see doc files for
+  ! possible values
+  character(15), dimension(35) :: output_quantities_list = ' '
+  ! Alternatively, tries to output everything.
+  logical :: output_everything = .false.
 
   namelist /io_parameters/ &
     output_file_name, input_file_name, p_IO_separate_output, &
     p_IO_chunking, p_IO_number_of_galaxies_in_chunks, p_IO_compression, &
     p_IO_compression_level, &
-    p_master_works_too, p_master_skip, p_ncheckpoint
-
+    p_master_works_too, p_master_skip, p_ncheckpoint, &
+    output_quantities_list
 
   ! -------------------------------------------------------
   ! Run settings and timestepping parameters
@@ -266,7 +271,6 @@ module global_input_parameters
   logical :: p_use_Pdm = .true.
   logical :: p_use_Pbulge = .true.
   logical :: p_halo_contraction = .true.
-  logical :: p_extra_rotation_curve_outputs = .false.
   logical :: p_extra_pressure_outputs = .false.
   ! Keeps P2>0 to avoid possible artifacts which the regularisation may introduce
   ! Usually not necessary.
@@ -290,9 +294,8 @@ module global_input_parameters
     p_rreg_to_rdisk, p_rdisk_min, Mgas_disk_min, rmin_over_rmax, &
     p_ignore_satellite_DM_haloes, p_enable_P2, p_truncates_within_rreg, &
     p_minimum_density, p_sech2_profile, p_use_Pdm, p_use_Pbulge, &
-    p_halo_contraction, p_extra_rotation_curve_outputs, &
-    p_extra_pressure_outputs, p_Pdm_numerical, p_Pbulge_numerical, &
-    p_P2_workaround
+    p_halo_contraction, p_extra_pressure_outputs, p_Pdm_numerical, &
+    p_Pbulge_numerical, p_P2_workaround
 
 
   ! -------------------------------------------------------

@@ -2,8 +2,8 @@ module tsDataObj
   implicit none
   private
 
-  double precision, parameter :: INVALID = -99999d0
-  integer, parameter :: NAMESIZE = 15
+  double precision, parameter :: INVALID = -99999d0 ! Invalid value tag
+  integer, parameter :: NAMESIZE = 15 ! Maximum name size
 
   type, public :: ts_array
     ! Package containing a time series array, the quantity name and
@@ -25,6 +25,7 @@ module tsDataObj
     procedure :: get_it => get_ts_single_value
     procedure :: get_ts => get_ts_array
     procedure :: is_scalar => is_ts_scalar
+    procedure :: output => is_ts_in_output
     procedure :: set_full => set_ts_full
     procedure :: set => set_ts_single
     procedure :: set_scalar => set_ts_single_scalar
@@ -35,9 +36,10 @@ module tsDataObj
   end interface
 
 contains
-  function new_tsData(scalars, profiles, nz, nx)
+  function new_tsData(scalars, profiles, nz, nx, output)
     implicit none
-    character(len=NAMESIZE), dimension(:), intent(in) :: scalars, profiles
+    character(len=*), dimension(:), intent(in) :: scalars, profiles
+    character(len=*), dimension(:), intent(in), optional :: output
     type(tsData), target :: new_tsData
     integer, intent(in) :: nz, nx
     integer :: i, j, nscalars, nprofiles
@@ -48,6 +50,7 @@ contains
     allocate(new_tsData%data(nscalars+nprofiles))
     do i=1,nscalars
       new_tsData%data(i)%scalar = .true.
+      if (present(output)) new_tsData%data(i)%output = is_in_list(scalars(i),output)
       new_tsData%data(i)%name = scalars(i)
       allocate(new_tsData%data(i)%value(nz,1))
       new_tsData%data(i)%value = INVALID
@@ -57,6 +60,7 @@ contains
       j = i + nscalars
       new_tsData%data(j)%scalar = .false.
       new_tsData%data(j)%name = profiles(i)
+      if (present(output)) new_tsData%data(j)%output = is_in_list(profiles(i),output)
       allocate(new_tsData%data(j)%value(nz, nx))
       new_tsData%data(j)%value = INVALID
     enddo
@@ -94,7 +98,6 @@ contains
     values = ts%value
   end function get_ts_values
 
-
   function get_ts_values_scalar(self, name) result(values)
     class(tsData), intent(in) :: self
     character(len=*), intent(in) :: name
@@ -107,7 +110,6 @@ contains
     allocate(values(dshape(1)))
     values = ts%value(:,1)
   end function get_ts_values_scalar
-
 
   function get_ts_single_value(self, name, it) result(values)
     class(tsData), intent(in) :: self
@@ -124,7 +126,6 @@ contains
     values = ts%value(it,:)
   end function get_ts_single_value
 
-
   subroutine set_ts_full(self, name, vals)
     class(tsData), intent(inout) :: self
     character(len=*), intent(in) :: name
@@ -134,7 +135,6 @@ contains
     ts => self%get_ts(name)
     ts%value = vals
   end subroutine set_ts_full
-
 
   subroutine set_ts_single(self, name, it, vals)
     class(tsData), intent(inout) :: self
@@ -158,7 +158,6 @@ contains
     ts%value(it,1) = vals
   end subroutine set_ts_single_scalar
 
-
   logical function is_ts_scalar(self, name)
     class(tsData), intent(in) :: self
     character(len=*), intent(in) :: name
@@ -167,6 +166,15 @@ contains
     ts => self%get_ts(name)
     is_ts_scalar = ts%scalar
   end function is_ts_scalar
+
+  logical function is_ts_in_output(self, name)
+    class(tsData), intent(in) :: self
+    character(len=*), intent(in) :: name
+    type(ts_array), pointer :: ts
+
+    ts => self%get_ts(name)
+    is_ts_in_output = ts%output
+  end function is_ts_in_output
 
   subroutine reset_ts_arrays(self)
     implicit none
@@ -178,4 +186,17 @@ contains
     end do
   end subroutine reset_ts_arrays
 
+  logical function is_in_list(quantity, list)
+    character(len=*), dimension(:), intent(in) :: list
+    character(len=*), intent(in) :: quantity
+    integer :: i
+
+    do i=1, size(list)
+      if (trim(list(i))==trim(quantity)) then
+        is_in_list = .true.
+        return
+      endif
+    enddo
+    is_in_list = .false.
+  end function is_in_list
 end module tsDataObj

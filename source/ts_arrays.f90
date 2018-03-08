@@ -41,11 +41,11 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
                                                  'alp_m        ', &
                                                  'Bzmod        ', &
                                                  'h            ', &
-                                                 'om           ', &
-                                                 'Om_b         ', &
-                                                 'Om_d         ', &
-                                                 'Om_h         ', &
-                                                 'G            ', &
+                                                 'Omega        ', &
+                                                 'Omega_b      ', &
+                                                 'Omega_d      ', &
+                                                 'Omega_h      ', &
+                                                 'Shear        ', &
                                                  'l            ', &
                                                  'v            ', &
                                                  'etat         ', &
@@ -101,7 +101,13 @@ contains
         ! but only one galform output is used.
         max_outputs = nsteps+1
       endif
-      ts_data = tsData(scalar_names, profile_names, max_outputs, p_nx_ref)
+
+      if (.not.output_everything) then
+        ts_data = tsData(scalar_names, profile_names, max_outputs, p_nx_ref, &
+                       output_quantities_list)
+      else
+        ts_data = tsData(scalar_names, profile_names, max_outputs, p_nx_ref)
+      endif
 
       allocate(ts_status_code(max_outputs))
       ! Initializes the time series
@@ -128,8 +134,8 @@ contains
       endif
     endif
     call rescale_array(h(nxghost+1:nx-nxghost), tmp); call ts_data%set('h', it, tmp)
-    call rescale_array(Om(nxghost+1:nx-nxghost), tmp); call ts_data%set('om', it, tmp)
-    call rescale_array(G(nxghost+1:nx-nxghost), tmp); call ts_data%set('G', it, tmp)
+    call rescale_array(Om(nxghost+1:nx-nxghost), tmp); call ts_data%set('Omega', it, tmp)
+    call rescale_array(G(nxghost+1:nx-nxghost), tmp); call ts_data%set('Shear', it, tmp)
     call rescale_array(l(nxghost+1:nx-nxghost), tmp); call ts_data%set('l', it, tmp)
     call rescale_array(v(nxghost+1:nx-nxghost), tmp); call ts_data%set('v', it, tmp)
     call rescale_array(etat(nxghost+1:nx-nxghost), tmp); call ts_data%set('etat', it, tmp)
@@ -141,13 +147,11 @@ contains
     call rescale_array(Beq(nxghost+1:nx-nxghost), tmp); call ts_data%set('Beq', it, tmp)
     call rescale_array(r_kpc(nxghost+1:nx-nxghost), tmp); call ts_data%set('rkpc', it, tmp)
 
-    if (p_extra_rotation_curve_outputs) then
-      call rescale_array(Om_h(nxghost+1:nx-nxghost), tmp); call ts_data%set('Om_h', it, tmp)
-      call rescale_array(Om_b(nxghost+1:nx-nxghost), tmp); call ts_data%set('Om_b', it, tmp)
-      call rescale_array(Om_d(nxghost+1:nx-nxghost), tmp); call ts_data%set('Om_d', it, tmp)
-    endif
+    call rescale_array(Om_h(nxghost+1:nx-nxghost), tmp); call ts_data%set('Omega_h', it, tmp)
+    call rescale_array(Om_b(nxghost+1:nx-nxghost), tmp); call ts_data%set('Omega_b', it, tmp)
+    call rescale_array(Om_d(nxghost+1:nx-nxghost), tmp); call ts_data%set('Omega_d', it, tmp)
 
-    if (p_extra_pressure_outputs) then
+    if (ts_data%output('P')) then
       call rescale_array(P(nxghost+1:nx-nxghost), tmp); call ts_data%set('P', it, tmp)
       call rescale_array(Pd(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pd', it, tmp)
       call rescale_array(Pm(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pm', it, tmp)

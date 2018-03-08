@@ -256,8 +256,15 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
         # Extracts the name of the quantity
         match = re.match(r'(.+)_max_indices', qname)
         qname = match.group(1)
-        q = get(qname)
-        quantity = np.argmax(q,axis=1)
+        # Special case: pre-computed Bmax index, stored in Bmax_idx
+        # Needs to check whether the output is present in this case
+        if (qname=='Btot') and ('Bmax_idx' in mag_run._data[0]):
+            idx = get('Bmax_idx',0).copy()-1
+            idx[np.isnan(idx)] = 0
+            quantity = idx.astype(int)
+        else:
+            q = get(qname)
+            quantity = np.argmax(q,axis=1)
 
     elif qname == r'Bmax_Beq':
         Bmax = get('Bmax')

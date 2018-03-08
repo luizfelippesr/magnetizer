@@ -62,7 +62,7 @@ module IO
 
 contains
 
-  subroutine IO_start(mpi_comm, mpi_info, resuming_run)
+  subroutine IO_start(mpi_comm, mpi_info, resuming_run, time_str)
     use grid
     use global_input_parameters
     ! Initializes IO
@@ -72,6 +72,7 @@ contains
     integer :: error
     integer, parameter :: MAX_NMLSTR=20000
     character(len=MAX_NMLSTR) :: namelist_str
+    character(len=*), intent(in) :: time_str
 
     ! Reads properties from the global parameters module
     grid_points = nx
@@ -150,6 +151,8 @@ contains
 
       write(namelist_str, nml=outflow_parameters)
       call add_text_attribute(file_id_out,'outflow_parameters',trim(namelist_str))
+
+      call add_text_attribute(file_id_out,'File creation',trim(time_str))
 
       ! Creates log group
       call message('Creating groups', info=3)

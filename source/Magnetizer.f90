@@ -34,12 +34,13 @@ program magnetizer
   logical :: lsingle_galaxy_mode = .false.
   logical :: start_galaxy = .false.
   logical :: lresuming_run = .false.
-  character(len=8) :: date
+  character(len=100) :: date
   double precision :: tstart,tfinish
   integer :: rank, nproc, ierr, rc, ncycles, flush_signal
   integer, parameter :: finished_tag = 0
   integer, parameter :: newjob_tag = 17
   integer, dimension(MPI_STATUS_SIZE) :: status
+  integer,dimension(8) :: time_vals
 
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -128,8 +129,21 @@ program magnetizer
     call MPI_Bcast(lresuming_run, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
   endif
 
+
+  if (rank==master_rank) then
+    call date_and_time(values=time_vals)
+    ! Displays date in the format yyyy-mm-dd  hh-mm-ss timezone
+    date = str(time_vals(1))//'-'//str(time_vals(2))//'-'//str(time_vals(3)) &
+                          //'  '//str(time_vals(5))//':'//str(time_vals(6))&
+                          //' (UTC'//str(time_vals(4))//')'
+  endif
+  ! It is probably a good idea to sync, to avoid different nodes having
+  ! slightly different times, for any reason (the attribute creation is
+  ! collective, anyway).
+  call MPI_Bcast(date, len_trim(date), MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
+
   ! Initializes IO (this also reads ngals from the hdf5 input file)
-  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL, lresuming_run)
+  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL, lresuming_run, date)
 
   ! Allocates a arrays to for logging
   nmygals = 0

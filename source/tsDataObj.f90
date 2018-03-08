@@ -21,11 +21,13 @@ module tsDataObj
   contains
     procedure :: reset => reset_ts_arrays
     procedure :: get => get_ts_values
+    procedure :: get_scalar => get_ts_values_scalar
+    procedure :: get_it => get_ts_single_value
     procedure :: get_ts => get_ts_array
     procedure :: is_scalar => is_ts_scalar
-    procedure :: set => set_ts_full
-    procedure :: set_value => set_ts_single
-    procedure :: set_value_scalar => set_ts_single_scalar
+    procedure :: set_full => set_ts_full
+    procedure :: set => set_ts_single
+    procedure :: set_scalar => set_ts_single_scalar
   end type tsData
 
   interface tsData
@@ -74,6 +76,8 @@ contains
         return
       endif
     enddo
+    ! If nothing is found, initializes the pointer to null
+    nullify(ts)
   end function get_ts_array
 
 
@@ -81,14 +85,44 @@ contains
     class(tsData), intent(in) :: self
     character(len=*), intent(in) :: name
     double precision, dimension(:,:), allocatable :: values
-    type(ts_array) :: ts
+    type(ts_array), pointer :: ts
     integer, dimension(2) :: dshape
 
-    ts = self%get_ts(name)
+    ts => self%get_ts(name)
     dshape = shape(ts%value)
     allocate(values(dshape(1),dshape(2)))
     values = ts%value
   end function get_ts_values
+
+
+  function get_ts_values_scalar(self, name) result(values)
+    class(tsData), intent(in) :: self
+    character(len=*), intent(in) :: name
+    double precision, dimension(:), allocatable :: values
+    type(ts_array), pointer :: ts
+    integer, dimension(2) :: dshape
+
+    ts => self%get_ts(name)
+    dshape = shape(ts%value)
+    allocate(values(dshape(1)))
+    values = ts%value(:,1)
+  end function get_ts_values_scalar
+
+
+  function get_ts_single_value(self, name, it) result(values)
+    class(tsData), intent(in) :: self
+    character(len=*), intent(in) :: name
+    type(ts_array), pointer :: ts
+    double precision, dimension(:), allocatable :: values
+    integer :: it
+    integer, dimension(2) :: dshape
+
+
+    ts => self%get_ts(name)
+    dshape = shape(ts%value)
+    allocate(values(dshape(2)))
+    values = ts%value(it,:)
+  end function get_ts_single_value
 
 
   subroutine set_ts_full(self, name, vals)
@@ -128,9 +162,9 @@ contains
   logical function is_ts_scalar(self, name)
     class(tsData), intent(in) :: self
     character(len=*), intent(in) :: name
-    type(ts_array) :: ts
+    type(ts_array), pointer :: ts
 
-    ts = self%get_ts(name)
+    ts => self%get_ts(name)
     is_ts_scalar = ts%scalar
   end function is_ts_scalar
 

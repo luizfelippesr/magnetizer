@@ -21,57 +21,56 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
   use var
   use grid
   use input_params
-
+  use tsDataObj
   implicit none
   private
 
   public make_ts_arrays, reset_ts_arrays
 
   double precision, parameter :: INVALID = -99999d0
-  double precision, allocatable, dimension(:), public :: ts_t_Gyr
+
+  character(len=15), dimension(5),parameter :: scalar_names = [         &
+                                                 't_Gyr         ', &
+                                                 'dt            ', &
+                                                 'rmax          ', &
+                                                 'Bmax          ', &
+                                                 'Bmax_idx      ']
+  character(len=15), dimension(28), parameter :: profile_names = [     &
+                                                 'Br           ', &
+                                                 'Bp           ', &
+                                                 'alp_m        ', &
+                                                 'Bzmod        ', &
+                                                 'h            ', &
+                                                 'om           ', &
+                                                 'Om_b         ', &
+                                                 'Om_d         ', &
+                                                 'Om_h         ', &
+                                                 'G            ', &
+                                                 'l            ', &
+                                                 'v            ', &
+                                                 'etat         ', &
+                                                 'tau          ', &
+                                                 'alp_k        ', &
+                                                 'alp          ', &
+                                                 'Uz           ', &
+                                                 'Ur           ', &
+                                                 'n            ', &
+                                                 'Beq          ', &
+                                                 'rkpc         ', &
+                                                 'P            ', &
+                                                 'Pd           ', &
+                                                 'Pm           ', &
+                                                 'Pstars       ', &
+                                                 'Pbulge       ', &
+                                                 'Pdm          ', &
+                                                 'P2           ']
+
   character, allocatable, dimension(:),public :: ts_status_code
-  double precision, allocatable, dimension(:), public :: ts_Dt
-  double precision, allocatable, dimension(:), public :: ts_rmax
-  double precision, allocatable, dimension(:), public :: ts_Bmax
-  double precision, allocatable, dimension(:), public :: ts_Bmax_idx
-  double precision, allocatable, dimension(:,:),public :: ts_Br
-  double precision, allocatable, dimension(:,:),public :: ts_Bp
-  double precision, allocatable, dimension(:,:),public :: ts_alp_m
-  double precision, allocatable, dimension(:,:),public :: ts_Bzmod
-  double precision, allocatable, dimension(:,:),public :: ts_h
-  double precision, allocatable, dimension(:,:),public :: ts_om
-  double precision, allocatable, dimension(:,:),public :: ts_om_b
-  double precision, allocatable, dimension(:,:),public :: ts_om_d
-  double precision, allocatable, dimension(:,:),public :: ts_om_h
-  double precision, allocatable, dimension(:,:),public :: ts_G
-  double precision, allocatable, dimension(:,:),public :: ts_l
-  double precision, allocatable, dimension(:,:),public :: ts_v
-  double precision, allocatable, dimension(:,:),public :: ts_etat
-  double precision, allocatable, dimension(:,:),public :: ts_tau
-  double precision, allocatable, dimension(:,:),public :: ts_alp_k
-  double precision, allocatable, dimension(:,:),public :: ts_alp
-  double precision, allocatable, dimension(:,:),public :: ts_Uz
-  double precision, allocatable, dimension(:,:),public :: ts_Ur
-  double precision, allocatable, dimension(:,:),public :: ts_n
-  double precision, allocatable, dimension(:,:),public :: ts_Beq
-  double precision, allocatable, dimension(:,:),public :: ts_rkpc
 
-  double precision, allocatable, dimension(:,:),public :: ts_P, ts_Pd
-  double precision, allocatable, dimension(:,:),public :: ts_Pm, ts_Pstars
-  double precision, allocatable, dimension(:,:),public :: ts_Pbulge, ts_Pdm
-  double precision, allocatable, dimension(:,:),public :: ts_P2
-
-  ! The following would be much better than this multitude of public arrays:
-  type ts_array
-    character(len=10) :: name
-    logical :: output
-    logical :: scalar
-    double precision, allocatable, dimension(:,:) :: value
-  end type
-
-  type(ts_array), dimension(:), allocatable, public :: ts_data
+  type(tsData), public :: ts_data
 
 contains
+
   subroutine make_ts_arrays(it,this_t,f,Bzmod,alp)
     ! Saves the results of simulation (obtained for a particular snapshot it)
     ! to arrays, i.e. stores the time evolution (over snapshots) of the run
@@ -87,308 +86,102 @@ contains
     double precision, dimension(:), intent(in) :: Bzmod
     double precision, dimension(:), intent(in) :: alp
     double precision, dimension(p_nx_ref) :: Btot
-    double precision, dimension(p_nx_ref) :: rtmp
+    double precision, dimension(p_nx_ref) :: tmp
     integer :: Bmax_idx
+    integer :: max_outputs
 
+    ! Initializes the ts_data object if necessary
+    if (.not.ts_data%initialized) then
+      if (.not. p_oneSnaphotDebugMode) then
+        ! Default mode: only times corresponding to snapshots are included
+        ! in the output.
+        max_outputs = n1 ! Gets it from the global variables
+      else
+        ! In the oneSnaphotDebugMode, all timesteps are included in the output
+        ! but only one galform output is used.
+        max_outputs = nsteps+1
+      endif
+      ts_data = tsData(scalar_names, profile_names, max_outputs, p_nx_ref)
 
-    if (.not.allocated(ts_t_Gyr)) call allocate_ts_arrays()
-    if (size(ts_t_Gyr)<it) call reallocate_ts_arrays()
+      allocate(ts_status_code(max_outputs))
+      ! Initializes the time series
+      ts_status_code = '-'
+      ! Marks all the possible redshifts with 'not run' code
+      ! (but only if init_it had been previously initialized)
+      if (init_it>0) ts_status_code(init_it:max_it) = '0'
+    endif
 
-    ts_t_Gyr(it) = this_t
     ts_status_code(it) = status_code
 
-    ts_Dt(it) = t*t0_Gyr
+    call ts_data%set_scalar('dt', it, t*t0_Gyr)
 
     ! Reads and stores the magnetic field
-    call rescale_array(f(nxghost+1:nx-nxghost,1), ts_Br(it,:))
-    call rescale_array(f(nxghost+1:nx-nxghost,2), ts_Bp(it,:))
-    call rescale_array(Bzmod(nxghost+1:nx-nxghost), ts_Bzmod(it,:))
+    call rescale_array(f(nxghost+1:nx-nxghost,1), tmp); call ts_data%set('Br', it, tmp)
+    call rescale_array(f(nxghost+1:nx-nxghost,2), tmp); call ts_data%set('Bp', it, tmp)
+    call rescale_array(Bzmod(nxghost+1:nx-nxghost), tmp); call ts_data%set('Bzmod', it, tmp)
 
     if (Dyn_quench) then
       if (.not.Damp) then
-        call rescale_array(f(nxghost+1:nx-nxghost,3), ts_alp_m(it,:))
+        call rescale_array(f(nxghost+1:nx-nxghost,3), tmp); call ts_data%set('alp_m', it, tmp)
       else
-        call rescale_array(f(nxghost+1:nx-nxghost,7), ts_alp_m(it,:))
+        call rescale_array(f(nxghost+1:nx-nxghost,7), tmp); call ts_data%set('alp_m', it, tmp)
       endif
     endif
-    call rescale_array(h(nxghost+1:nx-nxghost), ts_h(it,:))
-    call rescale_array(Om(nxghost+1:nx-nxghost), ts_om(it,:))
-
-
-    call rescale_array(G(nxghost+1:nx-nxghost), ts_G(it,:))
-    call rescale_array(l(nxghost+1:nx-nxghost), ts_l(it,:))
-    call rescale_array(v(nxghost+1:nx-nxghost), ts_v(it,:))
-    call rescale_array(etat(nxghost+1:nx-nxghost), ts_etat(it,:))
-    call rescale_array(tau(nxghost+1:nx-nxghost), ts_tau(it,:))
-    call rescale_array(alp_k(nxghost+1:nx-nxghost), ts_alp_k(it,:))
-    call rescale_array(Uz(nxghost+1:nx-nxghost), ts_Uz(it,:))
-    call rescale_array(Ur(nxghost+1:nx-nxghost), ts_Ur(it,:))
-    call rescale_array(n(nxghost+1:nx-nxghost), ts_n(it,:))
-    call rescale_array(Beq(nxghost+1:nx-nxghost), ts_Beq(it,:))
-    call rescale_array(r_kpc(nxghost+1:nx-nxghost), ts_rkpc(it,:))
+    call rescale_array(h(nxghost+1:nx-nxghost), tmp); call ts_data%set('h', it, tmp)
+    call rescale_array(Om(nxghost+1:nx-nxghost), tmp); call ts_data%set('om', it, tmp)
+    call rescale_array(G(nxghost+1:nx-nxghost), tmp); call ts_data%set('G', it, tmp)
+    call rescale_array(l(nxghost+1:nx-nxghost), tmp); call ts_data%set('l', it, tmp)
+    call rescale_array(v(nxghost+1:nx-nxghost), tmp); call ts_data%set('v', it, tmp)
+    call rescale_array(etat(nxghost+1:nx-nxghost), tmp); call ts_data%set('etat', it, tmp)
+    call rescale_array(tau(nxghost+1:nx-nxghost), tmp); call ts_data%set('tau', it, tmp)
+    call rescale_array(alp_k(nxghost+1:nx-nxghost), tmp); call ts_data%set('alp_k', it, tmp)
+    call rescale_array(Uz(nxghost+1:nx-nxghost), tmp); call ts_data%set('Uz', it, tmp)
+    call rescale_array(Ur(nxghost+1:nx-nxghost), tmp); call ts_data%set('Ur', it, tmp)
+    call rescale_array(n(nxghost+1:nx-nxghost), tmp); call ts_data%set('n', it, tmp)
+    call rescale_array(Beq(nxghost+1:nx-nxghost), tmp); call ts_data%set('Beq', it, tmp)
+    call rescale_array(r_kpc(nxghost+1:nx-nxghost), tmp); call ts_data%set('rkpc', it, tmp)
 
     if (p_extra_rotation_curve_outputs) then
-      call rescale_array(Om_h(nxghost+1:nx-nxghost), ts_Om_h(it,:))
-      call rescale_array(Om_b(nxghost+1:nx-nxghost), ts_Om_b(it,:))
-      call rescale_array(Om_d(nxghost+1:nx-nxghost), ts_Om_d(it,:))
+      call rescale_array(Om_h(nxghost+1:nx-nxghost), tmp); call ts_data%set('Om_h', it, tmp)
+      call rescale_array(Om_b(nxghost+1:nx-nxghost), tmp); call ts_data%set('Om_b', it, tmp)
+      call rescale_array(Om_d(nxghost+1:nx-nxghost), tmp); call ts_data%set('Om_d', it, tmp)
     endif
 
     if (p_extra_pressure_outputs) then
-      call rescale_array(P(nxghost+1:nx-nxghost), ts_P(it,:))
-      call rescale_array(Pd(nxghost+1:nx-nxghost), ts_Pd(it,:))
-      call rescale_array(Pm(nxghost+1:nx-nxghost), ts_Pm(it,:))
-      call rescale_array(Pstars(nxghost+1:nx-nxghost), ts_Pstars(it,:))
-      call rescale_array(Pbulge(nxghost+1:nx-nxghost), ts_Pbulge(it,:))
-      call rescale_array(Pdm(nxghost+1:nx-nxghost), ts_Pdm(it,:))
-      call rescale_array(P2(nxghost+1:nx-nxghost), ts_P2(it,:))
+      call rescale_array(P(nxghost+1:nx-nxghost), tmp); call ts_data%set('P', it, tmp)
+      call rescale_array(Pd(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pd', it, tmp)
+      call rescale_array(Pm(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pm', it, tmp)
+      call rescale_array(Pstars(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pstars', it, tmp)
+      call rescale_array(Pbulge(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pbulge', it, tmp)
+      call rescale_array(Pdm(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pdm', it, tmp)
+      call rescale_array(P2(nxghost+1:nx-nxghost), tmp); call ts_data%set('P2', it, tmp)
     endif
 
     ! For convenience, computes and stores maximum magnetic field value, and the
     ! position of the maximum
-    Btot = (ts_Br(it,:))**2 + (ts_Bp(it,:))**2 + (ts_Bzmod(it,:))**2
+    Btot = (ts_data%get_it('Br',it))**2 +  &
+           (ts_data%get_it('Bp',it))**2 +  &
+           (ts_data%get_it('Bzmod',it))**2
     Btot = sqrt(Btot)
 
     Bmax_idx = maxloc(Btot, 1)
+    call ts_data%set_scalar('Bmax', it, Btot(Bmax_idx))
+    tmp = ts_data%get_it('rkpc',it)
+    call ts_data%set_scalar('rmax', it, tmp(Bmax_idx))
+    ! Later, everything should be updated to accept integer datasets
+    call ts_data%set_scalar('Bmax_idx', it, dfloat(Bmax_idx))
 
-    ts_Bmax(it) = Btot(Bmax_idx)
-    ts_rmax(it) = ts_rkpc(it,Bmax_idx)
-    ts_Bmax_idx(it) = Bmax_idx
     ! alp is computed in the gutsdynamo module (annoyingly differently from
     ! anything else). Therefore, one needs to be careful. This is a good
     ! candidate for some code refactoring.
     if (status_code == 'M' .or. status_code == 'm') &
-        call rescale_array(alp(nxghost+1:nx-nxghost), ts_alp(it,:))
+        call rescale_array(alp(nxghost+1:nx-nxghost), tmp); call ts_data%set('alp', it, tmp)
 
   end subroutine make_ts_arrays
 
-  subroutine allocate_ts_arrays()
-    ! Initial allocation / initialization
-    implicit none
-    integer :: max_outputs
-    if (.not. p_oneSnaphotDebugMode) then
-      ! Default mode: only times corresponding to snapshots are included
-      ! in the output.
-      max_outputs = n1 ! Gets it from the global variables
-    else
-      ! In the oneSnaphotDebugMode, all timesteps are included in the output
-      ! but only one galform output is used.
-      max_outputs = nsteps+1
-    endif
-
-    allocate(ts_t_Gyr(max_outputs))
-    ts_t_Gyr = INVALID
-    allocate(ts_status_code(max_outputs))
-
-    ! Initializes the time series
-    ts_status_code = '-'
-    ! Marks all the possible redshifts with 'not run' code
-    ! (but only if init_it had been previously initialized)
-    if (init_it>0) ts_status_code(init_it:max_it) = '0'
-
-    allocate(ts_Dt(max_outputs))
-    ts_Dt = INVALID
-    allocate(ts_rmax(max_outputs))
-    ts_rmax = INVALID
-    allocate(ts_Bmax(max_outputs))
-    ts_Bmax = INVALID
-    allocate(ts_Bmax_idx(max_outputs))
-    ts_Bmax_idx = INVALID
-    allocate(ts_Br(max_outputs,p_nx_ref))
-    ts_Br = INVALID
-    allocate(ts_Bp(max_outputs,p_nx_ref))
-    ts_Bp = INVALID
-    allocate(ts_alp_m(max_outputs,p_nx_ref))
-    ts_alp_m = INVALID
-    allocate(ts_h(max_outputs,p_nx_ref))
-    ts_h = INVALID
-    allocate(ts_om(max_outputs,p_nx_ref))
-    ts_om = INVALID
-
-    allocate(ts_G(max_outputs,p_nx_ref))
-    ts_G = INVALID
-    allocate(ts_l(max_outputs,p_nx_ref))
-    ts_l = INVALID
-    allocate(ts_v(max_outputs,p_nx_ref))
-    ts_v = INVALID
-    allocate(ts_etat(max_outputs,p_nx_ref))
-    ts_etat = INVALID
-    allocate(ts_tau(max_outputs,p_nx_ref))
-    ts_tau = INVALID
-    allocate(ts_alp_k(max_outputs,p_nx_ref))
-    ts_alp_k = INVALID
-    allocate(ts_alp(max_outputs,p_nx_ref))
-    ts_alp = INVALID
-    allocate(ts_Uz(max_outputs,p_nx_ref))
-    ts_Uz = INVALID
-    allocate(ts_Ur(max_outputs,p_nx_ref))
-    ts_Ur = INVALID
-    allocate(ts_n(max_outputs,p_nx_ref))
-    ts_n = INVALID
-    allocate(ts_Beq(max_outputs,p_nx_ref))
-    ts_Beq = INVALID
-    allocate(ts_Bzmod(max_outputs,p_nx_ref))
-    ts_Bzmod = INVALID
-    allocate(ts_rkpc(max_outputs,p_nx_ref))
-    ts_rkpc = INVALID
-
-    if (p_extra_rotation_curve_outputs) then
-      allocate(ts_om_h(max_outputs,p_nx_ref))
-      ts_om_h = INVALID
-      allocate(ts_om_d(max_outputs,p_nx_ref))
-      ts_om_d = INVALID
-      allocate(ts_om_b(max_outputs,p_nx_ref))
-      ts_om_b = INVALID
-    endif
-
-    if (p_extra_pressure_outputs) then
-      allocate(ts_P(max_outputs,p_nx_ref))
-      ts_P = INVALID
-      allocate(ts_Pd(max_outputs,p_nx_ref))
-      ts_Pd = INVALID
-      allocate(ts_Pm(max_outputs,p_nx_ref))
-      ts_Pm = INVALID
-      allocate(ts_Pstars(max_outputs,p_nx_ref))
-      ts_Pstars = INVALID
-      allocate(ts_Pbulge(max_outputs,p_nx_ref))
-      ts_Pbulge = INVALID
-      allocate(ts_Pdm(max_outputs,p_nx_ref))
-      ts_Pdm = INVALID
-      allocate(ts_P2(max_outputs,p_nx_ref))
-      ts_P2 = INVALID
-    endif
-
-
-
-  end subroutine allocate_ts_arrays
-
   subroutine reset_ts_arrays()
-    implicit none
-
-    ! Resets the time series arrays
-    if (allocated(ts_t_Gyr)) then
-      deallocate(ts_t_Gyr)
-      deallocate(ts_status_code)
-      deallocate(ts_Dt)
-      deallocate(ts_rmax)
-      deallocate(ts_Bmax)
-      deallocate(ts_Bmax_idx)
-      deallocate(ts_Br)
-      deallocate(ts_Bp)
-      deallocate(ts_alp_m)
-      deallocate(ts_h)
-      deallocate(ts_om)
-
-      if (p_extra_rotation_curve_outputs) then
-        deallocate(ts_om_h)
-        deallocate(ts_om_d)
-        deallocate(ts_om_b)
-      endif
-
-
-      if (p_extra_pressure_outputs) then
-        deallocate(ts_P)
-        deallocate(ts_Pd)
-        deallocate(ts_Pm)
-        deallocate(ts_Pstars)
-        deallocate(ts_Pbulge)
-        deallocate(ts_Pdm)
-        deallocate(ts_P2)
-      endif
-
-      deallocate(ts_G)
-      deallocate(ts_l)
-      deallocate(ts_v)
-      deallocate(ts_etat)
-      deallocate(ts_tau)
-      deallocate(ts_alp_k)
-      deallocate(ts_alp)
-      deallocate(ts_Uz)
-      deallocate(ts_Ur)
-      deallocate(ts_n)
-      deallocate(ts_Beq)
-      deallocate(ts_Bzmod)
-      deallocate(ts_rkpc)
-    endif
+    call ts_data%reset()
+    ts_status_code = '-'
   end subroutine reset_ts_arrays
 
-  subroutine extend_array_vec(ar, length)
-    implicit none
-    double precision, allocatable, dimension(:,:), intent(inout) :: ar
-    double precision, allocatable, dimension(:,:) :: tmp
-    integer, dimension(2) :: new_shape, old_shape
-    integer, optional, intent(in) :: length
-    integer :: how_long
-
-    if (present(length)) then
-      how_long = length
-    else
-      how_long = 10
-    endif
-
-    old_shape = shape(ar)
-    new_shape = old_shape
-    new_shape(1) = new_shape(1)+how_long
-
-    ! Allocates tmp, moves a there
-    call move_alloc(ar, tmp)
-    allocate(ar(new_shape(1),new_shape(2)))
-    ar = INVALID
-    ar(:old_shape(1), :) = tmp
-    deallocate(tmp)
-  end subroutine extend_array_vec
-
-  subroutine extend_array_sca(ar, length)
-    implicit none
-    double precision, allocatable, dimension(:), intent(inout) :: ar
-    double precision, allocatable, dimension(:) :: tmp
-    integer :: new_shape, old_shape
-    integer, optional, intent(in) :: length
-    integer :: how_long
-
-    if (present(length)) then
-      how_long = length
-    else
-      how_long = 1
-    endif
-
-    old_shape = size(ar)
-    new_shape = old_shape+how_long
-
-    ! Allocates tmp, moves a there
-    call move_alloc(ar, tmp)
-    allocate(ar(new_shape))
-    ar = INVALID
-    ar(:old_shape) = tmp
-    deallocate(tmp)
-  end subroutine extend_array_sca
-
-  subroutine reallocate_ts_arrays()
-    implicit none
-    ! Moves each ts_array to a temporary place, allocates more space, move the data back.
-    ! (There must be a shorter way of writing this!)
-
-    call extend_array_sca(ts_Dt)
-    call extend_array_sca(ts_rmax)
-    call extend_array_sca(ts_Bmax)
-    call extend_array_sca(ts_Bmax_idx)
-    ! Vectors
-    call extend_array_vec(ts_Br)
-    call extend_array_vec(ts_Bp)
-    call extend_array_vec(ts_alp_m)
-    call extend_array_vec(ts_h)
-    call extend_array_vec(ts_om)
-    call extend_array_vec(ts_G)
-    call extend_array_vec(ts_l)
-    call extend_array_vec(ts_v)
-    call extend_array_vec(ts_etat)
-    call extend_array_vec(ts_tau)
-    call extend_array_vec(ts_alp_k)
-    call extend_array_vec(ts_alp)
-    call extend_array_vec(ts_Uz)
-    call extend_array_vec(ts_Ur)
-    call extend_array_vec(ts_n)
-    call extend_array_vec(ts_Beq)
-    call extend_array_vec(ts_Bzmod)
-    call extend_array_vec(ts_rkpc)
-  end subroutine reallocate_ts_arrays
 end module ts_arrays

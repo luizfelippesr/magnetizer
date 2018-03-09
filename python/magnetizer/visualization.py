@@ -200,7 +200,7 @@ def plot_input(ts, quantity, name='', zs=None, ax=None, **args):
     if name in quantities_dict:
         name = quantities_dict[name]
 
-    ax.set_xlim([0.0, ts.max()])
+    ax.set_xlim([0.0, ts.value.max()])
     ax.set_xlabel(r'$t\,[\rm Gyr]$')
     ax.set_ylabel(r'$ {0} {1} $'.format(name,unit))
     ax.grid(alpha=0.2)
@@ -281,8 +281,8 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
     fig.tight_layout()
     fig.subplots_adjust(top=0.95, bottom=0.15)
     # Prepares colorbar
-    norm = matplotlib.colors.Normalize(vmin=run_obj.times.min(),
-                                       vmax=run_obj.times.max())
+    norm = matplotlib.colors.Normalize(vmin=run_obj.times.value.min(),
+                                       vmax=run_obj.times.value.max())
     ax = fig.add_axes([.065, .04, .9, .01])
     cbar = matplotlib.colorbar.ColorbarBase(ax, cmap=plt.cm.viridis, norm=norm,
                                     orientation='horizontal')
@@ -298,7 +298,7 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
 
 
     cax2 = ax.twiny()
-    cax2.set_xlim(run_obj.times.min(),run_obj.times.max())
+    cax2.set_xlim(run_obj.times.value.min(),run_obj.times.value.max())
     cax2.set_xticks(ticks)
     cax2.set_xticklabels(zlabels)
     cax2.set_xlabel("$z$")

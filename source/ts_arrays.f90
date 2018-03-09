@@ -151,7 +151,7 @@ contains
     call rescale_array(Om_b(nxghost+1:nx-nxghost), tmp); call ts_data%set('Omega_b', it, tmp)
     call rescale_array(Om_d(nxghost+1:nx-nxghost), tmp); call ts_data%set('Omega_d', it, tmp)
 
-    if (ts_data%output('P')) then
+    if (p_extra_pressure_outputs) then
       call rescale_array(P(nxghost+1:nx-nxghost), tmp); call ts_data%set('P', it, tmp)
       call rescale_array(Pd(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pd', it, tmp)
       call rescale_array(Pm(nxghost+1:nx-nxghost), tmp); call ts_data%set('Pm', it, tmp)

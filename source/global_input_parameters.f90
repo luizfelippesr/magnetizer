@@ -62,7 +62,7 @@ module global_input_parameters
     p_IO_chunking, p_IO_number_of_galaxies_in_chunks, p_IO_compression, &
     p_IO_compression_level, &
     p_master_works_too, p_master_skip, p_ncheckpoint, &
-    output_quantities_list
+    output_quantities_list, output_everything
 
   ! -------------------------------------------------------
   ! Run settings and timestepping parameters

@@ -189,35 +189,36 @@ contains
                           description='Angular velocity of the disc' &
                           // ' (no regularization).')
 
-
-    if (ts_data%output('P')) &
-      call IO_write_dataset('P', gal_id, ts_data%get('P'), units='erg cm^-3', &
-                            description='Pressure in the midplane.')
-    if (ts_data%output('Pd')) &
-      call IO_write_dataset('Pd', gal_id, ts_data%get('Pd'), units='erg cm^-3',           &
-                            description='Contribution of the gravity of the ' &
-                            // 'diffuse gas to the pressure in the midplane')
-    if (ts_data%output('Pm')) &
-      call IO_write_dataset('Pm', gal_id, ts_data%get('Pm'), units='erg cm^-3',           &
-                            description='Contribution of the gravity of the ' &
-                            // 'molecular gas to the pressure in the midplane')
-    if (ts_data%output('Pstars')) &
-      call IO_write_dataset('Pstars', gal_id, ts_data%get('Pstars'), units='erg cm^-3',   &
-                            description='Contribution of the gravity of the ' &
-                            // 'stars to the pressure in the midplane')
-    if (ts_data%output('Pbulge')) &
-      call IO_write_dataset('Pbulge', gal_id, ts_data%get('Pbulge'), units='erg cm^-3',   &
-                            description='Contribution of the gravity of the ' &
-                            // 'stellar bulge to the pressure in the midplane')
-    if (ts_data%output('Pdm')) &
-      call IO_write_dataset('Pdm', gal_id, ts_data%get('Pdm'), units='erg cm^-3',            &
-                            description='Contribution of the gravity of the '    &
-                            // 'dark matter halo to the pressure in the midplane')
-    if (ts_data%output('P2')) &
-      call IO_write_dataset('P2', gal_id, ts_data%get('P2'), units='erg cm^-3',  &
-                            description='Correction to the pressure ' &
-                            // ' contribution associated with the fact that ' &
-                            // 'the disc is not perfectly thin')
+    if (p_extra_pressure_outputs) then
+      if (ts_data%output('P')) &
+        call IO_write_dataset('P', gal_id, ts_data%get('P'), units='erg cm^-3', &
+                              description='Pressure in the midplane.')
+      if (ts_data%output('Pd')) &
+        call IO_write_dataset('Pd', gal_id, ts_data%get('Pd'), units='erg cm^-3',           &
+                              description='Contribution of the gravity of the ' &
+                              // 'diffuse gas to the pressure in the midplane')
+      if (ts_data%output('Pm')) &
+        call IO_write_dataset('Pm', gal_id, ts_data%get('Pm'), units='erg cm^-3',           &
+                              description='Contribution of the gravity of the ' &
+                              // 'molecular gas to the pressure in the midplane')
+      if (ts_data%output('Pstars')) &
+        call IO_write_dataset('Pstars', gal_id, ts_data%get('Pstars'), units='erg cm^-3',   &
+                              description='Contribution of the gravity of the ' &
+                              // 'stars to the pressure in the midplane')
+      if (ts_data%output('Pbulge')) &
+        call IO_write_dataset('Pbulge', gal_id, ts_data%get('Pbulge'), units='erg cm^-3',   &
+                              description='Contribution of the gravity of the ' &
+                              // 'stellar bulge to the pressure in the midplane')
+      if (ts_data%output('Pdm')) &
+        call IO_write_dataset('Pdm', gal_id, ts_data%get('Pdm'), units='erg cm^-3',            &
+                              description='Contribution of the gravity of the '    &
+                              // 'dark matter halo to the pressure in the midplane')
+      if (ts_data%output('P2')) &
+        call IO_write_dataset('P2', gal_id, ts_data%get('P2'), units='erg cm^-3',  &
+                              description='Correction to the pressure ' &
+                              // ' contribution associated with the fact that ' &
+                              // 'the disc is not perfectly thin')
+    endif
 
     call IO_finish_galaxy(gal_id)
 

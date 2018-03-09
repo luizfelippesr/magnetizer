@@ -50,7 +50,11 @@ contains
     allocate(new_tsData%data(nscalars+nprofiles))
     do i=1,nscalars
       new_tsData%data(i)%scalar = .true.
-      if (present(output)) new_tsData%data(i)%output = is_in_list(scalars(i),output)
+      if (present(output)) then
+        new_tsData%data(i)%output = is_in_list(scalars(i),output)
+      else
+        new_tsData%data(i)%output = .true. ! Default behaviour: output all
+      endif
       new_tsData%data(i)%name = scalars(i)
       allocate(new_tsData%data(i)%value(nz,1))
       new_tsData%data(i)%value = INVALID
@@ -60,7 +64,11 @@ contains
       j = i + nscalars
       new_tsData%data(j)%scalar = .false.
       new_tsData%data(j)%name = profiles(i)
-      if (present(output)) new_tsData%data(j)%output = is_in_list(profiles(i),output)
+      if (present(output)) then
+        new_tsData%data(j)%output = is_in_list(profiles(i),output)
+      else
+        new_tsData%data(j)%output = .true.
+      endif
       allocate(new_tsData%data(j)%value(nz, nx))
       new_tsData%data(j)%value = INVALID
     enddo

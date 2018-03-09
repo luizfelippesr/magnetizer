@@ -58,8 +58,8 @@ if __name__ == "__main__"  :
                   for m1,m2 in zip(bins_list[:-1],bins_list[1:])]
 
     magnetizer_run = magnetizer.MagnetizerRun(
-                                      input_file_path=args.magnetizer_input,
-                                      output_file_path=args.MAGNETIZER_OUTPUT)
+                                      input_path=args.magnetizer_input,
+                                      output_path=args.MAGNETIZER_OUTPUT)
 
     binning = magnetizer.MassBinningObject(magnetizer_run, z=0.0,
                                            bins=mass_bins*u.Msun)

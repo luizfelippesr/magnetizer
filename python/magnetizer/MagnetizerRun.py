@@ -131,8 +131,8 @@ class MagnetizerRun(object):
             self.ivol.append(ivol)
 
             if 'sample_z' in data_dict: # Backwards compatibility
-                self.gal_id_orig.append(data_dict['IDs'])
-                self.sample_z.append(data_dict['sample_z'])
+                self.gal_id_orig.append(data_dict['IDs'][completed])
+                self.sample_z.append(data_dict['sample_z'][completed])
 
         for name in ('gal_id','ivol'):
             # Concatenates list attributes

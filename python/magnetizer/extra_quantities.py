@@ -23,6 +23,7 @@ from numpy import pi, arctan, sqrt
 import numpy as np
 import re
 import astropy.units as u
+import astropy.constants as const
 
 
 def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
@@ -152,6 +153,17 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
 
     elif qname == r'D_Dc':
         quantity = get('D')/get('Dc')
+
+    elif qname == r'Beq':
+        n = get('n')*const.m_p
+        v  = mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
+        v *= mag_run.parameters.ISM_and_disk['P_ISM_KAPPA']
+        v *= u.km/u.s
+
+        cgs_gauss = u.cm**-0.5 * u.g**0.5 /u.s
+
+        quantity = np.sqrt(4*pi*n) * v
+        quantity = quantity.cgs / cgs_gauss * 1e6*u.microgauss
 
     elif qname == r'Bfloor':
         r = get('r')

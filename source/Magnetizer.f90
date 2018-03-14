@@ -26,6 +26,7 @@ program magnetizer
   implicit none
 
   integer :: igal, nmygals, igal_first, igal_last, igal_finished
+  integer :: info_mpi
   integer, parameter :: master_rank = 0
   integer, allocatable, dimension(:) :: mygals, allgals
   character(len=100) :: command_argument
@@ -142,9 +143,13 @@ program magnetizer
   ! collective, anyway).
   call MPI_Bcast(date, len_trim(date), MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
 
-  ! Initializes IO (this also reads ngals from the hdf5 input file)
-  call IO_start(MPI_COMM_WORLD, MPI_INFO_NULL, lresuming_run, date)
+  ! Avoids MPI errors
+  call MPI_Info_create(info_mpi, IERR)
+  call MPI_Info_set(info_mpi, "romio_ds_write", "disable", ierr)
+  call MPI_Info_set(info_mpi, "romio_ds_read", "disable", ierr)
 
+  ! Initializes IO (this also reads ngals from the hdf5 input file)
+  call IO_start(MPI_COMM_WORLD, info_mpi, lresuming_run, date)
   ! Allocates a arrays to for logging
   nmygals = 0
   allocate(mygals(ngals*nproc))

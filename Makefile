@@ -6,18 +6,10 @@ builddir=build
 _OBJ= tsDataObj.o bessel_functions.o root_finder.o constants.o grid.o floor_field.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o IO_hdf5.o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o seed_field.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
-# Special configurations
-ifeq ($(HOSTNAME),topsy-login-1-0.local)
-	FCFLAGS_special= -fintrinsic-modules-path /share/apps/fgsl/fgsl-1.0.0/include/fgsl -I/share/apps/fgsl/fgsl-1.0.0/include/fgsl
-endif
-
-FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/ ${FCFLAGS_special} -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
+FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl  -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
 FCFLAGS_TEST=-g -Wall
-FCFLAGS_PROD=-O2 -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-loop-vectorize -ftree-loop-distribution -ftree-loop-distribute-patterns -ftree-slp-vectorize -fvect-cost-model -fpeel-loops -fipa-cp-clone
-# The difference between the long list of arguments above and -O3 is -finline-functions
-# option, which at the moment (Nov/2017) leads to problems in some Newcastle machines
-
+FCFLAGS_PROD=-O3
 
 help:
 	@echo '---------------------'

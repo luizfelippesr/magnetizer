@@ -9,7 +9,20 @@ OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 FCFLAGS+=-I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -lfgsl -lgsl -lgslcblas -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
 FCFLAGS_TEST=-g -Wall
-FCFLAGS_PROD=-O3
+FCFLAGS_PROD=-O2 \
+-funswitch-loops \
+-fpredictive-commoning \
+-fgcse-after-reload \
+-ftree-loop-vectorize \
+-ftree-loop-distribution \
+-ftree-loop-distribute-patterns \
+-floop-interchange \
+-fsplit-paths \
+-ftree-slp-vectorize \
+-fvect-cost-model \
+-ftree-partial-pre \
+-fpeel-loops \
+-fipa-cp-clone
 
 help:
 	@echo '---------------------'

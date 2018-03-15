@@ -110,13 +110,14 @@ class MagnetizerRun(object):
         self.name = self.parameters.name
         self._z_tolerance = z_tolerance
 
-        self.ngals, self.ngrid, self.nz = self._data[0]['h'].shape
+        self.ngrid, self.nz = self._data[0]['h'].shape[1:]
 
         self.gal_id = []
         self.gal_id_orig = []
         self.sample_z = []
         self.ivol = []
         self._completed = []
+
         for i, data_dict in enumerate(self._data):
             # Creates a masks for finished runs
             completed = data_dict['completed'][:]>0.
@@ -144,6 +145,9 @@ class MagnetizerRun(object):
                 # Concatenates list attributes
                 attrlist = getattr(self, name)
                 setattr(self,name, np.concatenate(attrlist))
+
+        # Convenience
+        self.ngals = self.gal_id.size
 
         # Place-holders used elsewhere
         self._valid = None

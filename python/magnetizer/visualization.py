@@ -31,13 +31,14 @@ from extra_quantities import compute_extra_quantity
 units_dict = {}
 
 default_quantities = [
+                        'V',
                         'Omega',
                         'Shear',
                         'Uz',
-                        'alp',
                         #'etat',
                         'h',
                         'n',
+                        'alp',
                         'Beq',
                         'Bp',
                         'Br',
@@ -86,13 +87,14 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'Mgas_disk': r'M_{{\rm gas,disc}}',
                    'r_disk': r'r_{{\rm disc}}',
                    'Bmax': r'B_{{\rm max}}',
+                   'Bmax_Beq': r'B_{{\rm max}}/B_{{\rm eq}}',
                    'bmax': r'b_{{\rm max}}',
                    'pmax': r'p_{{\rm max}}',
                    'n': r'n',
                    'h': r'h',
                    }
 
-log_quantities = ('Beq','n','h', 'Mstars_disk','Mstars_bulge','Mgas_disk',)
+log_quantities = ('Beq','n','h','Mstars_disk','Mstars_bulge','Mgas_disk')
 
 
 def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
@@ -219,7 +221,8 @@ def plot_mass_summary(igal, ivol, run_obj, ax=None, **kwargs):
     ax.legend(frameon=False, loc='lower right', fontsize=7)
 
 def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
-                     selected_quantities=None, cmap=plt.cm.viridis):
+                     selected_quantities=None, cmap=plt.cm.viridis,
+                     verbose=False):
     """
     Prepares a page o plots
     """
@@ -258,6 +261,8 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
 
     # Plots each of the quantities
     for quantity in selected_quantities:
+        if verbose:
+            print igal, 'Working on ', quantity
         subplot_idx += 1
         if subplot_idx > nrows*ncols:
             break
@@ -309,7 +314,8 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
 def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
                        selected_galaxies=None, selected_ivols=None,
                        galaxies_per_bin=10,
-                       pdf_filename=None, return_figures=False):
+                       pdf_filename=None, return_figures=False,
+                       verbose=False):
     """
     Prepares portfolios of various galaxies for a given Magnetizer run.
     """
@@ -349,7 +355,8 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
     for igal, ivol in zip(selected_galaxies, selected_ivols):
 
         fig = galaxy_portfolio(igal, ivol, run_obj,
-                               selected_quantities=selected_quantities)
+                               selected_quantities=selected_quantities,
+                               verbose=verbose)
 
         if fig is not None:
             if pdf_filename is not None:

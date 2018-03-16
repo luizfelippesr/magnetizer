@@ -272,6 +272,7 @@ class MagnetizerRun(object):
             (if a non-scalar quantity is selected, last axis will correspond to
             different times).
         """
+        reload(eq) # Allows for on-the-fly changes to this module!
 
         key = (quantity, gal_id, ivol)
         data = self._data[ivol]
@@ -304,7 +305,7 @@ class MagnetizerRun(object):
 
 
                 self._galaxies_cache[key] = eq.compute_extra_quantity(quantity,
-                                                            self, gal_id=gal_id)
+                                                self, gal_id=gal_id, ivol=ivol)
 
         return self._galaxies_cache[key]
 

@@ -26,7 +26,7 @@ import astropy.units as u
 import astropy.constants as const
 
 
-def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
+def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0):
     """
     Computes extra Magnetizer quantites.
 
@@ -88,7 +88,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None):
 
     # Makes sure the correct method is used
     if (gal_id is not None) and (z is None) :
-        get = lambda quantity: mag_run.get_galaxy(quantity, gal_id)
+        get = lambda quantity: mag_run.get_galaxy(quantity, gal_id, ivol=ivol)
     elif (gal_id is None) and (z is not None):
         get = lambda quantity, redshift=z: mag_run.get(quantity, redshift)
     else:

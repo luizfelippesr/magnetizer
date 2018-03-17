@@ -39,9 +39,9 @@ default_quantities = [
                         'h',
                         'n',
                         'alp',
-                        'Beq',
-                        'Bp',
                         'Br',
+                        'Bp',
+                        'Beq',
                         'Bzmod',
                         'Btot',
                         'D_Dc',
@@ -97,15 +97,49 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
 log_quantities = ('Beq','n','h','Mstars_disk','Mstars_bulge','Mgas_disk')
 
 
-def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
-        log=False, log0=None, **args):
+def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
+        log=False, log0=None, do_not_plot=False, **args):
+    """
+    Computes a Probability Density Distribution
+
+    Uses scipy's kernel density estimation to compute normalized PDFs of a
+    given array.
+
+    Parameters
+    ----------
+    data : array
+        An array or astropy.units.Quantity object containing some data. In the
+        case of the latter, units are reported in the axes.
+    name : str
+        Name of the quantity whose PDF is being plotted
+    plot_histogram : bool
+        If True, plots an histogram together with the kde, for checking.
+    ax : matplotlib.axes.Axes
+        The axis where the figures should be plotted (typically, a panel in a
+        subplot). If set to None, a new axis is generated.
+    vmin, vmax : float
+        The minimum and maximum values.
+    log : bool
+        Whether the ideia is to plot $PDF(data)$ or $PDF(log_{10}(data))$.
+    log0 : float or str or None
+        Sets the behaviour when using log=True and there is a 0 value in `data`.
+        If None, zero values (and infinite logs) in `data` will be propagated.
+        If set to 'remove', they are removed before further processing.
+        If set to a real number, the 0 is substituted by the number (this is the
+        most convenient for plotting).
+
+    Returns
+    -------
+    x,y : numpy.ndarray
+        Values used for the PDF
+    """
     import scipy.stats as stat
 
-    unit, values = get_formated_units(quantity, return_base=True, clean=log)
+    unit, values = get_formated_units(data, return_base=True, clean=log)
     values = values[np.isfinite(values)]
 
 
-    if ax is None:
+    if ax is None and (not do_not_plot):
         ax = plt.subplot(1,1,1)
 
     if log:
@@ -133,9 +167,10 @@ def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     x = np.linspace(values_min,values_max, 300)
     y = kernel.evaluate(x)
 
-    ax.plot(x,y, **args)
-    if plot_histogram:
-        ax.hist(values, normed=True)
+    if not do_not_plot:
+        ax.plot(x,y, **args)
+        if plot_histogram:
+            ax.hist(values, normed=True)
 
     if name in quantities_dict:
         if not log:
@@ -152,9 +187,10 @@ def PDF(quantity, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     else:
         quantitytxt = name
         ylabel = 'PDF'
-    plt.ylabel(ylabel)
-    plt.xlabel(quantitytxt)
-
+    if not do_not_plot:
+        plt.ylabel(ylabel)
+        plt.xlabel(quantitytxt)
+    return x, y
 
 
 def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
@@ -592,7 +628,10 @@ def prepare_mass_bins_list(mag_run, redshifts,
                            binning_obj=magnetizer.MassBinningObject,
                            **kwargs):
     """
-    Prepares a list of `MassBinningObject`s computed at each redshift.
+    Helper function that prepares a list of `MassBinningObject`s computed at
+    each redshift.
+
+
 
     Parameters
     ----------
@@ -602,16 +641,21 @@ def prepare_mass_bins_list(mag_run, redshifts,
     """
     mass_bins = []
     redshifts = mag_run.redshifts[closest_indices(mag_run.redshifts, redshifts)]
-    for z in redshifts:
+    for i, z in enumerate(redshifts):
         if filter_quantity is None:
             filt = None
         else:
             if filter_threshold is None:
                 raise ValueError
-            if not filter_greater:
-                filt = mag_run.get(filter_quantity, z) > filter_threshold
+            if type(filter_threshold)==type(float) or type(filter_threshold)==type(int):
+                filt = filter_threshold
             else:
-                filt = mag_run.get(filter_quantity, z) < filter_threshold
+                filt = filter_threshold[i]
+
+            if not filter_greater:
+                filt = mag_run.get(filter_quantity, z) > filt
+            else:
+                filt = mag_run.get(filter_quantity, z) < filt
         if fixed_binning_redshift is None:
             bin_obj = binning_obj(mag_run, extra_filter=filt, z=z, **kwargs)
         else:

@@ -647,7 +647,8 @@ def prepare_mass_bins_list(mag_run, redshifts,
         else:
             if filter_threshold is None:
                 raise ValueError
-            if type(filter_threshold)==type(float) or type(filter_threshold)==type(int):
+            if (isinstance(filter_threshold, Quantity) or
+                type(filter_threshold) == type(1.0)) :
                 filt = filter_threshold
             else:
                 filt = filter_threshold[i]

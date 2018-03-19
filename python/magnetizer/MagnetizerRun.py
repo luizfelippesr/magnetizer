@@ -154,7 +154,8 @@ class MagnetizerRun(object):
         self._valid_scalar = None
 
 
-    def get(self, quantity, z, position=None, binning=None):
+    def get(self, quantity, z, position=None, binning=None, cache=True,
+            cache_intermediate=True):
         """
         Loads a given quantity at specified redshift
 
@@ -168,6 +169,11 @@ class MagnetizerRun(object):
             Number of half-mass radii at which the output will be returned.
         binning : BinningObject, optional
             Specifies binning to be applied. See BinningObject
+        cache : bool
+            Caches the requested quantity
+        cache_intermediate : bool
+            Caches intermediate results needed for the computation of the
+            requested quantity.
 
         Returns
         -------
@@ -185,11 +191,16 @@ class MagnetizerRun(object):
         iz = self._closest_redshift_idx(z)
         key = (quantity, iz)
 
+        if cache == False:
+            cache_intermediate = False
+
         # If this quantity at this redshift was not already loaded, load or
         # computes it (and save to the cache)
-        if key not in self._cache:
+        if key in self._cache:
+            result = self._cache[key]
+        else:
             if quantity == 'status':
-                self._cache[key] = status[self._completed, iz]
+                result = status[self._completed, iz]
                 raise NotImplementedError
             elif quantity in self._data[0]:
                 profile = len(self._data[0][quantity].shape)==3
@@ -209,29 +220,31 @@ class MagnetizerRun(object):
                 for i, data_dict in enumerate(self._data):
                       data.append(self._clean(data_dict[quantity],iz,i,profile))
 
-                self._cache[key] = np.concatenate(data)
+                result = np.concatenate(data)
 
                 if unit is not None:
-                    self._cache[key] = self._cache[key]*unit
+                    result = result*unit
             else:
                 if self.verbose:
                     print 'Computing {0} at z={1}'.format(quantity,
                                                           self.redshifts[iz])
 
-                self._cache[key] = eq.compute_extra_quantity(quantity,self,z=z)
-
+                result = eq.compute_extra_quantity(quantity,self,z=z,
+                                                   cache=cache_intermediate)
+            if cache:
+                self._cache[key] = result
 
         if position is None:
             # Returns the cached quantity
-            return_data = self._cache[key]
+            return_data = result
         else:
             # Returns the cached quantity at selected radius
             rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
             target_pos = int(self.ngrid/rmax_rdisc*position)
-            if isinstance(self._cache[key], u.Quantity):
-                return_data = self._cache[key].base[:,target_pos]*self._cache[key].unit
+            if isinstance(result, u.Quantity):
+                return_data = result.base[:,target_pos]*result.unit
             else:
-                return_data = self._cache[key][:,target_pos]
+                return_data = result[:,target_pos]
 
 
         if binning is None:

@@ -26,7 +26,8 @@ import astropy.units as u
 import astropy.constants as const
 
 
-def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0):
+def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
+                           cache=True):
     """
     Computes extra Magnetizer quantites.
 
@@ -72,12 +73,12 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0):
         index of the required galaxy. Having this different from None
         signals that the redshift evolution of a given galaxy should be
         computed
-
     z : float
         target redshift . Having this different from None signals that
         the quantity needs to be computed at this redshift only for a
         range of galaxies.
-
+    cache : bool
+        Caches any intermediate quantities requested for the calculation
 
     Returns
     -------
@@ -90,7 +91,8 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0):
     if (gal_id is not None) and (z is None) :
         get = lambda quantity: mag_run.get_galaxy(quantity, gal_id, ivol=ivol)
     elif (gal_id is None) and (z is not None):
-        get = lambda quantity, redshift=z: mag_run.get(quantity, redshift)
+        get = lambda quantity, redshift=z: mag_run.get(quantity, redshift,
+                                                       cache=cache)
     else:
         raise ValueError, 'Must choose either gal_id or z'
 
@@ -251,6 +253,9 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0):
     elif qname == r'Bmax':
         quantity = get('Btot')
         quantity = __get_profile_max(quantity, gal_id=gal_id, z=z)
+
+    elif qname == r'rmax_rdisk':
+        quantity = get('rmax')/get('r_disk')
 
     elif qname == r'b':
         quantity = get('Beq')

@@ -419,8 +419,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
                             log=True, color='#d95f0e', log0=None,
                             colors = ['#1f78b4','#33a02c','#b2df8a',
                                       '#fb9a99','#fdbf6f','#cab2d6'],
-                            single_panel = False, show_t=False,
-                            **kwargs):
+                            single_panel=False, show_t=False,
+                            cache_intermediate=True, **kwargs):
     """
     Plots the redshift evolution of the 25th, 50th and 85 percentiles of a
     given quantity. This can be a single panel or a set of panels showing
@@ -462,8 +462,10 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         List of colours to use, if in single_panel mode.
     show_t : bool
         Shows an extra x-axis with the time coordinate.
+    cache_intermediate : bool
+        Caches intermediate quantities used in computation of quantity.
+        Default: True
     """
-
 
     single_binning = no_binning = False
 
@@ -499,13 +501,16 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
     unit = ''
     for j, z in enumerate(zs):
         if no_binning:
-            zdata = [mag_run.get(quantity, z=z, position=position),]
+            zdata = [mag_run.get(quantity, z=z, position=position,
+                                 cache_intermediate=cache_intermediate),]
         else:
             if single_binning:
                 zdata = mag_run.get(quantity, z=z, position=position,
+                                    cache_intermediate=cache_intermediate,
                                     binning=bin_objs)
             else:
                 zdata = mag_run.get(quantity, z=z, position=position,
+                                    cache_intermediate=cache_intermediate,
                                     binning=bin_dict[z])
 
         for i in range(nbins):
@@ -586,6 +591,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             else:
                 plt.annotate(masstxt, (keypos[0], keypos[1]))
 
+        ax.tick_params(top=False, right=False)
+        ax_label.tick_params(top=False, right=False)
 
         if zs.size>7:
             redshifts = np.linspace(zs.min(), zs.max(),7)

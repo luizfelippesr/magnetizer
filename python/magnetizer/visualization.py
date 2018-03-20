@@ -557,6 +557,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         if single_panel:
             color = colors[i]
 
+
         plt.plot(zs, p50[i], color=color, **kwargs)
         plt.plot(zs, p15[i], color=color, linestyle=':')
         plt.plot(zs, p85[i], color=color, linestyle=':')
@@ -584,15 +585,14 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
                 #ok = np.isfinite(p50[i])
                 #ypos = (p50[i][ok].max()-p50[i][ok].min())*0.9+p50[i][ok].min()
                 #keypos = (zs.max()*0.3, ypos)
-
+                 ax.tick_params(right=False)
                  ax_label = ax.twinx()
+                 ax_label.tick_params(right=False)
                  plt.setp(ax_label.get_yticklabels(), visible=False)
                  ax_label.set_ylabel(masstxt)
             else:
                 plt.annotate(masstxt, (keypos[0], keypos[1]))
 
-        ax.tick_params(top=False, right=False)
-        ax_label.tick_params(top=False, right=False)
 
         if zs.size>7:
             redshifts = np.linspace(zs.min(), zs.max(),7)

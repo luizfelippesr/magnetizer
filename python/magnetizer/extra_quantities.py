@@ -138,6 +138,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
 
     elif qname == 'h/r':
         quantity = get('h')/get('r')
+        quantity = quantity.cgs
 
     elif qname == r'\tau\Omega':
         quantity = get('tau')*get('Omega')
@@ -256,6 +257,10 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
 
     elif qname == r'rmax_rdisk':
         quantity = get('rmax')/get('r_disk')
+
+    elif qname == r'hmax_rdisk':
+        quantity = get('h_at_Bmax')/get('r_disk')
+        quantity = quantity.cgs
 
     elif qname == r'b':
         quantity = get('Beq')

@@ -35,7 +35,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
     from None - i.e. the extra quantity qname will be computed for a given
     galaxy at various redshifts or for various galaxies at a single redshift.
 
-    Available quantities are:
+    Some of the available quantities are:
     * '|Bp|'/'|Br|'/'|Bz|' - Absolute value of a B component
     * 'Btot' - Total magnetic field strength
     * r'Bmax' - Maximum field strength
@@ -58,9 +58,6 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
     Also, for convenience: any quantity, Q, can be computed at the radius of
     the maximum field strength [i.e. Q(rmax) where B(rmax)=Bmax]
     using 'Q_at_Bmax'.
-
-
-
 
     Parameters
     ----------
@@ -266,6 +263,39 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         quantity = get('Beq')
         quantity *= mag_run.parameters.dynamo['FMAG']
 
+    elif qname == r'Bavg':
+        if z is not None:
+            Btot = get('Btot')
+            r = get('r')
+            # Area weigthed average:
+            # Bavg = sum( B*2*pi*r*dr)/sum(2*pi*r*dr)
+            # Cancelling constant terms
+            # Bavg = sum(B*r)/sum(r)
+            quantity = (Btot*r).sum(axis=1)/r.sum(axis=1) #Sums for each galaxy
+        else:
+            #TODO
+            raise NotImplementedError
+
+    elif qname == r'Beavg':
+        if z is not None:
+            Btot = get('Btot')
+            r = get('r')
+            h = get('h')
+            # Area weigthed average:
+            # Beavg = sqrt( 8pi*sum( B**2/(8pi)*2*pi*r*h*dr)/sum(2*pi*r*h*dr) )
+            # Cancelling constant terms
+            # Beavg = sqrt( sum( B**2*r*h*dr)/sum(r*h*dr) )
+            quantity = (Btot**2*r*h).sum(axis=1)/(r*h).sum(axis=1)
+            quantity = np.sqrt(quantity)
+        else:
+            #TODO
+            raise NotImplementedError
+
+    elif qname == r'Bmax_Beq':
+        Bmax = get('Bmax')
+        Beq = get('Beq_at_Bmax')
+        quantity = Bmax/Beq
+
     elif '_at_Bmax' in qname:
         # Extracts the name of the quantity
         match = re.match(r'(.+)_at_Bmax', qname)
@@ -287,11 +317,6 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         else:
             q = get(qname)
             quantity = np.argmax(q,axis=1)
-
-    elif qname == r'Bmax_Beq':
-        Bmax = get('Bmax')
-        Beq = get('Beq_at_Bmax')
-        quantity = Bmax/Beq
 
     else:
         raise ValueError, qname + ' is unknown.'

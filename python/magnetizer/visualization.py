@@ -420,6 +420,7 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
                             colors = ['#1f78b4','#33a02c','#b2df8a',
                                       '#fb9a99','#fdbf6f','#cab2d6'],
                             single_panel=False, show_t=False,
+                            limits=None,
                             cache_intermediate=True, **kwargs):
     """
     Plots the redshift evolution of the 25th, 50th and 85 percentiles of a
@@ -574,6 +575,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
                                                         unit)
         else:
             quantitytxt = quantity
+        if limits is not None:
+            plt.axis(limits)
 
         plt.ylabel(quantitytxt)
         plt.xlabel('$z$')

@@ -322,6 +322,35 @@ class MagnetizerRun(object):
 
         return self._galaxies_cache[key]
 
+    @property
+    def cache_size(self):
+        size = 0
+        for k in self._cache:
+            size += self._cache[k].nbytes
+
+        for k in self._galaxies_cache:
+            size += self._galaxies_cache[k].nbytes
+
+        return size/1e6 * u.Mbyte
+
+    def reset_galaxy_cache(self, gal_id=None):
+        if gal_id is None:
+            self._galaxies_cache = {}
+        else:
+            keys = self._galaxies_cache.keys()
+            for key in keys:
+                if key[1] == gal_id:
+                    del self._galaxies_cache[key]
+
+    def reset_cache(self, quantity=None, iz=None):
+        if quantity is None:
+            self._cache = {}
+        else:
+            keys = self._cache.keys()
+            for key in keys:
+                if key[0] == quantity:
+                    if iz is None or key == (quantity,iz):
+                        del self._cache[key]
 
     def _clean(self, dataset, iz = slice(None), ivol=0, profile=True,
                pre_selected_z=False):

@@ -281,7 +281,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
             Btot = get('Btot')
             r = get('r')
             h = get('h')
-            # Area weigthed average:
+            # Volume weigthed average (B associated with average energy density):
             # Beavg = sqrt( 8pi*sum( B**2/(8pi)*2*pi*r*h*dr)/sum(2*pi*r*h*dr) )
             # Cancelling constant terms
             # Beavg = sqrt( sum( B**2*r*h*dr)/sum(r*h*dr) )

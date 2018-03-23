@@ -189,6 +189,17 @@ contains
                           description='Angular velocity of the disc' &
                           // ' (no regularization).')
 
+    if (ts_data%output('Bavg')) &
+      call IO_write_dataset('Bavg', gal_id,                            &
+                          ts_data%get_scalar('Bavg'),                         &
+                          units='microgauss',                          &
+                          description='Surface average magnetic field')
+    if (ts_data%output('Beavg')) &
+      call IO_write_dataset('Beavg', gal_id,                            &
+                          ts_data%get_scalar('Beavg'),                         &
+                          units='microgauss',                          &
+                          description='"Energy averaged" magnetic field')
+
     if (p_extra_pressure_outputs) then
       if (ts_data%output('P')) &
         call IO_write_dataset('P', gal_id, ts_data%get('P'), units='erg cm^-3', &

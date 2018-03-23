@@ -29,13 +29,15 @@ module ts_arrays  !Contains subroutine that stores time series data (n1 snapshot
 
   double precision, parameter :: INVALID = -99999d0
 
-  character(len=15), dimension(5),parameter :: scalar_names = [         &
+  character(len=15), dimension(7),parameter :: scalar_names = [    &
                                                  't_Gyr         ', &
                                                  'dt            ', &
                                                  'rmax          ', &
                                                  'Bmax          ', &
-                                                 'Bmax_idx      ']
-  character(len=15), dimension(28), parameter :: profile_names = [     &
+                                                 'Bmax_idx      ', &
+                                                 'Bavg          ', &
+                                                 'Beavg         ']
+  character(len=15), dimension(28), parameter :: profile_names = [  &
                                                  'Br           ', &
                                                  'Bp           ', &
                                                  'alp_m        ', &
@@ -86,7 +88,8 @@ contains
     double precision, dimension(:), intent(in) :: Bzmod
     double precision, dimension(:), intent(in) :: alp
     double precision, dimension(p_nx_ref) :: Btot
-    double precision, dimension(p_nx_ref) :: tmp
+    double precision, dimension(p_nx_ref) :: tmp, rkpc
+    double precision :: avg
     integer :: Bmax_idx
     integer :: max_outputs
 
@@ -170,10 +173,22 @@ contains
 
     Bmax_idx = maxloc(Btot, 1)
     call ts_data%set_scalar('Bmax', it, Btot(Bmax_idx))
-    tmp = ts_data%get_it('rkpc',it)
-    call ts_data%set_scalar('rmax', it, tmp(Bmax_idx))
+    rkpc = ts_data%get_it('rkpc',it)
+    call ts_data%set_scalar('rmax', it, rkpc(Bmax_idx))
     ! Later, everything should be updated to accept integer datasets
     call ts_data%set_scalar('Bmax_idx', it, dfloat(Bmax_idx))
+
+    ! Volume weigthed average (B associated with average energy density):
+    ! Beavg = sqrt( 8pi*sum( B**2/(8pi)*2*pi*r*h*dr)/sum(2*pi*r*h*dr) )
+    tmp = ts_data%get_it('h',it)
+    avg = sum(Btot**2*rkpc*tmp)/sum(rkpc*tmp)
+    avg = sqrt(avg)
+    call ts_data%set_scalar('Beavg', it, avg)
+    ! Surface area weighted average
+    avg = sum(Btot*rkpc)/sum(rkpc)
+    call ts_data%set_scalar('Bavg', it, avg)
+
+
 
     ! alp is computed in the gutsdynamo module (annoyingly differently from
     ! anything else). Therefore, one needs to be careful. This is a good

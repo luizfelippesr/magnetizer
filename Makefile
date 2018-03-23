@@ -69,7 +69,7 @@ all: test testRoots testProfiles
 
 # Tides up
 clean:
-	rm -fv ${builddir}/*.mod ${builddir}/*.o
+	rm -fv ${builddir}/*.mod ${builddir}/*.o Magnetizer.exe
 
 cleanall: clean
 	rm -fv python/*.pyc

@@ -75,7 +75,7 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p']):
     print '\nAverage CPU time per galaxy:', runtime[completed_indices].sum()/ngal
     print
 
-    return
+    return nice, ngal
 
 
 if __name__ == "__main__"  :
@@ -92,13 +92,23 @@ if __name__ == "__main__"  :
 
     args = parser.parse_args()
 
+    total_number_of_galaxies = 0.
+    total_nice_galaxies = 0.
     for path in args.MAGNETIZER_OUTPUT:
+        nice, ngals = 0, 0
         print '\nFile: ',path
         try:
             with h5py.File(path,'r') as f:
-                error_stats(f)
+                nice, ngals = error_stats(f)
         except:
             if args.skip_errors:
                 print 'Error\n'
             else:
                 raise
+        total_nice_galaxies += nice
+        total_number_of_galaxies += ngals
+
+    print
+    print 'Total number of completed galaxies: {}'.format(total_number_of_galaxies)
+    print 'Galaxies with errors: {0:.2%}'.format(1.0
+                                - total_nice_galaxies/total_number_of_galaxies)

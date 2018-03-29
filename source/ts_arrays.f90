@@ -89,7 +89,7 @@ contains
     double precision, dimension(:), intent(in) :: alp
     double precision, dimension(p_nx_ref) :: Btot
     double precision, dimension(p_nx_ref) :: tmp, rkpc
-    double precision :: avg
+    double precision :: tmp_scalar
     integer :: Bmax_idx
     integer :: max_outputs
 
@@ -181,12 +181,18 @@ contains
     ! Volume weigthed average (B associated with average energy density):
     ! Beavg = sqrt( 8pi*sum( B**2/(8pi)*2*pi*r*h*dr)/sum(2*pi*r*h*dr) )
     tmp = ts_data%get_it('h',it)
-    avg = sum(Btot**2*rkpc*tmp)/sum(rkpc*tmp)
-    avg = sqrt(avg)
-    call ts_data%set_scalar('Beavg', it, avg)
+    tmp_scalar = sum(rkpc*tmp)
+    if (tmp_scalar>0) then
+      tmp_scalar = sum(Btot**2*rkpc*tmp)/tmp_scalar
+      tmp_scalar = sqrt(tmp_scalar)
+    else
+      tmp_scalar = INVALID
+    endif
+    call ts_data%set_scalar('Beavg', it, tmp_scalar)
+
     ! Surface area weighted average
-    avg = sum(Btot*rkpc)/sum(rkpc)
-    call ts_data%set_scalar('Bavg', it, avg)
+    tmp_scalar = sum(Btot*rkpc)/sum(rkpc)
+    call ts_data%set_scalar('Bavg', it, tmp_scalar)
 
 
 

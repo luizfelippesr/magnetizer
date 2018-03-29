@@ -23,7 +23,7 @@ from __future__ import division
 import h5py
 import numpy as np
 
-def error_stats(h5file, error_codes=['e','g','h','H','s','i','p']):
+def error_stats(h5file, error_codes=['e','g','h','H','s','i','p'], quiet=False):
     """
     Prints to screen summary statistics about errors in a particular output.
 
@@ -60,20 +60,24 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p']):
         # Counts nice galaxies
         if ok:
             nice+=1
-    print 'Model name:',name[0]
-    print 'Total number of galaxies', completed.size
-    print 'Number of completed galaxies', ngal
-    print '\nSummary of errors'
-    print ' Code\tFrac \t N\tExamples'
+    if not quiet:
+        print '\nModel name:',name[0]
+        print 'File: ',h5file.filename
+        print 'Total number of galaxies', completed.size
+        print 'Number of completed galaxies', ngal
+        print '\nSummary of errors'
+        print ' Code\tFrac \t N\tExamples'
     for c in err_number:
         max_idx = min(len(err_gals[c]),9)
-        print ' {0} \t{1:.1%}\t {2} \t{3}'.format(c, err_number[c]/ngal,
+        if not quiet:
+            print ' {0} \t{1:.1%}\t {2} \t{3}'.format(c, err_number[c]/ngal,
                                   err_number[c],','.join(err_gals[c][:max_idx]))
 
-    print ' ok\t{1:.1%}\t {2}'.format(c, nice/ngal, nice)
+    if not quiet:
+        print ' ok\t{1:.1%}\t {2}'.format(c, nice/ngal, nice)
 
-    print '\nAverage CPU time per galaxy:', runtime[completed_indices].sum()/ngal
-    print
+        print '\nAverage CPU time per galaxy:', runtime[completed_indices].sum()/ngal
+        print
 
     return nice, ngal, completed.size
 
@@ -87,8 +91,11 @@ if __name__ == "__main__"  :
     parser.add_argument("MAGNETIZER_OUTPUT",help="Name(s) of the Magnetizer"
                         "output file(s) to be examined.", nargs="+")
 
-    parser.add_argument('-s', "--skip_errors", action="store_true",
+    parser.add_argument('-k', "--skip_errors", action="store_true",
                         help="If present, files with errors will be skipped.")
+
+    parser.add_argument('-s', "--only_summary", action="store_true",
+                        help="Shows only the summary.")
 
     args = parser.parse_args()
 
@@ -98,10 +105,9 @@ if __name__ == "__main__"  :
     total_nice_galaxies = 0.
     for path in args.MAGNETIZER_OUTPUT:
         nice, ngals, total = 0, 0, 0
-        print '\nFile: ',path
         try:
             with h5py.File(path,'r') as f:
-                nice, ngals, total = error_stats(f)
+                nice, ngals, total = error_stats(f, quiet=args.only_summary)
         except:
             if args.skip_errors:
                 print 'Error\n'
@@ -111,14 +117,14 @@ if __name__ == "__main__"  :
         total_number_of_galaxies += ngals
         report[path] = (ngals, total)
 
-    if len(report)>4:
+    if len(report)>4 or args.only_summary:
         print '\n','-'*23,'Summary','-'*23,'\n'
         maxsize = max([len(k) for k in report.keys()])
 
-        for p in report:
+        for p in sorted(report.keys()):
             ngals, total = report[p]
             name = p + ' '*(maxsize-len(p))
-            print ' {0}\t{1}\t{2}\t{3:.2%}'.format(name, int(ngals),total,ngals/float(total))
+            print ' {0}\t{1}\t{2}\t{3:.2%}'.format(name,int(ngals),total,ngals/float(total))
 
     print '\nTotal number of completed galaxies: {0:d}'.format(int(total_number_of_galaxies))
     print 'Galaxies with errors: {0:.2%}'.format(1.0

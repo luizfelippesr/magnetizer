@@ -5,10 +5,23 @@ import pandas as pd
 import numpy as np
 
 
-def prepare_DataFrame(quantities, magnetizer_run, redshifts, mass_bins,
-                      verbose=False):
+def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False):
     """
     Prepares pandas DataFrame objects from the magnetizer run
+
+    Parameters
+    ----------
+    quantities : list
+        List of strings with the names of the requested quantites
+    magnetizer_run : MagnetizerRun
+        A MagnetizerRun object containing the run.
+    redshifts : list
+        List of redshifts to be loaded into the DataFrame
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        Dataframe containing all the selected quantities in selected redshifts.
     """
     if verbose:
       print 'Preparing a pandas DataFrame object'

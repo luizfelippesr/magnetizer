@@ -96,10 +96,20 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
     if qname == 'V':
         quantity = get('Omega')*get('r')
 
-    elif qname == 'D':
+    elif qname == 'Dgen':
+
         S = get('Shear')
         eta_t= get('etat')
         alpha = get('alp')
+        h = get('h')
+
+        quantity = alpha * S * h**3 / (eta_t**2)
+        quantity = quantity.cgs
+
+    elif qname == 'D':
+        S = get('Shear')
+        eta_t= get('etat')
+        alpha = get('alp_k')
         h = get('h')
 
         quantity = alpha * S * h**3 / (eta_t**2)
@@ -110,6 +120,20 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         Cu = 0.25 # hard-coded at input_constants module
         quantity = - (pi/2.)**5 * (1. + 4./pi**2 *Cu * Ru)**2
         quantity = quantity.cgs
+
+    elif qname == 'alp_k':
+        # Uses Krause formula to compute alpha_k if it is not in the output
+
+        C_alp = mag_run.parameters.dynamo['C_ALP']
+        l = get('l')
+        h = get('h')
+        v = get('v')
+        Om = get('Omega')
+
+        quantity = C_alp*l**2/h*Om
+        quantity = quantity.to(u.km/u.s)
+        quantity = np.minimum(quantity,v)
+
 
     elif qname == 'R_u':
         quantity = get('Uz') * get('h') / get('etat')

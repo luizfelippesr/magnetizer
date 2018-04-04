@@ -127,7 +127,13 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         C_alp = mag_run.parameters.dynamo['C_ALP']
         l = get('l')
         h = get('h')
-        v = get('v')
+        try:
+            v = get('v')
+        except ValueError:
+            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            v = l/l
+            v *= mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
+            v *= u.km/u.s
         Om = get('Omega')
 
         quantity = C_alp*l**2/h*Om
@@ -174,6 +180,9 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
                     get('Br')**2 +
                     get('Bzmod')**2)
         quantity /= get('Beq')
+
+    elif qname == r'Dgen_Dc':
+        quantity = get('Dgen')/get('Dc')
 
     elif qname == r'D_Dc':
         quantity = get('D')/get('Dc')

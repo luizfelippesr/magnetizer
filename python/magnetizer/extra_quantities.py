@@ -25,7 +25,6 @@ import re
 import astropy.units as u
 import astropy.constants as const
 
-
 def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
                            cache=True):
     """
@@ -290,6 +289,10 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
 
     elif qname == r'hmax_rdisk':
         quantity = get('h_at_Bmax')/get('r_disk')
+        quantity = quantity.cgs
+
+    elif qname == r'hmax_rmax':
+        quantity = get('h_at_Bmax')/get('rmax')
         quantity = quantity.cgs
 
     elif qname == r'b':

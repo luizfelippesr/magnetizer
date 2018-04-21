@@ -175,6 +175,7 @@ module dynamo
           ! Loops through the timesteps
           do jt=1,nsteps
             this_t = t_Gyr +dt*t0_Gyr*jt
+            call message('Main loop: it = ', gal_id=gal_id, val_int=it, info=3)
             call message('Inner loop: jt = ',gal_id=gal_id, val_int=jt, info=3)
             call message('Inner loop: fail_count =', val_int=fail_count, &
                          gal_id=gal_id, info=3)
@@ -207,13 +208,12 @@ module dynamo
             endif
 
             ! Runs Runge-Kutta time-stepping routine
-            call rk(f)
+            call rk(f,ok)
 
             ! Impose boundary conditions
             call impose_bc(f)
             ! If the magnetic field blows up, flags and exits the loop
-            if (maxval(f(:,1:2))>1.d7) then
-              ok = .false.
+            if (.not.ok) then
               ! Stores the bogus profiles
               ! NB the magnetic field info is out of date
               call make_ts_arrays(it,this_t,f,Bzmod,alp)

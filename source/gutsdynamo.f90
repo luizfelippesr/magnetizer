@@ -401,19 +401,18 @@ module timestep  !Contains time-stepping routine
 
 contains
 
-  subroutine rk(f)
+  subroutine rk(f, ok)
+    implicit none
 
-  implicit none
-
-  double precision :: gam1, gam2, gam3, zet1, zet2
-  double precision, dimension(nx,nvar), intent(inout) :: f
-  double precision, dimension(nx,nvar) :: dfdt
-  double precision, dimension(nx,nvar) :: pdef, ftmp
-  double precision :: ttmp
+    double precision :: gam1, gam2, gam3, zet1, zet2
+    double precision, dimension(nx,nvar), intent(inout) :: f
+    logical, intent(inout) :: ok
+    double precision, dimension(nx,nvar) :: dfdt
+    double precision, dimension(nx,nvar) :: pdef, ftmp
+    double precision :: ttmp
 
     !  Runge Kutta 3rd order time advance
     !  f = f(exact) - 0.0046*dt**3*d3f/dt3
-
     gam1=8.d0/15 !gam1, gam2 AND gam3 ARE THE COEFFICIENTS OF THE TIMESTEPS AT WHICH dfdt IS CALCULATED
     gam2=5.d0/12
     gam3=3.d0/4
@@ -427,6 +426,9 @@ contains
     ftmp=f+dt*zet1*pdef !NOW CALCULATE A TEMPORARY f (AT t=t_0+dt*gam1+dt*zet1) USING dfdt AT t_0
     ttmp=t+dt*zet1 !DEFINE TEMPORARY t AS THAT TIMESTEP (t=t_0+dt*gam1+dt*zet1)
 
+    call check_f_error(f, ok)
+    if (.not.ok) return
+
     call pde(f,dfdt)
     pdef=dfdt !NOW CALCULATE dfdt AT THE NEW TIMESTEP t_0+dt*gam1
     f=ftmp+dt*gam2*pdef !USE THIS TO GET ANOTHER INTERMEDIATE VALUE OF f (AT t=t_0+dt*gam1+dt*zet1+dt*gam2)
@@ -434,11 +436,34 @@ contains
     ftmp=f+dt*zet2*pdef !NOW CALCULATE A TEMPORARY f (AT t=t_0+dt*gam1+dt*zet1+dt*gam2+dt*zet2) USING dfdt AT t=t_0+dt*gam1
     ttmp=t+dt*zet2 !DEFINE TEMPORARY t AS THAT TIMESTEP (t=t_0+dt*gam1+dt*zet1+dt*gam2+dt*zet2)
 
+    call check_f_error(f, ok)
+    if (.not.ok) return
+
     call pde(f,dfdt)
     pdef=dfdt !CALCULATE dfdt AT THE NEW TIMESTEP t_0+dt*gam1+dt*zet1+dt*gam2
     f=ftmp+dt*gam3*pdef !USE THIS TO GET THE FINAL VALUE OF f (AT t=t_0+dt*gam1+dt*zet1+dt*gam2+dt*zet2+dt*gam3)
     t=ttmp+dt*gam3 !THEN GO TO THAT TIMESTEP
 
+    call check_f_error(f, ok)
+    if (.not.ok) return
+
     first=first+1. !COUNTS THE NUMBER OF TIMES RUNGA-KUTTA ROUTINE IS EXCUTED
   end subroutine rk
+
+  subroutine check_f_error(f, ok)
+    double precision, dimension(nx,nvar), intent(in) :: f
+    logical, intent(inout) :: ok
+
+    ! Ensures the magnetic field is not blowing up
+    if (maxval(f(:,1:2))<1d8) then
+      ok = .false.
+    endif
+
+    ! Ensures that alpha_m is not blowing up
+    if (Dyn_quench .and. (maxval(f(:,nvar))> 1000)) then
+      ok = .false.
+    endif
+  end subroutine
+
+
 end module timestep

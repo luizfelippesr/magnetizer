@@ -32,6 +32,7 @@ program magnetizer
   character(len=100) :: command_argument
   integer :: i, j, iproc
   logical :: lstop, error
+  logical :: lforce = .false.
   logical :: lsingle_galaxy_mode = .false.
   logical :: start_galaxy = .false.
   logical :: lresuming_run = .false.
@@ -76,7 +77,7 @@ program magnetizer
                //' for the output of a semi-analytic galaxy formation model.'
       print *,
       print *, 'Usage:'
-      print *, trim(command_argument), ' <input_parameters_file> [galaxy number]'
+      print *, trim(command_argument), ' <input_parameters_file> [galaxy number] [-f]'
       print *,
       print *, 'For more details please visit: '&
              //'https://github.com/luizfelippesr/magnetizer'
@@ -117,6 +118,14 @@ program magnetizer
       call message('Single galaxy mode. igal='// trim(command_argument), &
                  master_only=.true., set_info=info)
       lsingle_galaxy_mode = .true.
+      igal = str2int(command_argument)
+      call get_command_argument(3, command_argument)
+      if (len_trim(command_argument) /= 0) then
+        if (trim(command_argument)=='-f') then
+          call message('Recomputing, if necessary.', master_only=.true.)
+          lforce = .true.
+        endif
+      endif
     endif
   endif
 
@@ -158,12 +167,11 @@ program magnetizer
   flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
 
   if (lsingle_galaxy_mode .and. (rank == master_rank)) then
-    igal = str2int(command_argument)
     ncycles = 0
     call message('Starting',gal_id=igal, rank=rank)
     ! Check whether the galaxy was processed previously
     start_galaxy = IO_start_galaxy(igal)
-    if (start_galaxy) then
+    if (start_galaxy .or. lforce) then
       ! If it is a new galaxy, runs it!
       call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
       nmygals = nmygals + 1

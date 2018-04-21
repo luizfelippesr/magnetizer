@@ -455,7 +455,7 @@ contains
     logical, intent(inout) :: ok
 
     ! Ensures the magnetic field is not blowing up
-    if (maxval(f(:,1:2))<1d8) then
+    if (maxval(f(:,1:2))>1d8) then
       ok = .false.
     endif
 

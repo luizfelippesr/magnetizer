@@ -5,7 +5,8 @@ import pandas as pd
 import numpy as np
 
 
-def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False):
+def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False,
+                      cache_intermediate=False, cache=True):
     """
     Prepares pandas DataFrame objects from the magnetizer run
 
@@ -37,7 +38,9 @@ def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False):
             if verbose:
                 print '   Reading redshift ', z
 
-            datum = magnetizer_run.get(quantity, z)
+            datum = magnetizer_run.get(quantity, z,
+                                       cache=cache,
+                                       cache_intermediate=cache_intermediate)
             data = np.append(data, datum)
 
             if 'z' not in df:

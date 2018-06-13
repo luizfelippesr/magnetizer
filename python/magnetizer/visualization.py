@@ -21,6 +21,7 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib.backends.backend_pdf import PdfPages
 from astropy.units import Quantity
+import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import h5py, random, math
@@ -178,11 +179,11 @@ def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
                 quantitytxt = r'${0}{1}$'.format(quantities_dict[name],unit)
             else:
                 quantitytxt = r'${0}$'.format(quantities_dict[name])
-            ylabel = r'$\mathcal{{P}}({0})$'.format(quantities_dict[name])
+            ylabel = r'${{\rm P}}({0})$'.format(quantities_dict[name])
         else:
             quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[name],
                                                     unit)
-            ylabel = r'$\mathcal{{P}} [ {0} ]$'.format(quantitytxt.replace(
+            ylabel = r'${{\rm P}} [ {0} ]$'.format(quantitytxt.replace(
               '$',''))
     else:
         quantitytxt = name
@@ -419,7 +420,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
                             log=True, color='#d95f0e', log0=None,
                             colors = ['#1f78b4','#33a02c','#b2df8a',
                                       '#fb9a99','#fdbf6f','#cab2d6'],
-                            single_panel=False, show_t=False,
+                            single_panel=False,
+                            show_t_and_z=False, use_t=False,
                             limits=None,
                             cache_intermediate=True, **kwargs):
     """
@@ -461,8 +463,10 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
         Plots different bins in the same panel.
     colors : list
         List of colours to use, if in single_panel mode.
-    show_t : bool
+    show_t_and_z : bool
         Shows an extra x-axis with the time coordinate.
+    use_t : bool
+        Use time instead of redshift
     cache_intermediate : bool
         Caches intermediate quantities used in computation of quantity.
         Default: True
@@ -499,6 +503,15 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
     ngals = np.empty((nbins, zs.size))*np.nan
 
     zs = np.array(zs)
+
+    idx = closest_indices(mag_run.redshifts,zs)
+    times = mag_run.times[idx]
+
+    if use_t:
+        zs_or_ts = times/u.Gyr
+    else:
+        zs_or_ts = zs
+
     unit = ''
     for j, z in enumerate(zs):
         if no_binning:
@@ -559,10 +572,10 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             color = colors[i]
 
 
-        plt.plot(zs, p50[i], color=color, **kwargs)
-        plt.plot(zs, p15[i], color=color, linestyle=':')
-        plt.plot(zs, p85[i], color=color, linestyle=':')
-        plt.fill_between(zs, p15[i], p85[i], color=color, alpha=0.1)
+        plt.plot(zs_or_ts, p50[i], color=color, **kwargs)
+        plt.plot(zs_or_ts, p15[i], color=color, linestyle=':')
+        plt.plot(zs_or_ts, p85[i], color=color, linestyle=':')
+        plt.fill_between(zs_or_ts, p15[i], p85[i], color=color, alpha=0.1)
 
         if quantity in quantities_dict:
             if not log:
@@ -579,7 +592,10 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             plt.axis(limits)
 
         plt.ylabel(quantitytxt)
-        plt.xlabel('$z$')
+        if not use_t:
+            plt.xlabel('$z$')
+        else:
+            plt.xlabel(r"$t\;[\rm Gyr]$")
 
         if not (no_binning or single_panel):
             masstxt = '${0}< \log(M_\star/M_\odot) <{1}$'.format(
@@ -596,29 +612,50 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             else:
                 plt.annotate(masstxt, (keypos[0], keypos[1]))
 
+        if show_t_and_z:
 
-        if zs.size>7:
-            redshifts = np.linspace(zs.min(), zs.max(),7)
-            idx = closest_indices(mag_run.redshifts,redshifts)
+            if not use_t:
+                if limits is not None:
+                    zmin, zmax = limits[0], limits[1]
+                else:
+                    zmin, zmax = zs.min(), zs.max()
+                redshifts = np.linspace(zmin, zmax, 7)
+                idx = closest_indices(mag_run.redshifts,redshifts)
+            else:
+                if limits is not None:
+                    tmin, tmax = limits[0], limits[1]
+                else:
+                    tmin, tmax = times.min()/u.Gyr, times.max()/u.Gyr
+                ltimes = np.linspace(tmin, tmax, 7)
+                idx = closest_indices(mag_run.times/u.Gyr,ltimes)
+
             redshifts = mag_run.redshifts[idx]
-        else:
-            redshifts = zs
+            ltimes = mag_run.times[idx]/u.Gyr
 
-        idx = closest_indices(mag_run.redshifts,redshifts)
-        times = mag_run.times[idx]
-
-        if show_t:
-            tlabels = ['{0:.1f}'.format(x) for x in times.value]
+            tlabels = ['{0:.1f}'.format(x) for x in ltimes]
             zlabels = ['{0:.1f}'.format(abs(x)) for x in redshifts]
-            ax.set_xlim(redshifts.min(),redshifts.max())
-            ax.xaxis.set_ticks(redshifts)
-            ax.xaxis.set_ticklabels(zlabels)
 
-            ax2 = ax.twiny()
-            ax2.set_xlim(redshifts.min(),redshifts.max())
-            ax2.xaxis.set_ticks(redshifts)
-            ax2.xaxis.set_ticklabels(tlabels)
-            ax2.set_xlabel(r"$t\;[\rm Gyr]$")
+            if not use_t:
+                ax.set_xlim(zmin,zmax)
+                ax.xaxis.set_ticks(redshifts)
+                ax.xaxis.set_ticklabels(zlabels)
+
+                ax2 = ax.twiny()
+                ax2.set_xlim(zmin,zmax)
+                ax2.xaxis.set_ticks(redshifts)
+                ax2.xaxis.set_ticklabels(tlabels)
+                ax2.set_xlabel(r"$t\;[\rm Gyr]$")
+            else:
+                ax.set_xlim(tmin, tmax)
+                ax.xaxis.set_ticks(ltimes)
+                ax.xaxis.set_ticklabels(tlabels)
+
+                ax2 = ax.twiny()
+                ax2.set_xlim(tmin, tmax)
+                ax2.xaxis.set_ticks(ltimes)
+                ax2.xaxis.set_ticklabels(zlabels)
+                ax2.set_xlabel(r"$z$")
+
 
     return ngals
 

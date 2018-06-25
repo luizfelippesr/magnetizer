@@ -4,9 +4,8 @@ import astropy.units as u
 
 class TimeEvolution(object):
     """
-    Plots the redshift evolution of the 25th, 50th and 85 percentiles of a
-    given quantity. This can be a single panel or a set of panels showing
-    different mass bins.
+    Stores the redshift/time evolution of 3 percentiles of a
+    given quantity.
 
     Parameters
     ----------
@@ -45,15 +44,17 @@ class TimeEvolution(object):
                  use_t=False,
                  ignore_zero_valued=False, log=True, percentiles=[15,50,85],
                  cache_intermediate=True, cache=True):
-
-        self.run = mag_run
+        self.quantity = quantity
+        self.run = mag_run.name
         single_binning = no_binning = False
 
         if bin_objs is None:
+            self.bins = None
             self.nbins = 1
             bin_dict = None
             no_binning = True
         else:
+            self.bins = bin_objs
             if isinstance(bin_objs, magnetizer.BinningObject):
                 self.nbins = bin_objs.nbins
                 single_binning = True
@@ -68,7 +69,8 @@ class TimeEvolution(object):
               '(bin_objs=[bin_obj1,...]) or a list of redshifts (target_redshifts=[z1,...])'
 
         if target_redshifts is not None:
-            self.zs = mag_run.redshifts[closest_indices(mag_run.redshifts, target_redshifts)]
+            self.zs = mag_run.redshifts[closest_indices(mag_run.redshifts,
+                                                        target_redshifts)]
         else:
             self.zs = np.array(sorted(bin_dict.keys()))
 
@@ -120,14 +122,13 @@ class TimeEvolution(object):
                 self.ngals[i][j] = datum.size
 
 
-
-
 def get_formated_units(quantity, return_base=False, clean=False):
     if isinstance(quantity, u.Quantity):
         unit = r'{0}'.format(quantity.unit._repr_latex_())
         unit = unit.replace('$','')
         if not clean:
-            unit = r'\;[{0}]'.format(unit)
+            if unit is not '':
+                unit = r'\;[{0}]'.format(unit)
         if return_base:
             base = quantity.base
     else:

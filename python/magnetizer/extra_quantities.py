@@ -114,6 +114,68 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         quantity = alpha * S * h**3 / (eta_t**2)
         quantity = quantity.cgs
 
+    elif qname == 'D_diag1':
+        S = get('Shear')
+        Om = get('Omega')
+        h = get('h')
+        try:
+            v = get('v')
+        except ValueError:
+            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            v = mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
+            v *= u.km/u.s
+
+        quantity = 9. * h**2  * Om * S/ v**2
+        quantity = quantity.cgs
+
+    elif qname == 'D_diag2':
+        S = get('Shear')
+        h = get('h')
+        l = get('l')
+
+        try:
+            v = get('v')
+        except ValueError:
+            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            v = mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
+            v *= u.km/u.s
+
+        quantity = 9. * h**3 * S /v /l**2
+        quantity = quantity.cgs
+
+    elif qname == 'D_diag3':
+        S = get('Shear')
+        h = get('h')
+
+        try:
+            v = get('v')
+        except ValueError:
+            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            v = mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
+            v *= u.km/u.s
+
+        quantity = 9. * h * S /v
+        quantity = quantity.cgs
+
+    elif qname == 'D1_D_at_Bmax':
+        D1 = get('D_diag1_at_Bmax')
+        D = get('D_at_Bmax')
+
+        quantity = D1/D
+
+    elif qname == 'D2_D_at_Bmax':
+        D2 = get('D_diag2_at_Bmax')
+        D = get('D_at_Bmax')
+
+        quantity = D2/D
+
+    elif qname == 'D3_D_at_Bmax':
+        D3 = get('D_diag3_at_Bmax')
+        D = get('D_at_Bmax')
+
+        quantity = D3/D
+
+
     elif qname in (r'D_{{\rm crit}}','Dc','Dcrit'):
         Ru = get('R_u')
         Cu = 0.25 # hard-coded at input_constants module
@@ -296,8 +358,8 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         quantity = quantity.cgs
 
     elif qname == r'b':
-        quantity = get('Beq')
-        quantity *= mag_run.parameters.dynamo['FMAG']
+        quantity = get('Beq').copy()
+        quantity *mag_run.parameters.dynamo['FMAG']
 
     elif qname == r'Bavg':
         if z is not None:

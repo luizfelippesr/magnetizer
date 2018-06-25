@@ -51,14 +51,13 @@ class BinningObject(object):
 
     def _update_masks(self,quantity):
         for i, interval in enumerate(self.bins):
-            mask = self._compute_bin_filter(quantity, interval)
             if self.masks[i] is None:
-               self.masks[i] = mask
+               self.masks[i] = self._compute_bin_filter(quantity, interval)
                if self.extra_filter is not None:
                   self.masks[i] *= self.extra_filter
             else:
-               self.masks[i] *= mask
-            self.bin_counts[i] = mask.sum()
+               self.masks[i] *= self._compute_bin_filter(quantity, interval)
+            self.bin_counts[i] = self.masks[i].sum()
 
     def __repr__(self):
         return_str = '[BinningObject]\n'
@@ -76,7 +75,7 @@ class MassBinningObject(BinningObject):
                  gas_mass=False, include_bulge=True, extra_filter=None,
                  bin_array=10**np.array([8.,8.75,9.5,10.25,11.])*u.Msun):
 
-        BinningObject.__init__(self,magnetizer_run, z=z, bins=bins,
+        super(MassBinningObject, self).__init__(magnetizer_run, z=z, bins=bins,
                                bin_array=bin_array, extra_filter=extra_filter)
 
         self.masks = [None]*len(self.bins)
@@ -84,7 +83,7 @@ class MassBinningObject(BinningObject):
         mass = None
 
         if stellar_mass:
-            mass = magnetizer_run.get('Mstars_disk', z)
+            mass = magnetizer_run.get('Mstars_disk', z).copy()
             str_type = 'stellar'
 
             if include_bulge:
@@ -94,7 +93,7 @@ class MassBinningObject(BinningObject):
                 str_disk = ' disc '
 
         if gas_mass:
-            gas_mass = magnetizer_run.get('Mgas_disk', z)
+            gas_mass = magnetizer_run.get('Mgas_disk', z).copy()
             if mass is None:
                 mass = gas_mass
             else:

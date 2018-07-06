@@ -55,14 +55,39 @@ class TimeEvolution(object):
     cache_intermediate : bool
         Caches intermediate quantities used in computation of quantity.
         Default: True
+    percentiles : list
+        The three percentiles to be computed. Default: [15,50,85]
+
+    Attributes
+    ----------
+    zs : array
+        Redshifts
+    times : astropy.units.Quantity
+        Times
+    med : array
+        50th percentile (or the value at percentiles[1] if set)
+    lower : array
+        15th percentile (or the value at percentiles[0] if set)
+    upper : array
+        85th percentile (or the value at percentiles[2] if set)
+    percentiles : list
+        Available percentiles (set with the corresponding parameter)
+    bins : BinningObject or list
+        Link to binning used in the computation
+    nbins : int
+        Number of bins
+    ngals : array
+        Number of galaxies used for the calculation at each time/redshift
+
     """
     def __init__(self, quantity, mag_run, position=None, bin_objs=None,
                  target_redshifts=None, minimum_number_per_bin=5,
-                 use_t=False,
+                 use_t=False, log0=None,
                  ignore_zero_valued=False, log=True, percentiles=[15,50,85],
                  cache_intermediate=True, cache=True):
         self.quantity = quantity
-        self.run = mag_run.name
+        self.run = mag_run
+        self.percentiles = percentiles
         single_binning = no_binning = False
 
         if bin_objs is None:
@@ -136,8 +161,15 @@ class TimeEvolution(object):
 
                 self.lower[i][j], self.med[i][j], self.upper[i][j] = \
                                             np.percentile(datum, percentiles)
+                if log:
+                    for p in (self.lower, self.med, self.upper):
+                        p[i][j] = np.log10(p[i][j])
+
                 self.ngals[i][j] = datum.size
 
+        if log and (log0 is not None):
+            invalid = ~np.isfinite(self.lower)
+            self.lower[invalid] = log0
 
 def get_formated_units(quantity, return_base=False, clean=False):
     if isinstance(quantity, u.Quantity):

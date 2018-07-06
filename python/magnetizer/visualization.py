@@ -27,7 +27,7 @@ import numpy as np
 import h5py, random, math
 import magnetizer
 from extra_quantities import compute_extra_quantity
-
+from scipy.interpolate import UnivariateSpline
 
 units_dict = {}
 
@@ -87,10 +87,15 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'Mstars_disk': r'M_{{\star,\rm disc}}',
                    'Mgas_disk': r'M_{{\rm gas,disc}}',
                    'r_disk': r'r_{{\rm disc}}',
+                   'rmax': r'r_{{\rm max}}',
                    'Bmax': r'B_{{\rm max}}',
+                   'Beavg': r'B_{{0}}',
+                   'Bavg': r'B_{{s}}',
                    'Bmax_Beq': r'B_{{\rm max}}/B_{{\rm eq}}',
                    'bmax': r'b_{{\rm max}}',
                    'pmax': r'p_{{\rm max}}',
+                   'p_at_Bmax': r'p\,[ ^\circ ]',
+                   'Bmax_b_at_Bmax': r'B_{{\rm max}}/b',
                    'n': r'n',
                    'h': r'h',
                    }
@@ -257,9 +262,22 @@ def plot_mass_summary(igal, ivol, run_obj, ax=None, **kwargs):
     ax.set_yscale('log')
     ax.legend(frameon=False, loc='lower right', fontsize=7)
 
+
+def plot_B_summary(igal, ivol, run_obj, ax=None, **kwargs):
+
+    if ax is None:
+        ax = plt.gcf().add_subplot(111)
+
+    for name in  ('Bmax','Beavg', 'Bavg'):
+        data = run_obj.get_galaxy(name, igal, ivol)
+        label = '$'+quantities_dict[name]+'$'
+        plot_input(run_obj.times, data, name='B', ax=ax, label=label, **kwargs)
+    #ax.set_yscale('log')
+    ax.legend(frameon=False, loc='lower right', fontsize=7)
+
 def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
-                     selected_quantities=None, cmap=plt.cm.viridis,
-                     verbose=False):
+                     B_frame=True, selected_quantities=None,
+                     cmap=plt.cm.viridis, verbose=False):
     """
     Prepares a page o plots
     """
@@ -317,6 +335,11 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
         ax = fig.add_subplot(nrows, ncols, subplot_idx)
         plot_mass_summary(igal, ivol, run_obj,ax=ax, linewidth=1.5)
 
+    if B_frame:
+        subplot_idx += 1
+        ax = fig.add_subplot(nrows, ncols, subplot_idx)
+        plot_B_summary(igal, ivol, run_obj,ax=ax, linewidth=1.5)
+
     # Adds title
     fig.suptitle('Galaxy {0},{1}{2}'.format(igal, ivol, info))
     # Finds space for the color bar
@@ -350,7 +373,7 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
 
 def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
                        selected_galaxies=None, selected_ivols=None,
-                       galaxies_per_bin=10,
+                       galaxies_per_bin=10, B_frame=True,
                        pdf_filename=None, return_figures=False,
                        verbose=False):
     """
@@ -391,7 +414,7 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
 
     for igal, ivol in zip(selected_galaxies, selected_ivols):
 
-        fig = galaxy_portfolio(igal, ivol, run_obj,
+        fig = galaxy_portfolio(igal, ivol, run_obj, B_frame=B_frame,
                                selected_quantities=selected_quantities,
                                verbose=verbose)
 
@@ -411,6 +434,77 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
     return figures
 
 
+def plot_time_evolution_column(t, name, keypos=None, limits=None, fig=None,
+                               t_ticks=None, z_ticks=None, color='b'):
+    if fig is None:
+        first = True
+        fig, ax = plt.subplots(t.nbins, sharex=True,
+                            figsize=(mnras_text_size/4.1,mnras_text_size*0.55))
+    else:
+        first = False
+        ax = fig.axes
+    zs_or_ts = t.times.value
+
+    t_limits = (t.times.min()/u.Gyr, t.times.max()/u.Gyr)
+
+    if t_ticks is None:
+        ltimes = np.linspace(t.times.max()/u.Gyr, t.times.min()/u.Gyr, 5)
+    else:
+        ltimes = np.array(t_ticks)
+
+    if z_ticks is not None:
+        # Find corresponding redshifts with spline interpolation
+        z_to_t_spline_converter = UnivariateSpline(t.run.redshifts[::-1],
+                                                   t.run.times[::-1]/u.Gyr,
+                                                   k=5, s=0)
+
+        z_tick_pos = z_to_t_spline_converter(z_ticks)
+    else:
+        z_tick_pos = ltimes
+        t_to_z_spline_converter = UnivariateSpline(t.run.times/u.Gyr,
+                                                   t.run.redshifts,
+                                                   k=5, s=0)
+        z_ticks = t_to_z_spline_converter(z_tick_pos)
+
+    tlabels = ['{0:.1f}'.format(x) for x in ltimes]
+    zlabels = ['{0:.1f}'.format(abs(x)) for x in z_ticks]
+
+    if limits is None:
+        limits = (np.nanmin(t.lower), np.nanmax(t.upper))
+    for i, b in enumerate(t.bins.bins):
+        if keypos is not None:
+            ax[i].text(keypos[0],keypos[1],format_log_mass(b), size=6)
+
+        ax[i].plot(zs_or_ts, t.med[i], color=color)
+        ax[i].plot(zs_or_ts, t.lower[i], color=color, linestyle=':')
+        ax[i].plot(zs_or_ts, t.upper[i], color=color, linestyle=':')
+        ax[i].fill_between(zs_or_ts, t.lower[i], t.upper[i],
+                           color=color, alpha=0.1)
+
+        if first:
+            ax[i].set_ylabel(name)
+            ax[i].set_ylim(limits)
+            ax[i].set_yticks(ax[i].get_yticks()[1:-1])
+    if first:
+        ax[0].set_xlim(*t_limits)
+        ax[0].xaxis.set_ticks(ltimes)
+        ax[0].xaxis.set_ticklabels(tlabels)
+        ax[-1].set_xlabel(r"$t\;[\rm Gyr]$")
+
+
+        ax2 = ax[0].twiny()
+
+        ax2.set_xlim(*t_limits)
+        ax2.xaxis.set_ticks(z_tick_pos)
+        ax2.xaxis.set_ticklabels(zlabels)
+        ax2.set_xlabel(r"$z$")
+
+    fig.subplots_adjust(hspace=0,
+                        left=0.28,
+                        right=0.96,
+                        top=0.92,
+                        bottom=0.1)
+    return fig
 
 
 def plot_redshift_evolution(quantity, mag_run, position=None,
@@ -671,6 +765,7 @@ def prepare_mass_bins_list(mag_run, redshifts,
                            filter_quantity=None,
                            filter_threshold=None,
                            filter_greater=False,
+                           spirals_only=False,
                            fixed_binning_redshift=None,
                            binning_obj=magnetizer.MassBinningObject,
                            **kwargs):
@@ -704,6 +799,16 @@ def prepare_mass_bins_list(mag_run, redshifts,
                 filt = mag_run.get(filter_quantity, z) > filt
             else:
                 filt = mag_run.get(filter_quantity, z) < filt
+        if spirals_only:
+            spiral_filter = mag_run.get('Mstars_bulge',z) / (
+                                                 mag_run.get('Mstars_bulge', z)
+                                               + mag_run.get('Mstars_disk', z)
+                                              ) < 0.5
+            if filt is None:
+                filt = spiral_filter
+            else:
+                filt = spiral_filter * filt
+
         if fixed_binning_redshift is None:
             bin_obj = binning_obj(mag_run, extra_filter=filt, z=z, **kwargs)
         else:
@@ -731,3 +836,11 @@ def get_formated_units(quantity, return_base=False, clean=False):
         return unit, base
     else:
         return unit
+
+
+
+def format_log_mass(v):
+    # Need to make this better later?
+    masstxt = '${0}< \log(M_\star/M_\odot) \leq {1}$'.format(
+              np.log10(v[0].base), np.log10(v[1].base))
+    return masstxt

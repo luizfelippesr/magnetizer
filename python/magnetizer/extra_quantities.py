@@ -157,6 +157,13 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         quantity = 9. * h * S /v
         quantity = quantity.cgs
 
+    elif qname == 'q_at_Bmax':
+        quantity = -get('Shear_at_Bmax')/get('Omega_at_Bmax')
+
+    elif qname == 'Bmax_b_at_Bmax':
+        print mag_run.parameters.dynamo['FMAG']
+        quantity = get('Bmax_Beq') / mag_run.parameters.dynamo['FMAG']
+
     elif qname == 'D1_D_at_Bmax':
         D1 = get('D_diag1_at_Bmax')
         D = get('D_at_Bmax')
@@ -175,12 +182,12 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
 
         quantity = D3/D
 
-
     elif qname in (r'D_{{\rm crit}}','Dc','Dcrit'):
         Ru = get('R_u')
         Cu = 0.25 # hard-coded at input_constants module
         quantity = - (pi/2.)**5 * (1. + 4./pi**2 *Cu * Ru)**2
         quantity = quantity.cgs
+
 
     elif qname == 'alp_k':
         # Uses Krause formula to compute alpha_k if it is not in the output
@@ -393,6 +400,12 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         Bmax = get('Bmax')
         Beq = get('Beq_at_Bmax')
         quantity = Bmax/Beq
+
+    elif qname == 'h2_at_Bmax':
+        quantity = get('h_at_Bmax')*get('h_at_Bmax')
+
+    elif qname == 'OmegaS_at_Bmax':
+        quantity = get('Omega_at_Bmax')*get('Shear_at_Bmax')
 
     elif '_at_Bmax' in qname:
         # Extracts the name of the quantity

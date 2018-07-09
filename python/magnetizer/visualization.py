@@ -104,7 +104,8 @@ log_quantities = ('Beq','n','h','Mstars_disk','Mstars_bulge','Mgas_disk')
 
 
 def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
-        log=False, log0=None, do_not_plot=False, **args):
+        log=False, log0=None, do_not_plot=False, use_seaborn=True, gridsize=300,
+        **args):
     """
     Computes a Probability Density Distribution
 
@@ -139,7 +140,6 @@ def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     x,y : numpy.ndarray
         Values used for the PDF
     """
-    import scipy.stats as stat
 
     unit, values = get_formated_units(data, return_base=True, clean=log)
     values = values[np.isfinite(values)]
@@ -167,16 +167,26 @@ def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     else:
         values_min = vmin
 
-    # Uses gaussian kernel density estimator to evaluate the PDF
-    kernel = stat.gaussian_kde(values)
-
-    x = np.linspace(values_min,values_max, 300)
-    y = kernel.evaluate(x)
-
-    if not do_not_plot:
-        ax.plot(x,y, **args)
+    if use_seaborn:
+        import seaborn.apionly as sns
         if plot_histogram:
-            ax.hist(values, normed=True)
+            sns.distplot(values, ax=ax, kde_kws={'gridsize': gridsize})
+        else:
+            sns.kdeplot(values, ax=ax, gridsize=gridsize)
+    else:
+        import scipy.stats as stat
+
+        # Uses gaussian kernel density estimator to evaluate the PDF
+        kernel = stat.gaussian_kde(values)
+
+        x = np.linspace(values_min,values_max, gridsize)
+        y = kernel.evaluate(x)
+
+        if not do_not_plot:
+            ax.plot(x,y, **args)
+            if plot_histogram:
+                ax.hist(values, normed=True)
+
 
     if name in quantities_dict:
         if not log:
@@ -196,7 +206,9 @@ def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     if not do_not_plot:
         plt.ylabel(ylabel)
         plt.xlabel(quantitytxt)
-    return x, y
+
+    if not use_seaborn:
+        return x, y
 
 
 def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,

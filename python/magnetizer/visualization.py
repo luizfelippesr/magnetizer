@@ -95,7 +95,7 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'bmax': r'b_{{\rm max}}',
                    'pmax': r'p_{{\rm max}}',
                    'p_at_Bmax': r'p\,[ ^\circ ]',
-                   'Bmax_b_at_Bmax': r'B_{{\rm max}}/b',
+                   'B2_B2b2_avg': r'\langle \overline{B}^2/(b^2+\overline{B}^2)\rangle',
                    'n': r'n',
                    'h': r'h',
                    }

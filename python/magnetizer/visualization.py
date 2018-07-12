@@ -170,9 +170,9 @@ def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
     if use_seaborn:
         import seaborn.apionly as sns
         if plot_histogram:
-            sns.distplot(values, ax=ax, kde_kws={'gridsize': gridsize})
+            sns.distplot(values, ax=ax, kde_kws={'gridsize': gridsize}, **args)
         else:
-            sns.kdeplot(values, ax=ax, gridsize=gridsize)
+            sns.kdeplot(values, ax=ax, gridsize=gridsize, **args)
     else:
         import scipy.stats as stat
 
@@ -194,11 +194,11 @@ def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
                 quantitytxt = r'${0}{1}$'.format(quantities_dict[name],unit)
             else:
                 quantitytxt = r'${0}$'.format(quantities_dict[name])
-            ylabel = r'${{\rm P}}({0})$'.format(quantities_dict[name])
+            ylabel = r'${{\rm \mathcal{{P}} }}({0})$'.format(quantities_dict[name])
         else:
             quantitytxt = r'$\log({0}/{1})$'.format(quantities_dict[name],
                                                     unit)
-            ylabel = r'${{\rm P}} [ {0} ]$'.format(quantitytxt.replace(
+            ylabel = r'${{\rm \mathcal{{P}} }} [ {0} ]$'.format(quantitytxt.replace(
               '$',''))
     else:
         quantitytxt = name

@@ -18,9 +18,12 @@ Galaxy Magnetizer requires the following libraries to run:
  * [FGSL](http://www.lrz.de/services/software/mathematik/gsl/fortran/)
 
 Once they are installed (see [Dependencies](#dependencies) for building
-instructions), the code can be compiled by simply typing `make`
-(or `make -j <number of processors>` if you would like to save time using
-multiple processors) and run using:
+instructions), the code can be compiled by using `make prod` or `make test`, for
+a production or test (debugging and backtracing enable) run, respectively.
+For building using multiple processors, the command
+`make -j <number of processors>` should work.
+
+The code can be run using mpi:
 ```
 mpirun ./Magnetizer.exe <parameters_file>
 ```
@@ -34,17 +37,18 @@ thus the minimal parameters file is
   input_file_name = "sam_input.hdf5"
 /
 ```
-An example parameters file can be found in the `example/example_global_parameters.in`
-(actually, if one tries to run the code without specifying a parameter file,
-this is the fall-back case). In the same directory, there is an example input
-file, `example/example_SAM_input.hdf5`.
+An example parameters file can be found in the
+`example/example_global_parameters.in`.
+In the same directory, there is an example input file,
+`example/example_SAM_input.hdf5`.
 
-The magnetizer can also be run in the _single galaxy mode_ (which is
+The Magnetizer can also be run in the _single galaxy mode_ (which is
 particularly useful for debugging) by simply specifying the galaxy number i.e.
 ```
-./Magnetizer.exe <parameters_file> <igal>
+./Magnetizer.exe <parameters_file> <igal> [-f]
 ```
-note that the output file will contain only this galaxy.
+note that a full output file will be generated, but containing only this galaxy.
+The option `-f` allows one to force re-run a particular galaxy.
 
 Magnetizer comes with a range of Python modules and scripts which can be used for
 

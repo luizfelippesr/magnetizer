@@ -452,11 +452,11 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
 
 def plot_evolution_column(t, name, keypos=None, limits=None, x_limits=None,
                           t_ticks=None, z_ticks=None, use_z=False,
-                          fig=None, figsize=None, color='b'):
+                          fig=None, figsize=None, color='b',**kwargs):
     if fig is None:
         first = True
         if figsize is None:
-            figsize=(mnras_text_size/4.1,mnras_text_size*0.55)
+            figsize=(mnras_text_size/4.11,mnras_text_size*0.59)
         fig, ax = plt.subplots(t.nbins, sharex=True, figsize=figsize)
     else:
         first = False
@@ -528,16 +528,14 @@ def plot_evolution_column(t, name, keypos=None, limits=None, x_limits=None,
         if keypos is not None:
             ax[i].text(keypos[0],keypos[1],format_log_mass(b), size=5.85)
 
-        ax[i].plot(zs_or_ts, t.med[i], color=color)
-        ax[i].plot(zs_or_ts, t.lower[i], color=color, linestyle=':')
-        ax[i].plot(zs_or_ts, t.upper[i], color=color, linestyle=':')
+        ax[i].plot(zs_or_ts, t.med[i], color=color,**kwargs)
         ax[i].fill_between(zs_or_ts, t.lower[i], t.upper[i],
-                           color=color, alpha=0.1)
+                           color=color, alpha=0.1, linewidth=0.05)
 
         if first:
             ax[i].set_ylabel(name)
             ax[i].set_ylim(limits)
-            ax[i].set_yticks(ax[i].get_yticks()[1:-1])
+            ax[i].set_yticks(ax[i].get_yticks()[:-1])
     if first:
         ax[0].set_xlim(*x_limits)
         if not use_z:
@@ -568,6 +566,190 @@ def plot_evolution_column(t, name, keypos=None, limits=None, x_limits=None,
                         top=0.92,
                         bottom=0.1)
     return fig
+
+def plot_evolution_row(t, name, keypos=None, limits=None, x_limits=None,
+                          t_ticks=None, z_ticks=None, use_z=False,
+                          fig=None, figsize=None, color='b',**kwargs):
+    if fig is None:
+        first = True
+        if figsize is None:
+            figsize=(mnras_text_size*0.59, mnras_text_size/4.11)
+        fig, ax = plt.subplots(ncols=t.nbins,
+                               sharey=True, sharex=True,
+                               figsize=figsize)
+    else:
+        first = False
+        ax = fig.axes
+    if not use_z:
+        zs_or_ts = t.times.value
+
+        if x_limits is None:
+            x_limits = (t.times.min()/u.Gyr, t.times.max()/u.Gyr)
+
+        if t_ticks is None:
+            t_ticks = np.linspace(t.times.max()/u.Gyr, t.times.min()/u.Gyr, 5)
+        else:
+            t_ticks = np.array(t_ticks)
+
+        if z_ticks is not None:
+            # Find corresponding redshifts with spline interpolation
+            z_to_t_spline_converter = UnivariateSpline(t.run.redshifts[::-1],
+                                                      t.run.times[::-1]/u.Gyr,
+                                                      k=5, s=0)
+
+            z_tick_pos = z_to_t_spline_converter(z_ticks)
+        else:
+            z_tick_pos = t_ticks
+            t_to_z_spline_converter = UnivariateSpline(t.run.times/u.Gyr,
+                                                      t.run.redshifts, k=5, s=0)
+
+            z_ticks = t_to_z_spline_converter(z_tick_pos)
+
+        tlabels = ['{0:.1f}'.format(x) for x in t_ticks]
+        zlabels = ['{0:.1f}'.format(abs(x)) for x in z_ticks]
+    else:
+        zs_or_ts = t.zs
+
+        if x_limits is None:
+            x_limits = (t.zs.min(), t.zs.max())
+
+        if z_ticks is None:
+            z_ticks = np.linspace(t.zs.min(), t.zs.max(), 5)
+        else:
+            z_ticks = np.array(z_ticks)
+
+        if t_ticks is not None:
+            # Find corresponding redshifts with spline interpolation
+            t_to_z_spline_converter = UnivariateSpline(t.run.times/u.Gyr,
+                                                      t.run.redshifts, k=5, s=0)
+
+            t_tick_pos = t_to_z_spline_converter(t_ticks)
+        else:
+            t_tick_pos = z_ticks
+
+            z_to_t_spline_converter = UnivariateSpline(t.run.redshifts[::-1],
+                                                      t.run.times[::-1]/u.Gyr,
+                                                      k=5, s=0)
+            t_ticks = z_to_t_spline_converter(t_tick_pos)
+
+        tlabels = ['{0:.1f}'.format(x) for x in t_ticks]
+        zlabels = ['{0:.1f}'.format(abs(x)) for x in z_ticks]
+
+
+    if limits is None:
+        limits = (np.nanmin(t.lower), np.nanmax(t.upper))
+    try:
+        bins = t.bins.bins
+    except:
+        bins = t.bins[0].bins
+
+    for i, b in enumerate(bins):
+        if keypos is not None:
+            ax[i].text(keypos[0],keypos[1],format_log_mass(b), size=5.85)
+
+        ax[i].plot(zs_or_ts, t.med[i], color=color,**kwargs)
+        ax[i].fill_between(zs_or_ts, t.lower[i], t.upper[i],
+                           color=color, alpha=0.1, linewidth=0.05)
+
+        if first:
+            ax[i].set_ylim(limits)
+            ax[i].set_xticks(ax[i].get_xticks()[:-1])
+
+
+            ax2 = ax[i].twiny()
+
+            if not use_z:
+                ax2.set_xlim(*x_limits)
+                ax2.xaxis.set_ticks(z_tick_pos[:-1])
+                ax2.xaxis.set_ticklabels(zlabels[:-1])
+                ax2.set_xlabel(r"$z$")
+            else:
+                ax2.set_xlim(*x_limits)
+                ax2.xaxis.set_ticks(t_tick_pos[:-1])
+                ax2.xaxis.set_ticklabels(tlabels[:-1])
+                ax2.set_xlabel(r"$t\;[\rm Gyr]$")
+
+
+
+    fig.subplots_adjust(wspace=0,
+                        left=0.28,
+                        right=0.96,
+                        top=0.92,
+                        bottom=0.1)
+    return fig
+
+
+def plot_profile_grid(ap, keypos=None, name=None, unit=None, ylim=None, xlim=None,
+                      fig=None, ax=None, color=None, log=False, **kwargs):
+    nbins, nzs, nrs = ap.med.shape
+    figsize = (mnras_text_size,mnras_text_size*0.7)
+    if fig is None:
+        fig, ax = plt.subplots(nrows=nbins, ncols=nzs, sharex=True, sharey=True, figsize=figsize)
+        first = True
+    else:
+        first = False
+
+    r = np.linspace(0,ap.run.parameters.grid['P_RMAX_OVER_RDISK'],ap.ngrid)
+    if name is None:
+        name = ap.quantity
+    if unit is None:
+        unit = ap.unit
+    for ib in range(nbins):
+
+        for iz in range(nzs):
+            ignore_me = ((iz==nzs-1) and (ib==nbins-1))
+            if keypos is not None and not ignore_me:
+                mass_interval = ap.bins[0].bins[ib]
+                masstxt = '${0}< \log(M_\star/M_\odot) <{1}$'.format(
+                    np.log10(mass_interval[0]/u.Msun),np.log10(mass_interval[1]/u.Msun))
+                masstxt += '\n'+r'$z={0:.1f}$'.format(abs(ap.zs[iz]))
+                ax[ib, iz].annotate(masstxt, keypos, fontsize=7)
+
+
+            if color is None:
+                c = colors[ib]
+            else:
+                c = color
+            if not ignore_me:
+                ax[ib, iz].plot(r,ap.med[ib,iz,:], color=c, **kwargs)
+                ax[ib, iz].fill_between(r, ap.lower[ib,iz,:], ap.upper[ib,iz,:], alpha=0.25, color=c, linewidth=0.05)
+                ax[ib, iz].set_xlim(0,r.max())
+            else:
+                ax[ib, iz].plot(r,ap.med[ib,iz,:]*np.NaN, color=c, **kwargs)
+
+            if ylim is not None:
+                ax[ib, iz].set_ylim(ylim)
+            if log and not ignore_me:
+                ax[ib, iz].set_yscale('log')
+            if xlim is not None:
+                ax[ib, iz].set_xlim(xlim)
+
+
+
+    ylabel = r'${}{}$'.format(name, unit)
+
+    if first:
+        for ib in range(nbins):
+
+
+            ax[ib, 0].set_ylabel(ylabel)
+            ax[ib, -1].set_ylabel(ylabel)
+
+            ax[ib, -1].yaxis.set_label_position("right")
+            ax[ib, -1].yaxis.tick_right()
+
+        for iz in range(nzs):
+            ax[-1,iz].set_xlabel(r'$r/r_{50}$')
+            ax[0,iz].set_xlabel(r'$r/r_{50}$')
+            ax[0, iz].xaxis.set_label_position("top")
+            ax[0, iz].xaxis.tick_top()
+
+        ax[0, 0].set_yticks(ax[0, 0].get_yticks()[:-1])
+        ax[0, 0].set_xticks(ax[0, 0].get_xticks()[:-1])
+
+    fig.subplots_adjust(wspace=0, hspace=0)
+    return fig, ax
+
 
 def plot_redshift_evolution(quantity, mag_run, position=None,
                             target_redshifts=None, bin_objs=None,

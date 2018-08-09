@@ -36,7 +36,8 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
 
     Some of the available quantities are:
     * '|Bp|'/'|Br|'/'|Bz|' - Absolute value of a B component
-    * 'Btot' - Total magnetic field strength
+    * 'Btot' - Total (large scale) magnetic field strength
+    * 'Bfull' - Total magnetic field strength
     * r'Bmax' - Maximum field strength
     * r'b' - Turbulent magnetic field strength
     * r'growth' - Growth rate of the B (assuming no radial variation)
@@ -242,6 +243,9 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         quantity = sqrt(get('Bp')**2 +
                     get('Br')**2 +
                     get('Bzmod')**2)
+
+    elif qname == r'Bfull':
+        quantity = sqrt(get('Btot')**2 + get('b')**2)
 
     elif qname == r'B_Beq':
         quantity = sqrt(get('Bp')**2 +

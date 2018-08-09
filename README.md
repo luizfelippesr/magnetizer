@@ -1,30 +1,12 @@
 # Magnetizer #
 
-This code takes the output of a [semi-analytic model of galaxy formation][SAM]
-(SAM) or cosmological hydro-simulation _(planned)_ and computes radial dependent
-ISM properties and magnetic field for each simulated galaxy. The magnetic field
-is obtained by numerically solving the galactic dynamo equation throughout
-history of each galaxy.
+This code takes the output of the [Galform][GLF] [semi-analytic model of galaxy formation][SAM]
+(SAM) and computes radial dependent ISM properties and magnetic field for each
+simulated galaxy. The magnetic field is obtained by numerically solving the
+galactic dynamo equation throughout history of each galaxy.
 
 [SAM]: https://ui.adsabs.harvard.edu/#abs/2006RPPh...69.3101B/
-
-## Supported SAMs and simulations ##
-
-For the present version, only the [Galform][GLF] model is supported.
-
-We have plans to include suport to the [Galacticus][GLC]. We also have plans to
-allow using data from the [Millenium database][MIL], which includes the output
-of several published versions of both Galform and also various versions of the
-[L-Galaxies][LGA] SAM developed at the MPA. Similarly, there is planned support
-to retrieving data from the [Eagle database][EAG], which contains data extracted
-from the [EAGLE simulation][EAGD].
-
 [GLF]: https://ui.adsabs.harvard.edu/#abs/2000MNRAS.319..168C
-[GLC]: https://sites.google.com/site/galacticusmodel/
-[MIL]: http://wwwmpa.mpa-garching.mpg.de/millennium/#DATABASE_ACCESS
-[LGA]: http://galformod.mpa-garching.mpg.de/public/LGalaxies/
-[EAG]: http://icc.dur.ac.uk/Eagle/database.php
-[EAGD]: http://icc.dur.ac.uk/Eagle/
 
 ## Quick install and run guide ##
 
@@ -108,7 +90,6 @@ masses and gas masses change in time according to it.
 An example galaxy properties table containing data from M31 and Milky Way can be
 found in `python/example_galaxies.txt`.
 
-
 ### Parameter files ###
 
 * Description of how to use the parameter files
@@ -124,7 +105,7 @@ found in `python/example_galaxies.txt`.
 
 ### Contact ###
 
-Please use Bitbucket's [tools][issues]
+Please use Github's [tools][issues]
 or email [Luiz Felippe S. Rodrigues](mailto:luiz.rodrigues@ncl.ac.uk) if you find any problem.
 
-[issues]: https://bitbucket.org/luizfelippe/magnetic-fields-and-galaxy-formation-models/issues
+[issues]: https://github.com/luizfelippesr/magnetizer/issues

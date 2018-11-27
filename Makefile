@@ -9,19 +9,7 @@ OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 FCFLAGS+= -lfgsl -I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
 FCFLAGS_TEST=-g -Wall
-FCFLAGS_PROD=-O2 \
--funswitch-loops \
--fpredictive-commoning \
--fgcse-after-reload \
--ftree-loop-vectorize \
--ftree-loop-distribution \
--ftree-loop-distribute-patterns \
--floop-interchange \
--ftree-slp-vectorize \
--fvect-cost-model \
--ftree-partial-pre \
--fpeel-loops \
--fipa-cp-clone
+FCFLAGS_PROD=-O3
 
 help:
 	@echo '---------------------'
@@ -51,6 +39,10 @@ TST:
 
 main: $(OBJ) ${builddir}/Magnetizer.o
 	$(FC) $^ $(FCFLAGS) -o Magnetizer.exe
+
+
+integrate: $(OBJ) ${builddir}/path_integrate.o
+	$(FC) $^ $(FCFLAGS) -o path_integrate.exe
 
 # Test programs
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o

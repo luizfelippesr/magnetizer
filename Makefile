@@ -47,6 +47,10 @@ integrate: $(OBJ) ${builddir}/path_integrate.o
 # Test programs
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
 	$(FC) $(FCFLAGS) ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe
+
+testIO: ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/test_io.o
+	$(FC) $(FCFLAGS) ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/test_io.o  -o testIO.exe
+
 testInterpolation: ${builddir}/interpolation.o ${builddir}/tests.interpolation.o
 	$(FC) $(FCFLAGS) ${builddir}/interpolation.o ${builddir}/tests.interpolation.o -o testInterpolation.exe
 testRoots: ${builddir}/root_finder.o ${builddir}/tests.testRoots.o

@@ -38,20 +38,20 @@ contains
                           [runtime],                                &
                           units='s',                                &
                           description='Running time of the galaxy', &
-                          is_log=.true.)
+                          group='Log')
 
     call IO_write_dataset('nsteps', gal_id,                         &
                           [dble(nsteps)],                           &
                           description='Number of timesteps',        &
-                          is_log=.true.)
+                          group='Log')
 
     call IO_write_dataset('status', gal_id,                         &
                           ts_status_code,                           &
                           description='Status codes.',              &
-                          is_log=.true.)
+                          group='Log')
 
     call IO_write_dataset('completed', gal_id,                      &
-                          [1d0], is_log=.true.)
+                          [1d0], group='Log')
 
     ! Outputs the data!
     call IO_write_dataset('r', gal_id,                            &

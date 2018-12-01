@@ -58,7 +58,8 @@ module IO
   logical :: lchunking, lcompression, lseparate_output
   integer :: chunksize, compression_level
   public IO_start, IO_start_galaxy, IO_finish_galaxy, IO_write_dataset, IO_end
-  public IO_read_dataset_scalar, IO_read_dataset_single, IO_flush
+  public IO_read_dataset_single, IO_flush
+  public IO_read_dataset_scalar, IO_read_dataset_vector
 
 contains
 
@@ -195,7 +196,8 @@ contains
     if (lresuming_run) then
       ! If continuing a previous Magnetizer run, checks whether the galaxy
       ! was finished earlier.
-      call IO_read_dataset_scalar('completed', gal_id, flag, is_log=.true.)
+      call IO_read_dataset_scalar('completed', gal_id, flag, group='Log')
+
       if (flag(1)>0.5d0) then
         IO_start_galaxy = .false.
         call message('galaxy previously run. Skipping.', gal_id=gal_id,info=2)
@@ -205,14 +207,14 @@ contains
   end function IO_start_galaxy
 
   subroutine IO_write_dataset_scalar(dataset_name, gal_id, data, &
-                                     units, description, is_log)
+                                     units, description, group)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id
     double precision, dimension(:), intent(in) :: data
     character(len=*), optional, intent(in) :: units
     character(len=*), optional, intent(in) :: description
-    logical, intent(in), optional :: is_log
+    character(len=*), optional :: group
     integer(hid_t) :: group_id
     integer ::  idx, error
     integer, parameter :: rank = 2
@@ -222,7 +224,12 @@ contains
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
 
-    group_id = output_group_id
+    if (present(group)) then
+      group_id = choose_group_id(group)
+    else
+      group_id = output_group_id
+    endif
+
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
@@ -234,10 +241,6 @@ contains
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      ! Flag 'is_log' can be used to choose the group 'Log' instead of 'Output'
-      if (present(is_log)) then
-          if (is_log) group_id = log_group_id
-      endif
       if (lresuming_run) then
         idx = open_dset(dataset_name, group_id=group_id)
       else
@@ -272,15 +275,12 @@ contains
 
   end subroutine IO_write_dataset_scalar
 
-subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
-                                  group_id)
+subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, group)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id
     integer, intent(in), optional :: nrows
-    logical, intent(in), optional :: is_log
-    integer(hid_t), optional :: group_id
-
+    character(len=*), intent(in), optional :: group
     logical :: full
     double precision, dimension(:), intent(out) :: data
     integer ::  idx, error, nrows_actual
@@ -289,12 +289,16 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
     integer, dimension(1) :: data_shape
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
-    logical :: is_log_actual
+    integer(hid_t) :: group_id
 
-    if (present(is_log)) then
-      is_log_actual = is_log
+    if (present(group)) then
+      group_id = choose_group_id(group)
+      if (group_id == -1) &
+        call error_message('IO_read_dataset_scalar', &
+                           'Unrecognized group. Exiting..', &
+                           gal_id=gal_id, info=0, abort=.true.)
     else
-      is_log_actual = .false.
+      group_id = input_group_id
     endif
 
     if (present(nrows)) then
@@ -314,14 +318,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      if (is_log_actual) then
-        idx = open_dset(dataset_name, log_group_id)
-      elseif (present(group_id)) then
-        idx = open_dset(dataset_name, group_id)
-      else
-        idx = open_dset(dataset_name) !Defaults to the input_group_id
-      endif
-
+      idx = open_dset(dataset_name, group_id)
       if (full) then
         dimsf_sca = [nrows_actual,1]
         call H5Screate_simple_f(rank, dimsf_sca, memspace_ids(idx), error)
@@ -347,6 +344,63 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
     return
 
   end subroutine IO_read_dataset_scalar
+
+subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
+    ! Writes a dataset to disk - vector version
+    character(len=*), intent(in) :: dataset_name
+    integer, intent(in) :: gal_id
+    character(len=*), intent(in), optional :: group
+    logical :: full
+    double precision, dimension(:,:), intent(out) :: data
+    integer ::  idx, error, nrows_actual
+    integer, parameter :: rank = 2
+    integer(hssize_t), dimension(3) :: offset
+    integer, dimension(2) :: data_shape
+    integer(hsize_t), dimension(3) :: dimsf_vec
+    integer(hsize_t), dimension(3) :: dimsf_vec_1gal
+
+    integer(hid_t) :: group_id
+
+    if (present(group)) then
+      group_id = choose_group_id(group)
+      if (group_id == -1) &
+        call error_message('IO_read_dataset_scalar', &
+                           'Unrecognized group. Exiting..', &
+                           gal_id=gal_id, info=0, abort=.true.)
+    else
+      group_id = input_group_id
+    endif
+
+    data_shape = shape(data)
+
+    ! Sets dataset dimensions.
+    dimsf_vec = [data_shape(1),data_shape(2),gals_number]
+    ! Sets the dimensions associated with writing a single galaxy
+    dimsf_vec_1gal = [data_shape(1),data_shape(2),1]
+
+    ! Tries to find a previously opened dataset (-1 signals new)
+    idx = find_dset(dataset_name)
+    ! If it wasn't previously opened, creates it (collectively)
+    if (idx < 0) then
+      idx = open_dset(dataset_name, group_id)
+      call H5Screate_simple_f(rank, dimsf_vec_1gal, memspace_ids(idx), error)
+
+      call H5Dget_space_f(dset_ids(idx), dataspace_ids(idx), error)
+    end if
+
+    ! Selects hyperslab in the file.
+    offset = [0,0,gal_id-1] ! Means: in second dimension, start from gal_id-1
+    if (.not.full) &
+      call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+                                 offset, dimsf_vec_1gal, error)
+    ! At last, reads the dataset
+    call H5Dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error,&
+                   file_space_id=dataspace_ids(idx), &
+                   mem_space_id=memspace_ids(idx))
+
+    return
+
+  end subroutine IO_read_dataset_vector
 
   subroutine IO_read_dataset_single(dataset_name, gal_id, data)
     ! Writes a dataset to disk - scalar version
@@ -447,14 +501,14 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
   end subroutine IO_write_dataset_vector
 
   subroutine IO_write_dataset_code(dataset_name, gal_id, data, &
-                                     units, description, is_log)
+                                     units, description, group)
     ! Writes a dataset to disk - scalar version
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id
     character, dimension(:), intent(in) :: data
     character(len=*), optional, intent(in) :: units
     character(len=*), optional, intent(in) :: description
-    logical, intent(in), optional :: is_log
+    character(len=*), optional, intent(in) :: group
     integer(hid_t) :: group_id
     integer ::  idx, error
     integer, parameter :: rank = 2
@@ -464,11 +518,12 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
 
-
-    group_id = output_group_id
-    if (present(is_log)) then
-        if (is_log) group_id = log_group_id
+    if (present(group)) then
+      group_id = choose_group_id(group)
+    else
+      group_id = output_group_id
     endif
+
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
@@ -886,6 +941,26 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
     idx = -1
     return
   end function find_dset
+
+  function choose_group_id(group) result(group_id)
+    ! Returns the HDF5 group id associated with the argument string
+    ! Later this can be made more generic, opening any group
+    integer(hid_t) :: group_id
+    character(len=*), intent(in) :: group
+
+    select case (trim(group))
+      case('Log')
+        group_id = log_group_id
+      case('Output')
+        group_id = output_group_id
+      case('Input')
+        group_id = input_group_id
+      case default
+        group_id = -1
+      end select
+
+  end function
+
 
   subroutine check(error)
     integer, intent(in) :: error

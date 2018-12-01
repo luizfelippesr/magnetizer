@@ -316,7 +316,7 @@ subroutine IO_read_dataset_scalar(dataset_name, gal_id, data, nrows, is_log, &
     if (idx < 0) then
       if (is_log_actual) then
         idx = open_dset(dataset_name, log_group_id)
-      elseif (present(group_id)
+      elseif (present(group_id)) then
         idx = open_dset(dataset_name, group_id)
       else
         idx = open_dset(dataset_name) !Defaults to the input_group_id

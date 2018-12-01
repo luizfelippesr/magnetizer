@@ -9,7 +9,7 @@ OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 FCFLAGS+= -lfgsl -I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
 FCFLAGS_TEST=-g -Wall
-FCFLAGS_PROD=-O3
+FCFLAGS_PROD=-O2
 
 help:
 	@echo '---------------------'

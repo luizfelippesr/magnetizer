@@ -44,12 +44,12 @@ main: $(OBJ) ${builddir}/Magnetizer.o
 integrate: $(OBJ) ${builddir}/path_integrate.o
 	$(FC) $^ $(FCFLAGS) -o path_integrate.exe
 
-# Test programs
+# Other programs
+LoSintegrate: ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
+	$(FC) $(FCFLAGS) ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o  -o LoSintegrate.exe
+
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
 	$(FC) $(FCFLAGS) ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe
-
-testIO: ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/test_io.o
-	$(FC) $(FCFLAGS) ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/test_io.o  -o testIO.exe
 
 testInterpolation: ${builddir}/interpolation.o ${builddir}/tests.interpolation.o
 	$(FC) $(FCFLAGS) ${builddir}/interpolation.o ${builddir}/tests.interpolation.o -o testInterpolation.exe

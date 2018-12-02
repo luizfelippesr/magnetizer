@@ -1,5 +1,3 @@
-
-
 program test_IO_read
   use grid
   use IO
@@ -14,6 +12,10 @@ program test_IO_read
   integer :: rank, nproc, ierr, rc, ncycles, flush_signal
   integer :: igal, info_mpi
   integer,dimension(8) :: time_vals
+
+  double precision, allocatable, dimension(:) :: scalar_data
+  double precision, allocatable, dimension(:,:) :: vector_data
+
 
   ! Initializes MPI
   call MPI_INIT(ierr)
@@ -106,6 +108,14 @@ program test_IO_read
   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
 
-  IO_read_dataset_scalar
+  allocate(scalar_data(number_of_redshifts))
+  call IO_read_dataset_scalar('Bavg', igal, scalar_data, group='Output')
 
+
+  allocate(vector_data(number_of_redshifts,p_nx_ref))
+  call IO_read_dataset_vector('Br', igal, vector_data, group='Output')
+  print *, 'adasdasdads'
+  print *, vector_data(3,:)
+  print *, 'adasdasdads'
+  print *, shape(vector_data)
 end program test_IO_read

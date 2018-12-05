@@ -2,6 +2,8 @@ program test_IO_read
   use grid
   use IO
   use mpi
+  use math_constants
+  use units
   use messages
   use global_input_parameters
   implicit none
@@ -10,12 +12,18 @@ program test_IO_read
   logical :: success, incomplete
   integer, parameter :: master_rank = 0
   integer :: rank, nproc, ierr, rc, ncycles, flush_signal
-  integer :: igal, info_mpi
+  integer :: igal, info_mpi, i, j, iz
   integer,dimension(8) :: time_vals
-
-  double precision, allocatable, dimension(:) :: scalar_data
-  double precision, allocatable, dimension(:,:) :: vector_data
-
+  double precision :: alpha, b
+  double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl,xc2
+  double precision, allocatable, dimension(:,:) :: Bpara, Bperp
+  double precision, allocatable, dimension(:) :: Bpara_valid, Bperp_valid
+  double precision, allocatable, dimension(:) :: Bx, By, Bz, Bmag, xc, zc
+  double precision, allocatable, dimension(:) :: angle_B_LoS, tmp
+  logical, allocatable, dimension(:,:) :: valid
+  double precision, allocatable, dimension(:,:) :: Rpath
+  integer, allocatable, dimension(:) :: js
+  double precision, allocatable, dimension(:) :: test
 
   ! Initializes MPI
   call MPI_INIT(ierr)
@@ -104,18 +112,102 @@ program test_IO_read
   ! Initializes IO (this also reads ngals from the hdf5 input file)
   call IO_start(MPI_COMM_WORLD, info_mpi, .true., date)
 
+  ! For testing
   igal = 2
+  b = 2 ! kpc, Impact parameter
+  alpha = pi/2d0  ! kpc, angle relative to the normal to the midplane
+
+
   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
 
-  allocate(scalar_data(number_of_redshifts))
-  call IO_read_dataset_scalar('Bavg', igal, scalar_data, group='Output')
+  allocate(Rcyl(number_of_redshifts,p_nx_ref))
+  call IO_read_dataset_vector('r', igal, Rcyl, group='Output')
+
+  allocate(Br(number_of_redshifts,p_nx_ref))
+  call IO_read_dataset_vector('Br', igal, Br, group='Output')
+
+  allocate(Bp(number_of_redshifts,p_nx_ref))
+  call IO_read_dataset_vector('Bp', igal, Bp, group='Output')
+
+  !lfsr Later, we will need to account for the sign of Bz...
+  allocate(Bzmod(number_of_redshifts,p_nx_ref))
+  call IO_read_dataset_vector('Bzmod', igal, Bzmod, group='Output')
+
+  allocate(xc(number_of_redshifts))
+  allocate(xc2(number_of_redshifts, 2*p_nx_ref))
+  allocate(zc(number_of_redshifts))
+  allocate(js(2*p_nx_ref))
+  allocate(valid(number_of_redshifts,2*p_nx_ref))
+  valid = .false.
+  allocate(Bpara(number_of_redshifts,2*p_nx_ref))
+  allocate(Bperp(number_of_redshifts,2*p_nx_ref))
+  allocate(Bx(number_of_redshifts))
+  allocate(By(number_of_redshifts))
+  allocate(Bmag(number_of_redshifts))
+  allocate(angle_B_LoS(number_of_redshifts))
+!   allocate(Bz(number_of_redshifts))
+
+  ! Construct coordinates and auxiliary indices js
+  do i=1,2*p_nx_ref
+    if (i<p_nx_ref+1) then
+      ! Index for behind the x-z plane
+      j=p_nx_ref-i+1
+      js(i) = j
+
+      ! Coordinates
+      xc = -1
+    else
+      ! Index ahead of the x-z plane
+      j = i-p_nx_ref
+      js(i) = j
+
+      ! Coordinates
+      xc = 1
+    end if
+
+    ! The available values for x are x_i = sqrt(R_i^2-b^2)
+    tmp = Rcyl(:,j)**2-b**2
+    where (tmp>0)
+      xc = xc * sqrt(tmp)
+      ! Stores a mask to be used with the fortran 2003 'pack' function
+      valid(:,i) = .true.
+    endwhere
+
+    ! Bx = Br * x/R - Bp * y/R
+    Bx = Br(:,j) * xc/Rcyl(:,j) - Bp(:,j)* b/Rcyl(:,j)
+    ! By = Br * y/R + Bp * x/R
+    By = Br(:,j) * b/Rcyl(:,j) - Bp(:,j)* xc/Rcyl(:,j)
+    ! Bz = Bzmod * ?
+    Bz = Bzmod(:,j)
+
+    ! Simple vector calculations
+    ! |B|
+    Bmag = sqrt(Bx**2 + By**2 + Bz**2)
+    ! B_\parallel = dot(B,n)
+    Bpara(:,i) = Bx*cos(alpha) + Bz*sin(alpha)
+    ! angle = arccos(Bpara/|B|)
+    angle_B_LoS = acos(Bpara(:,i)/Bmag)
+    ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
+    Bperp(:,i) = Bmag*sin(angle_B_LoS)
+    xc2(:,i) = xc
+  enddo
+
+  ! Now work is done for each redshift (as the valid section of each array may
+  ! may be different)
+  do iz=1,number_of_redshifts
+    ! Filters away invalid part of an array
+    Bpara_valid = pack(Bpara(iz,:),valid(iz,:))
+    print *, shape(Bpara_valid)
+  enddo
+
+  print *,'----'
+  test = pack(xc2(2,:),valid(2,:))
+  print *, shape(test)
+  print *, test
+  do i=1,size(test)
+    print *, test(i)
+  enddo
 
 
-  allocate(vector_data(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('Br', igal, vector_data, group='Output')
-  print *, 'adasdasdads'
-  print *, vector_data(3,:)
-  print *, 'adasdasdads'
-  print *, shape(vector_data)
 end program test_IO_read

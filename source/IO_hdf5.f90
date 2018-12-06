@@ -350,9 +350,8 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     character(len=*), intent(in) :: dataset_name
     integer, intent(in) :: gal_id
     character(len=*), intent(in), optional :: group
-    logical :: full
     double precision, dimension(:,:), intent(out) :: data
-    integer ::  idx, error, nrows_actual
+    integer ::  idx, error
     integer, parameter :: rank = 2
     integer(hssize_t), dimension(3) :: offset
     integer, dimension(2) :: data_shape
@@ -390,8 +389,8 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
 
     ! Selects hyperslab in the file.
     offset = [0,0,gal_id-1] ! Means: in second dimension, start from gal_id-1
-    if (.not.full) &
-      call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
+
+    call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                  offset, dimsf_vec_1gal, error)
     ! At last, reads the dataset
     call H5Dread_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error,&
@@ -583,8 +582,8 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     ! Finishes IO (closing everything)
     integer :: i, error
     character(len=*), intent(in) :: date
-    character(len=10) :: date_formatted
 
+!     character(len=10) :: date_formatted
 !     date_formatted = date(1:4)//'-'//date(5:6)//'-'//date(7:8)
 !     call add_text_attribute(file_id_out, 'Run date', date_formatted)
 
@@ -659,7 +658,7 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     integer(size_t) :: attrlen    ! length of the attribute string
     integer     ::   error ! error flag
     integer(hsize_t), dimension(1) :: data_dims
-    integer :: old_attr_value
+
     attrlen = len(attribute)
     data_dims(1) = 1
     ! Creates scalar data space for the attribute.

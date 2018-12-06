@@ -6,25 +6,27 @@ program test_IO_read
   use units
   use messages
   use global_input_parameters
+  use LoSintegrate_aux
   implicit none
   character(len=100) :: command_argument
   character(len=100) :: date
   logical :: success, incomplete
   integer, parameter :: master_rank = 0
+  integer, parameter :: nz = 100
   integer :: rank, nproc, ierr, rc, ncycles, flush_signal
-  integer :: igal, info_mpi, i, j, iz
+  integer :: igal, info_mpi, i, j, iz, it
   integer,dimension(8) :: time_vals
   double precision :: alpha, b
-  double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl,xc2
-  double precision, allocatable, dimension(:,:) :: Bpara, Bperp
-  double precision, allocatable, dimension(:) :: Bpara_valid, Bperp_valid
-  double precision, allocatable, dimension(:) :: Bx, By, Bz, Bmag, xc, zc
+  double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl, h
+  double precision, allocatable, dimension(:,:) :: Bpara_all, Bperp_all, xc, zc
+  double precision, allocatable, dimension(:) :: Bpara, Bperp
+  double precision, allocatable, dimension(:) :: Bx, By, Bz, Bmag
   double precision, allocatable, dimension(:) :: angle_B_LoS, tmp
   logical, allocatable, dimension(:,:) :: valid
   double precision, allocatable, dimension(:,:) :: Rpath
   integer, allocatable, dimension(:) :: js
   double precision, allocatable, dimension(:) :: test
-
+  logical, parameter :: l_B_scale_with_z = .false.
   ! Initializes MPI
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -115,7 +117,7 @@ program test_IO_read
   ! For testing
   igal = 2
   b = 2 ! kpc, Impact parameter
-  alpha = pi/2d0  ! kpc, angle relative to the normal to the midplane
+  alpha = 1.51843644923506673192  ! kpc, angle relative to the normal to the midplane
 
 
   print *, 'Starting Galaxy', igal
@@ -127,6 +129,7 @@ program test_IO_read
   allocate(Br(number_of_redshifts,p_nx_ref))
   call IO_read_dataset_vector('Br', igal, Br, group='Output')
 
+
   allocate(Bp(number_of_redshifts,p_nx_ref))
   call IO_read_dataset_vector('Bp', igal, Bp, group='Output')
 
@@ -134,80 +137,104 @@ program test_IO_read
   allocate(Bzmod(number_of_redshifts,p_nx_ref))
   call IO_read_dataset_vector('Bzmod', igal, Bzmod, group='Output')
 
-  allocate(xc(number_of_redshifts))
-  allocate(xc2(number_of_redshifts, 2*p_nx_ref))
-  allocate(zc(number_of_redshifts))
+  allocate(h(number_of_redshifts,p_nx_ref))
+  call IO_read_dataset_vector('h', igal, h, group='Output')
+  h = h * 1d-3 ! Converts from pc to kpc
+
+
+  allocate(xc(number_of_redshifts, 2*p_nx_ref))
+  allocate(zc(number_of_redshifts, 2*p_nx_ref))
   allocate(js(2*p_nx_ref))
+
   allocate(valid(number_of_redshifts,2*p_nx_ref))
   valid = .false.
-  allocate(Bpara(number_of_redshifts,2*p_nx_ref))
-  allocate(Bperp(number_of_redshifts,2*p_nx_ref))
-  allocate(Bx(number_of_redshifts))
-  allocate(By(number_of_redshifts))
+  allocate(Bpara_all(number_of_redshifts,2*p_nx_ref))
+  allocate(Bperp_all(number_of_redshifts,2*p_nx_ref))
   allocate(Bmag(number_of_redshifts))
   allocate(angle_B_LoS(number_of_redshifts))
-!   allocate(Bz(number_of_redshifts))
+  allocate(tmp(number_of_redshifts))
 
-  ! Construct coordinates and auxiliary indices js
+  ! i -> index for quantities in a cartesian box
+  ! j -> index for axi-symmetric quantities
   do i=1,2*p_nx_ref
+    ! Constructs coordinates and auxiliary indices js
     if (i<p_nx_ref+1) then
       ! Index for behind the x-z plane
       j=p_nx_ref-i+1
       js(i) = j
-
-      ! Coordinates
-      xc = -1
+      ! sign for x coordinate
+      xc(:,i) = -1
     else
       ! Index ahead of the x-z plane
       j = i-p_nx_ref
       js(i) = j
-
-      ! Coordinates
-      xc = 1
+      ! sign for x coordinate
+      xc(:,i) = 1
     end if
 
     ! The available values for x are x_i = sqrt(R_i^2-b^2)
-    tmp = Rcyl(:,j)**2-b**2
+    tmp = Rcyl(:,j)**2-b**2 ! NB allocated on-the-fly: Fortran2003 feature
     where (tmp>0)
-      xc = xc * sqrt(tmp)
-      ! Stores a mask to be used with the fortran 2003 'pack' function
+      xc(:,i) = xc(:,i) * sqrt(tmp)
+      ! Stores a mask to be used with the Fortran 2003 'pack' intrinsic function
       valid(:,i) = .true.
     endwhere
 
-    ! Bx = Br * x/R - Bp * y/R
-    Bx = Br(:,j) * xc/Rcyl(:,j) - Bp(:,j)* b/Rcyl(:,j)
-    ! By = Br * y/R + Bp * x/R
-    By = Br(:,j) * b/Rcyl(:,j) - Bp(:,j)* xc/Rcyl(:,j)
-    ! Bz = Bzmod * ?
+    ! Sets z-coord
+    zc(:,i) = xc(:,i) / tan(alpha)
+
+    ! Bx = Br * x/R - Bp * y/R  (NB allocated on-the-fly)
+    Bx = Br(:,j) * xc(:,i)/Rcyl(:,j) - Bp(:,j)* b/Rcyl(:,j)
+    ! By = Br * y/R + Bp * x/R (NB allocated on-the-fly)
+    By = Br(:,j) * b/Rcyl(:,j) - Bp(:,j)* xc(:,i)/Rcyl(:,j)
+    ! Bz = Bzmod * ? (NB allocated on-the-fly)
     Bz = Bzmod(:,j)
 
     ! Simple vector calculations
     ! |B|
     Bmag = sqrt(Bx**2 + By**2 + Bz**2)
-    ! B_\parallel = dot(B,n)
-    Bpara(:,i) = Bx*cos(alpha) + Bz*sin(alpha)
+    ! B_\parallel = dot(B,n), where n is the LoS direction
+    Bpara_all(:,i) = Bx*cos(alpha) + Bz*sin(alpha)
     ! angle = arccos(Bpara/|B|)
-    angle_B_LoS = acos(Bpara(:,i)/Bmag)
+    angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
     ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
-    Bperp(:,i) = Bmag*sin(angle_B_LoS)
-    xc2(:,i) = xc
-  enddo
+    Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
 
+    tmp = abs(zc(:,i))/h(:,j)
+    if (l_B_scale_with_z) then
+      ! Scale with z (coordinate)
+      Bperp_all(:,i) = Bperp_all(:,i) * exp(-tmp)
+      Bpara_all(:,i) = Bpara_all(:,i) * exp(-tmp)
+    else
+      ! Constant for |z|<h, zero otherwise
+      where (tmp>1)
+        Bperp_all(:,i) = 0d0
+        Bpara_all(:,i) = 0d0
+      endwhere
+    endif
+    j = 2
+!     print *, xc(j,i), zc(j,i), Bperp_all(j,i), Bpara_all(j,i), tmp(j), valid(j,i)
+  enddo
+! stop
   ! Now work is done for each redshift (as the valid section of each array may
   ! may be different)
-  do iz=1,number_of_redshifts
+  do it=1,number_of_redshifts
+
+
     ! Filters away invalid part of an array
-    Bpara_valid = pack(Bpara(iz,:),valid(iz,:))
-    print *, shape(Bpara_valid)
+    Bpara = pack(Bpara_all(it,:),valid(it,:))
+    ! Includes z dependence
+
+    test = pack(xc(it,:),valid(it,:))
+    print *, shape(test)
+    print *,'----'
+    print *, '   xc        '
+    do i=1,size(test)
+      print *, test(i), Bpara(i)
+    enddo
+      print *,'----'
   enddo
 
-  print *,'----'
-  test = pack(xc2(2,:),valid(2,:))
-  print *, shape(test)
-  print *, test
-  do i=1,size(test)
-    print *, test(i)
-  enddo
 
 
 end program test_IO_read

@@ -10,23 +10,24 @@ program test_IO_read
   implicit none
   character(len=100) :: command_argument
   character(len=100) :: date
-  logical :: success, incomplete
+  logical :: incomplete
   integer, parameter :: master_rank = 0
   integer, parameter :: nz = 100
-  integer :: rank, nproc, ierr, rc, ncycles, flush_signal
-  integer :: igal, info_mpi, i, j, iz, it
+  integer :: rank, nproc, ierr, rc
+  integer :: igal, info_mpi, i, j, it
   integer,dimension(8) :: time_vals
-  double precision :: alpha, b
+  double precision :: alpha, impact_y, impact_z
   double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl, h
   double precision, allocatable, dimension(:,:) :: Bpara_all, Bperp_all, xc, zc
   double precision, allocatable, dimension(:) :: Bpara, Bperp
   double precision, allocatable, dimension(:) :: Bx, By, Bz, Bmag
   double precision, allocatable, dimension(:) :: angle_B_LoS, tmp
   logical, allocatable, dimension(:,:) :: valid
-  double precision, allocatable, dimension(:,:) :: Rpath
   integer, allocatable, dimension(:) :: js
-  double precision, allocatable, dimension(:) :: test
-  logical, parameter :: l_B_scale_with_z = .false.
+  double precision, allocatable, dimension(:) :: x_path, z_path
+  integer :: out_unit_x_path, out_unit_z_path, out_unit
+  logical :: debug = .true.
+  logical, parameter :: l_B_scale_with_z = .true.
   ! Initializes MPI
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -114,11 +115,14 @@ program test_IO_read
   ! Initializes IO (this also reads ngals from the hdf5 input file)
   call IO_start(MPI_COMM_WORLD, info_mpi, .true., date)
 
-  ! For testing
-  igal = 2
-  b = 2 ! kpc, Impact parameter
-  alpha = 1.51843644923506673192  ! kpc, angle relative to the normal to the midplane
-
+  ! Selects individual galaxy -- For testing
+  igal = 1
+  ! Relative orientation of the galaxy/LoS
+  ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
+  alpha = 1.62 ! angle relative to the normal to the midplane
+  alpha = 0.78 ! angle relative to the normal to the midplane
+  impact_y = 1. ! kpc, Impact parameter in y-direction
+  impact_z =  0.0 ! kpc, Impact parameter relative to z-direction
 
   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
@@ -173,7 +177,7 @@ program test_IO_read
     end if
 
     ! The available values for x are x_i = sqrt(R_i^2-b^2)
-    tmp = Rcyl(:,j)**2-b**2 ! NB allocated on-the-fly: Fortran2003 feature
+    tmp = Rcyl(:,j)**2-impact_y**2 ! NB allocated on-the-fly: Fortran2003 feature
     where (tmp>0)
       xc(:,i) = xc(:,i) * sqrt(tmp)
       ! Stores a mask to be used with the Fortran 2003 'pack' intrinsic function
@@ -181,12 +185,14 @@ program test_IO_read
     endwhere
 
     ! Sets z-coord
-    zc(:,i) = xc(:,i) / tan(alpha)
+    zc(:,i) = xc(:,i) / tan(alpha) + impact_z
 
     ! Bx = Br * x/R - Bp * y/R  (NB allocated on-the-fly)
-    Bx = Br(:,j) * xc(:,i)/Rcyl(:,j) - Bp(:,j)* b/Rcyl(:,j)
+    print *, Rcyl(:,j)
+    print *, p_nx_ref
+    Bx = Br(:,j) * xc(:,i)/Rcyl(:,j) - Bp(:,j)* impact_y/Rcyl(:,j)
     ! By = Br * y/R + Bp * x/R (NB allocated on-the-fly)
-    By = Br(:,j) * b/Rcyl(:,j) - Bp(:,j)* xc(:,i)/Rcyl(:,j)
+    By = Br(:,j) * impact_y/Rcyl(:,j) - Bp(:,j)* xc(:,i)/Rcyl(:,j)
     ! Bz = Bzmod * ? (NB allocated on-the-fly)
     Bz = Bzmod(:,j)
 
@@ -212,29 +218,40 @@ program test_IO_read
         Bpara_all(:,i) = 0d0
       endwhere
     endif
-    j = 2
+!     j = 2
 !     print *, xc(j,i), zc(j,i), Bperp_all(j,i), Bpara_all(j,i), tmp(j), valid(j,i)
   enddo
-! stop
+
+  if (debug) then
+    open(newunit=out_unit_x_path,file="x_path.txt",action="write",status="replace")
+    open(newunit=out_unit_z_path,file="z_path.txt",action="write",status="replace")
+    open(newunit=out_unit, file="quantity.txt", action="write",status="replace")
+  endif
+
   ! Now work is done for each redshift (as the valid section of each array may
   ! may be different)
   do it=1,number_of_redshifts
 
 
-    ! Filters away invalid part of an array
+    ! Filters away invalid parts of the arrays
     Bpara = pack(Bpara_all(it,:),valid(it,:))
-    ! Includes z dependence
+    Bperp = pack(Bperp_all(it,:),valid(it,:))
 
-    test = pack(xc(it,:),valid(it,:))
-    print *, shape(test)
-    print *,'----'
-    print *, '   xc        '
-    do i=1,size(test)
-      print *, test(i), Bpara(i)
-    enddo
-      print *,'----'
+    x_path = pack(xc(it,:),valid(it,:))
+    z_path = pack(zc(it,:),valid(it,:))
+
+    if (debug) then
+      write (out_unit_x_path,*) x_path
+      write (out_unit_z_path,*) z_path
+      write (out_unit,*) Bpara
+    endif
+
   enddo
 
-
+  if (debug) then
+    close (out_unit_x_path)
+    close (out_unit_z_path)
+    close (out_unit)
+  endif
 
 end program test_IO_read

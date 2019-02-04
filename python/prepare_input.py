@@ -191,7 +191,7 @@ if __name__ == "__main__"  :
                         help="Minimum disk half mass radius at z=0 (in kpc)."
                         " Default: 0.5.")
 
-    parser.add_argument('-z', "--max_redshift", default=4,
+    parser.add_argument('-z', "--max_redshift", default=6,
                         help="Maximum redshift to use. Default: 6.")
 
     parser.add_argument('-naz', "--do_not_sample_all_z", action="store_true",

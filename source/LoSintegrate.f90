@@ -1,4 +1,4 @@
-program LoSintegrate
+program Observables
   use grid
   use IO
   use mpi
@@ -14,22 +14,12 @@ program LoSintegrate
   integer, parameter :: master_rank = 0
   integer, parameter :: nz = 100
   integer :: rank, nproc, ierr, rc
-  integer :: igal, info_mpi, i, j, it
+  integer :: igal, info_mpi
   integer,dimension(8) :: time_vals
-  double precision :: theta, alpha, wavelength, impact_y, impact_z
-  double precision :: Stokes_I, RM
-  double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl, h, ne_all, ne_read
-  double precision, allocatable, dimension(:,:) :: Bpara_all, Bperp_all, xc, zc
-  double precision, allocatable, dimension(:) :: Bpara, Bperp, ne
-  double precision, allocatable, dimension(:) :: Bx, By, Bz, Bmag
-  double precision, allocatable, dimension(:) :: angle_B_LoS, tmp
-  logical, allocatable, dimension(:,:) :: valid
-  integer, allocatable, dimension(:) :: js
-  double precision, allocatable, dimension(:) :: x_path, z_path
-
-  logical, parameter :: l_B_scale_with_z = .true.
-  logical :: lsynchrotron = .true.
-  logical :: lRM = .true.
+  double precision :: impact_y, impact_z
+  type(Galaxy_Properties) :: props
+  type(LoS_data) :: data
+  double precision, allocatable, dimension(:,:) :: buffer
 
   ! Initializes MPI
   call MPI_INIT(ierr)
@@ -122,140 +112,39 @@ program LoSintegrate
   igal = 1
   ! Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
-!   theta = 1.58 ! angle relative to the normal to the midplane
-  theta = 1.5707963267948966 ! angle relative to the normal to the midplane
-  theta = 0.8
-!   theta = 1e-9 ! angle relative to the normal to the midplane
+  data%theta = 1.5707963267948966 ! angle relative to the normal to the midplane
+  data%theta = 0.8
+  data%alpha = 3d0 ! Spectral index of the cr energy distribution
+  data%wavelength = 1 !20e-2 ! 20 cm, 1.49 GHz
   impact_y = 0. ! kpc, Impact parameter in y-direction
   impact_z =  0. ! kpc, Impact parameter relative to z-direction
-  alpha = 3d0 ! Spectral index of the cr energy distribution
-  wavelength = 1 !20e-2 ! 20 cm, 1.49 GHz
 
   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
 
-  allocate(Rcyl(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('r', igal, Rcyl, group='Output')
+  ! Prepares a derived data type carrying the galaxy properties
+  call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
+  ! The reading below requires the use of a buffer variable, possibly
+  ! due to something in the HDF5 library
+  allocate(buffer(number_of_redshifts,p_nx_ref))
 
-  allocate(Br(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('Br', igal, Br, group='Output')
-
-
-  allocate(Bp(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('Bp', igal, Bp, group='Output')
-
-  !lfsr Later, we will need to account for the sign of Bz...
-  allocate(Bzmod(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('Bzmod', igal, Bzmod, group='Output')
-
-  allocate(h(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('h', igal, h, group='Output')
-  h = h * 1d-3 ! Converts from pc to kpc
-
-  allocate(ne_read(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('n', igal, ne_read, group='Output')
-  allocate(ne_all(number_of_redshifts, 2*p_nx_ref))
+  call IO_read_dataset_vector('r', igal, buffer, group='Output')
+  props%Rcyl = buffer
+  call IO_read_dataset_vector('Br', igal, buffer, group='Output')
+  props%Br = buffer
+  call IO_read_dataset_vector('Bp', igal, buffer, group='Output')
+  props%Bp = buffer
+  call IO_read_dataset_vector('Bzmod', igal, buffer, group='Output')
+  props%Bz = buffer
+  call IO_read_dataset_vector('h', igal, buffer, group='Output')
+  props%h = buffer
+  call IO_read_dataset_vector('n', igal, buffer, group='Output')
+  props%n = buffer
 
 
-  allocate(xc(number_of_redshifts, 2*p_nx_ref))
-  allocate(zc(number_of_redshifts, 2*p_nx_ref))
-  allocate(js(2*p_nx_ref))
+  call LoSintegrate(props, impact_y, impact_z, data)
 
-  allocate(valid(number_of_redshifts,2*p_nx_ref))
-  valid = .false.
-  allocate(Bpara_all(number_of_redshifts,2*p_nx_ref))
-  allocate(Bperp_all(number_of_redshifts,2*p_nx_ref))
-  allocate(Bmag(number_of_redshifts))
-  allocate(angle_B_LoS(number_of_redshifts))
-  allocate(tmp(number_of_redshifts))
+  print *, data%Stokes_I
+  print *, data%RM
 
-  ! Works on all redshifts simultaneously, looping over the radial grid-points
-  ! i -> index for quantities in a cartesian box
-  ! j -> index for axi-symmetric quantities
-  do i=1,2*p_nx_ref
-    ! Constructs coordinates and auxiliary indices js
-    if (i<p_nx_ref+1) then
-      ! Index for behind the x-z plane
-      j=p_nx_ref-i+1
-      js(i) = j
-      ! sign for x coordinate
-      xc(:,i) = -1
-    else
-      ! Index ahead of the x-z plane
-      j = i-p_nx_ref
-      js(i) = j
-      ! sign for x coordinate
-      xc(:,i) = 1
-    end if
-
-    ! The available values for x are x_i = sqrt(R_i^2-b^2)
-    tmp = Rcyl(:,j)**2-impact_y**2 ! NB allocated on-the-fly: Fortran2003 feature
-    where (tmp>=0)
-      xc(:,i) = xc(:,i) * sqrt(tmp)
-      ! Stores a mask to be used with the Fortran 2003 'pack' intrinsic function
-      valid(:,i) = .true.
-    endwhere
-
-    ! Sets z-coord
-    zc(:,i) = xc(:,i) / tan(theta) + impact_z
-
-    ! Bx = Br * x/R - Bp * y/R  (NB allocated on-the-fly)
-    Bx = Br(:,j) * xc(:,i)/Rcyl(:,j) - Bp(:,j)* impact_y/Rcyl(:,j)
-    ! By = Br * y/R + Bp * x/R (NB allocated on-the-fly)
-    By = Br(:,j) * impact_y/Rcyl(:,j) - Bp(:,j)* xc(:,i)/Rcyl(:,j)
-    ! Bz = Bzmod * ? (NB allocated on-the-fly)
-    Bz = Bzmod(:,j)
-
-    ! Simple vector calculations
-    ! |B|
-    Bmag = sqrt(Bx**2 + By**2 + Bz**2)
-    ! B_\parallel = dot(B,n), where n is the LoS direction
-    ! [NB  n = (cos(theta),0,sin(theta))  ]
-    Bpara_all(:,i) = Bx*cos(theta) + Bz*sin(theta)
-    ! angle = arccos(Bpara/|B|)
-    angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
-    ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
-    Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
-
-    tmp = abs(zc(:,i))/h(:,j)
-
-    ! Scales the density with z (coordinate)
-    ne_all(:,i) = ne_read(:,j) * exp(-tmp)
-
-    if (l_B_scale_with_z) then
-      ! Scale with z (coordinate)
-      Bperp_all(:,i) = Bperp_all(:,i) * exp(-tmp)
-      Bpara_all(:,i) = Bpara_all(:,i) * exp(-tmp)
-    else
-      ! Constant for |z|<h, zero otherwise
-      where (tmp>1)
-        Bperp_all(:,i) = 0d0
-        Bpara_all(:,i) = 0d0
-      endwhere
-    endif
-  enddo
-
-  ! Now work is done for each redshift (as the valid section of each array may
-  ! may be different)
-  do it=1,number_of_redshifts
-    ! Filters away invalid parts of the arrays
-    Bpara = pack(Bpara_all(it,:),valid(it,:))
-    Bperp = pack(Bperp_all(it,:),valid(it,:))
-    ne = pack(ne_all(it,:),valid(it,:))
-    x_path = pack(xc(it,:),valid(it,:))
-    z_path = pack(zc(it,:),valid(it,:))
-
-    ! Synchrotron emission
-    if (lsynchrotron) then
-      ! NB Using the total density as a proxi for cosmic ray electron density
-      Stokes_I = Compute_Stokes_I(Bperp, ne, x_path, z_path, wavelength, alpha)
-    endif
-
-    ! Faraday rotation (backlit)
-    if (lRM) then
-      ! NB Using the total density as a proxi for thermal electron density
-      RM = Compute_RM(abs(Bpara), ne, x_path, z_path)
-    endif
-  enddo
-
-end program LoSintegrate
+end program Observables

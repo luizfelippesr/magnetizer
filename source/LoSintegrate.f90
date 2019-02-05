@@ -1,4 +1,4 @@
-program test_IO_read
+program LoSintegrate
   use grid
   use IO
   use mpi
@@ -16,10 +16,12 @@ program test_IO_read
   integer :: rank, nproc, ierr, rc
   integer :: igal, info_mpi, i, j, it
   integer,dimension(8) :: time_vals
-  double precision :: alpha, impact_y, impact_z
-  double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl, h
+  double precision :: theta, alpha, wavelength, impact_y, impact_z
+  double precision :: Stokes_I, dr, RM
+  double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl, h, ne_all, ne_read
   double precision, allocatable, dimension(:,:) :: Bpara_all, Bperp_all, xc, zc
-  double precision, allocatable, dimension(:) :: Bpara, Bperp
+  double precision, allocatable, dimension(:) :: Bpara, Bperp, ne
+  double precision, allocatable, dimension(:) :: emissivity, integrand
   double precision, allocatable, dimension(:) :: Bx, By, Bz, Bmag
   double precision, allocatable, dimension(:) :: angle_B_LoS, tmp
   logical, allocatable, dimension(:,:) :: valid
@@ -28,6 +30,9 @@ program test_IO_read
   integer :: out_unit_x_path, out_unit_z_path, out_unit
   logical :: debug = .true.
   logical, parameter :: l_B_scale_with_z = .true.
+  logical :: lsynchrotron = .true.
+  logical :: lRM = .true.
+
   ! Initializes MPI
   call MPI_INIT(ierr)
   if (ierr/= MPI_SUCCESS) then
@@ -119,10 +124,14 @@ program test_IO_read
   igal = 1
   ! Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
-  alpha = 1.62 ! angle relative to the normal to the midplane
-  alpha = 0.78 ! angle relative to the normal to the midplane
-  impact_y = 1. ! kpc, Impact parameter in y-direction
-  impact_z =  0.0 ! kpc, Impact parameter relative to z-direction
+!   theta = 1.58 ! angle relative to the normal to the midplane
+  theta = 1.5707963267948966 ! angle relative to the normal to the midplane
+  theta = 0.8
+!   theta = 1e-9 ! angle relative to the normal to the midplane
+  impact_y = 0. ! kpc, Impact parameter in y-direction
+  impact_z =  0. ! kpc, Impact parameter relative to z-direction
+  alpha = 3d0 ! Spectral index of the cr energy distribution
+  wavelength = 1 !20e-2 ! 20 cm, 1.49 GHz
 
   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
@@ -144,6 +153,10 @@ program test_IO_read
   allocate(h(number_of_redshifts,p_nx_ref))
   call IO_read_dataset_vector('h', igal, h, group='Output')
   h = h * 1d-3 ! Converts from pc to kpc
+
+  allocate(ne_read(number_of_redshifts,p_nx_ref))
+  call IO_read_dataset_vector('n', igal, ne_read, group='Output')
+  allocate(ne_all(number_of_redshifts, 2*p_nx_ref))
 
 
   allocate(xc(number_of_redshifts, 2*p_nx_ref))
@@ -178,18 +191,16 @@ program test_IO_read
 
     ! The available values for x are x_i = sqrt(R_i^2-b^2)
     tmp = Rcyl(:,j)**2-impact_y**2 ! NB allocated on-the-fly: Fortran2003 feature
-    where (tmp>0)
+    where (tmp>=0)
       xc(:,i) = xc(:,i) * sqrt(tmp)
       ! Stores a mask to be used with the Fortran 2003 'pack' intrinsic function
       valid(:,i) = .true.
     endwhere
 
     ! Sets z-coord
-    zc(:,i) = xc(:,i) / tan(alpha) + impact_z
+    zc(:,i) = xc(:,i) / tan(theta) + impact_z
 
     ! Bx = Br * x/R - Bp * y/R  (NB allocated on-the-fly)
-    print *, Rcyl(:,j)
-    print *, p_nx_ref
     Bx = Br(:,j) * xc(:,i)/Rcyl(:,j) - Bp(:,j)* impact_y/Rcyl(:,j)
     ! By = Br * y/R + Bp * x/R (NB allocated on-the-fly)
     By = Br(:,j) * impact_y/Rcyl(:,j) - Bp(:,j)* xc(:,i)/Rcyl(:,j)
@@ -200,13 +211,18 @@ program test_IO_read
     ! |B|
     Bmag = sqrt(Bx**2 + By**2 + Bz**2)
     ! B_\parallel = dot(B,n), where n is the LoS direction
-    Bpara_all(:,i) = Bx*cos(alpha) + Bz*sin(alpha)
+    ! [NB  n = (cos(theta),0,sin(theta))  ]
+    Bpara_all(:,i) = Bx*cos(theta) + Bz*sin(theta)
     ! angle = arccos(Bpara/|B|)
     angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
     ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
     Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
 
+
     tmp = abs(zc(:,i))/h(:,j)
+
+    ne_all(:,i) = ne_read(:,j) * exp(-tmp)
+
     if (l_B_scale_with_z) then
       ! Scale with z (coordinate)
       Bperp_all(:,i) = Bperp_all(:,i) * exp(-tmp)
@@ -218,10 +234,9 @@ program test_IO_read
         Bpara_all(:,i) = 0d0
       endwhere
     endif
-!     j = 2
-!     print *, xc(j,i), zc(j,i), Bperp_all(j,i), Bpara_all(j,i), tmp(j), valid(j,i)
   enddo
 
+  ! Optionally outputs data for debugging
   if (debug) then
     open(newunit=out_unit_x_path,file="x_path.txt",action="write",status="replace")
     open(newunit=out_unit_z_path,file="z_path.txt",action="write",status="replace")
@@ -231,27 +246,47 @@ program test_IO_read
   ! Now work is done for each redshift (as the valid section of each array may
   ! may be different)
   do it=1,number_of_redshifts
-
-
     ! Filters away invalid parts of the arrays
     Bpara = pack(Bpara_all(it,:),valid(it,:))
     Bperp = pack(Bperp_all(it,:),valid(it,:))
 
+    ne = pack(ne_all(it,:),valid(it,:))
+
     x_path = pack(xc(it,:),valid(it,:))
     z_path = pack(zc(it,:),valid(it,:))
 
+    ! Optionally outputs data for debugging
     if (debug) then
       write (out_unit_x_path,*) x_path
       write (out_unit_z_path,*) z_path
       write (out_unit,*) Bpara
     endif
+    ! Synchrotron emission
+    if (lsynchrotron) then
 
+      emissivity = Bperp**((alpha+1.0)/2d0) * wavelength**((alpha-1.0)/2d0)
+
+      Stokes_I = 0
+      tmp = 0
+      ! Integrates
+      do i=1, size(emissivity)-1
+        dr = sqrt((x_path(i+1)-x_path(i))**2d0 + (z_path(i+1)-z_path(i))**2d0)
+        ! trapezoidal rule
+        Stokes_I = Stokes_I + 0.5*(emissivity(i)+emissivity(i+1))*dr
+      end do
+    endif
+
+    ! Faraday rotation (backlit)
+    if (lRM) then
+      RM = Compute_RM(abs(Bpara), ne, x_path, z_path)
+    endif
   enddo
 
+  ! Optionally outputs data for debugging
   if (debug) then
     close (out_unit_x_path)
     close (out_unit_z_path)
     close (out_unit)
   endif
 
-end program test_IO_read
+end program LoSintegrate

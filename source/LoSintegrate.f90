@@ -17,18 +17,16 @@ program LoSintegrate
   integer :: igal, info_mpi, i, j, it
   integer,dimension(8) :: time_vals
   double precision :: theta, alpha, wavelength, impact_y, impact_z
-  double precision :: Stokes_I, dr, RM
+  double precision :: Stokes_I, RM
   double precision, allocatable, dimension(:,:) :: Br, Bp, Bzmod, Rcyl, h, ne_all, ne_read
   double precision, allocatable, dimension(:,:) :: Bpara_all, Bperp_all, xc, zc
   double precision, allocatable, dimension(:) :: Bpara, Bperp, ne
-  double precision, allocatable, dimension(:) :: emissivity, integrand
   double precision, allocatable, dimension(:) :: Bx, By, Bz, Bmag
   double precision, allocatable, dimension(:) :: angle_B_LoS, tmp
   logical, allocatable, dimension(:,:) :: valid
   integer, allocatable, dimension(:) :: js
   double precision, allocatable, dimension(:) :: x_path, z_path
-  integer :: out_unit_x_path, out_unit_z_path, out_unit
-  logical :: debug = .true.
+
   logical, parameter :: l_B_scale_with_z = .true.
   logical :: lsynchrotron = .true.
   logical :: lRM = .true.
@@ -171,6 +169,7 @@ program LoSintegrate
   allocate(angle_B_LoS(number_of_redshifts))
   allocate(tmp(number_of_redshifts))
 
+  ! Works on all redshifts simultaneously, looping over the radial grid-points
   ! i -> index for quantities in a cartesian box
   ! j -> index for axi-symmetric quantities
   do i=1,2*p_nx_ref
@@ -218,9 +217,9 @@ program LoSintegrate
     ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
     Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
 
-
     tmp = abs(zc(:,i))/h(:,j)
 
+    ! Scales the density with z (coordinate)
     ne_all(:,i) = ne_read(:,j) * exp(-tmp)
 
     if (l_B_scale_with_z) then
@@ -236,57 +235,27 @@ program LoSintegrate
     endif
   enddo
 
-  ! Optionally outputs data for debugging
-  if (debug) then
-    open(newunit=out_unit_x_path,file="x_path.txt",action="write",status="replace")
-    open(newunit=out_unit_z_path,file="z_path.txt",action="write",status="replace")
-    open(newunit=out_unit, file="quantity.txt", action="write",status="replace")
-  endif
-
   ! Now work is done for each redshift (as the valid section of each array may
   ! may be different)
   do it=1,number_of_redshifts
     ! Filters away invalid parts of the arrays
     Bpara = pack(Bpara_all(it,:),valid(it,:))
     Bperp = pack(Bperp_all(it,:),valid(it,:))
-
     ne = pack(ne_all(it,:),valid(it,:))
-
     x_path = pack(xc(it,:),valid(it,:))
     z_path = pack(zc(it,:),valid(it,:))
 
-    ! Optionally outputs data for debugging
-    if (debug) then
-      write (out_unit_x_path,*) x_path
-      write (out_unit_z_path,*) z_path
-      write (out_unit,*) Bpara
-    endif
     ! Synchrotron emission
     if (lsynchrotron) then
-
-      emissivity = Bperp**((alpha+1.0)/2d0) * wavelength**((alpha-1.0)/2d0)
-
-      Stokes_I = 0
-      tmp = 0
-      ! Integrates
-      do i=1, size(emissivity)-1
-        dr = sqrt((x_path(i+1)-x_path(i))**2d0 + (z_path(i+1)-z_path(i))**2d0)
-        ! trapezoidal rule
-        Stokes_I = Stokes_I + 0.5*(emissivity(i)+emissivity(i+1))*dr
-      end do
+      ! NB Using the total density as a proxi for cosmic ray electron density
+      Stokes_I = Compute_Stokes_I(Bperp, ne, x_path, z_path, wavelength, alpha)
     endif
 
     ! Faraday rotation (backlit)
     if (lRM) then
+      ! NB Using the total density as a proxi for thermal electron density
       RM = Compute_RM(abs(Bpara), ne, x_path, z_path)
     endif
   enddo
-
-  ! Optionally outputs data for debugging
-  if (debug) then
-    close (out_unit_x_path)
-    close (out_unit_z_path)
-    close (out_unit)
-  endif
 
 end program LoSintegrate

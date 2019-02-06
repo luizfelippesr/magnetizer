@@ -12,14 +12,18 @@ program Observables
   character(len=100) :: date
   logical :: incomplete
   integer, parameter :: master_rank = 0
-  integer, parameter :: nz = 100
   integer :: rank, nproc, ierr, rc
   integer :: igal, info_mpi
+  integer :: i, j, u, v, k,l, o
   integer,dimension(8) :: time_vals
   double precision :: impact_y, impact_z
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
+  integer, parameter :: nprint = 60
+
+  double precision, dimension(1,nprint,nprint) :: RM_im, I_im, N_im
+  double precision, dimension(nprint) :: y, z
 
   ! Initializes MPI
   call MPI_INIT(ierr)
@@ -83,9 +87,8 @@ program Observables
     call message('Using global parameters file: '// trim(command_argument), &
                  master_only=.true., set_info=info)
 
-    ! Checks whether single galaxy mode was activated
-    call get_command_argument(2, command_argument)
   endif
+
 
 
   if (rank==master_rank) then
@@ -109,19 +112,27 @@ program Observables
   call IO_start(MPI_COMM_WORLD, info_mpi, .true., date)
 
   ! Selects individual galaxy -- For testing
-  igal = 1
+  igal = 2
   ! Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
-  data%theta = 1.5707963267948966 ! angle relative to the normal to the midplane
-  data%theta = 0.8
+  ! Angle relative to the normal to the midplane
+  data%theta = 0.7854 ! 45 degrees
+  data%theta = 1.0471975511965976 ! 60 degrees
+  data%theta = 1.5707963267948966 ! 90 degrees
+  call get_command_argument(2, command_argument)
+  data%theta = str2dbl(command_argument)
+  print *, 'using ', str2dbl(command_argument)
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
-  data%wavelength = 1 !20e-2 ! 20 cm, 1.49 GHz
+  data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
+  data%B_scale_with_z = .true.
   impact_y = 0. ! kpc, Impact parameter in y-direction
   impact_z =  0. ! kpc, Impact parameter relative to z-direction
 
   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
-
+  if (incomplete) then
+    stop
+  endif
   ! Prepares a derived data type carrying the galaxy properties
   call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
   ! The reading below requires the use of a buffer variable, possibly
@@ -137,14 +148,41 @@ program Observables
   call IO_read_dataset_vector('Bzmod', igal, buffer, group='Output')
   props%Bz = buffer
   call IO_read_dataset_vector('h', igal, buffer, group='Output')
-  props%h = buffer
+  props%h = buffer/1d3 ! Converts from pc to kpc
   call IO_read_dataset_vector('n', igal, buffer, group='Output')
   props%n = buffer
+  print *, '..............................'
+  open(newunit=u,file='I.dat', FORM='FORMATTED', status='replace')
+  open(newunit=v,file='RM.dat', FORM='FORMATTED',status='replace')
+  open(newunit=o,file='cells.dat', FORM='FORMATTED',status='replace')
+  open(newunit=k,file='y.dat', FORM='FORMATTED', status='replace')
+  open(newunit=l,file='z.dat', FORM='FORMATTED',status='replace')
 
 
-  call LoSintegrate(props, impact_y, impact_z, data)
+  do j=1,nprint
+    impact_z = -1.5d0 + 3d0/dble(nprint)*j
+    impact_z = -.8d0 + 1.6d0/dble(nprint)*j
+    z = impact_z
+    do i=1,nprint
+      impact_y =  -10d0 + 20d0/dble(nprint)*i
+      y(i) = impact_y
+      call LoSintegrate(props, impact_y, impact_z, data)
 
-  print *, data%Stokes_I
-  print *, data%RM
+      I_im(1,i,j) = data%Stokes_I(35)
+      N_im(1,i,j) = data%number_of_cells(35)
+      RM_im(1,i,j) = data%RM(35)
+
+    enddo
+    write(u, '(60E15.5)') I_im(1,:,j)
+    write(v, '(60E15.5)') RM_im(1,:,j)
+    write(o, '(60E15.5)') N_im(1,:,j)
+    write(k, '(60E15.5)') y
+    write(l, '(60E15.5)') z
+
+  enddo
+
+  close(u)
+  close(v)
+  close(o)
 
 end program Observables

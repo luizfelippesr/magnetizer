@@ -15,10 +15,11 @@ module LoSintegrate_aux
   type LoS_data
     double precision, allocatable, dimension(:) :: Stokes_I
     double precision, allocatable, dimension(:) :: RM
+    double precision, allocatable, dimension(:) :: number_of_cells
     double precision :: wavelength = 20d-2 ! 20 cm or 1.49 GHz
     double precision :: alpha = 3d0
     double precision :: theta = 0d0
-    logical :: B_scale_with_z
+    logical :: B_scale_with_z = .false.
   end type
 
   contains
@@ -111,6 +112,7 @@ module LoSintegrate_aux
     if (.not.allocated(data%RM)) then
       allocate(data%RM(props%n_redshifts))
       allocate(data%Stokes_I(props%n_redshifts))
+      allocate(data%number_of_cells(props%n_redshifts))
     endif
 
     ! Now work is done for each redshift (as the valid section of each array may
@@ -123,13 +125,14 @@ module LoSintegrate_aux
       x_path = pack(xc(it,:),valid(it,:))
       z_path = pack(zc(it,:),valid(it,:))
 
+      data%number_of_cells(it) = size(x_path)
       ! Synchrotron emission
       ! NB Using the total density as a proxi for cosmic ray electron density
       data%Stokes_I(it) = Compute_Stokes_I(Bperp, ne, x_path, z_path, &
                                            data%wavelength, data%alpha)
       ! Faraday rotation (backlit)
       ! NB Using the total density as a proxi for thermal electron density
-      data%Stokes_I(it) = Compute_RM(abs(Bpara), ne, x_path, z_path)
+      data%RM(it) = Compute_RM(Bpara, ne, x_path, z_path)
     enddo
   end subroutine LoSintegrate
 
@@ -141,6 +144,7 @@ module LoSintegrate_aux
     !        ne -> 1d-array, number of thermal electrons, in cm^-3
     !        x_path,z_path -> 1d-array, positions along path, in kpc
     ! Output: RM, in rad m^-2
+    !
     double precision, dimension(:), intent(in) :: Bpara, ne, x_path, z_path
     double precision, dimension(size(ne)) :: integrand
     double precision :: Compute_RM

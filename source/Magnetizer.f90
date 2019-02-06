@@ -176,6 +176,8 @@ program magnetizer
       call dynamo_run(igal, p_no_magnetic_fields_test_run, rank, error)
       nmygals = nmygals + 1
       mygals(nmygals) = igal
+    else
+      call message('galaxy previously run. Skipping.', gal_id=igal, info=2)
     endif
   else
     ! Before distributing work between workers, ALL processes will try to run

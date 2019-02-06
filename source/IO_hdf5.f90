@@ -200,7 +200,6 @@ contains
 
       if (flag(1)>0.5d0) then
         IO_start_galaxy = .false.
-        call message('galaxy previously run. Skipping.', gal_id=gal_id,info=2)
       endif
     endif
 

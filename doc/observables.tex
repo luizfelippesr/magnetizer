@@ -1,0 +1,155 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage[utf8]{inputenc}
+
+\newcommand{\ee}{\mathrm{e}}  %Euler's constant
+\newcommand{\dd}{\mathrm{d}}  %diferential
+\renewcommand{\vec}{\bm} % makes bold vectors
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{10pt}
+%opening
+\title{Observables}
+\author{Luiz F. S. Rodrigues}
+%
+\begin{document}
+
+\section{Construction of LoS quantities}
+\subsection{Coordinates}
+
+In the original output we have the cylindrical radial coordinates: $s_1 .. s_N$.
+
+These are translated into coordinates in a line of sight (LoS) using the following
+procedure.
+Let $\theta$ be the angle between the LoS and a normal to the galactic disc.
+We assume that the LoS is parallel to the $xz$ plane. The LoS can therefore be
+characterised by a choice of $\theta$, and and choosing the point where the LoS
+intercepts the $yz$ plane, $(y, z)|_\text{intercept} \equiv(b_y,b_z)$.
+
+
+Now we construct $2N$ points using the following:
+
+If $i\leq N$, $j = N-i+1$ and
+\[
+    x_{i} = -\sqrt{s_j^2 - b_y^2}
+\]
+But if $i>N$, $j = i-N$ and
+\[
+    x_{i} = \sqrt{s_j^2 - b_y^2}
+\]
+
+
+
+From our knowledge of $x_i$, we can construct the vertical coordinate:
+\[
+    z_i = \frac{x_i}{\tan\theta} + b_z
+\]
+
+Thus, the $2N$ LoS points are given by $(x_i,b_y, z_i)$.
+
+Any values of $i$ where ${s_j^2}<b_y^2$ are marked as invalid, and thus skipped
+and later removed from the calculation before the integrations.
+The removal is done using \textsc{Fortran} 95's \texttt{pack}
+function, which, given an array and a mask, outputs an array of smaller length.
+
+\subsection{Density}
+
+Using the same conventions for $i$ and $j$ as previously, the density in the output,
+$n^0$, can be translated into the LoS-density, $n$, using
+
+\[
+    n_i = n^0_j \times\ee^{-|z_i|/h^0_j}
+\]
+where $h^0$ is the scale-height in the output.
+
+\clearpage
+\subsection{Magnetic field}
+
+We have $N$ values of $B^0_r$, $B^0_\phi$, $|B^0_z|$
+on the mid-plane.
+
+To compute the $x$-, $y$- and $z$-components over the LoS, we do
+\[
+\widetilde B_{x,i} = B^0_{r,j} \frac{x_i}{s_j} - B^0_{\phi,j} \frac{b_y}{s_j}
+\]
+\[
+\widetilde B_{y,i} = B^0_{r,j} \frac{b_y}{s_j} + B^0_{\phi,j} \frac{x_i}{s_j}
+\]
+\[
+\widetilde B_{z,i} = |B^0_{z,j}| \times \text{sign}(z_i)
+\]
+NB $x/s = \sin\phi$ and $b_y/s = \cos\phi$
+
+Then, the $z$-dependence is added. There are two options, so far: scaling the same way
+as the gas,
+\[
+    B_{x/y/z,i} = \widetilde B_{x/y/z,i} \exp(-|z_i|/h^0_j)
+\]
+or assuming constant values within a scale-height
+\[
+    B_{x/y/z,i} = \begin{cases}
+                    \widetilde B_{x/y/z,i}\,, & |z_i| \leq h^0_j\\
+                                0\,,          & |z_i| >    h^0_j
+                  \end{cases}
+\]
+
+From these components, the projections are computed, using the initial $\theta$ value,
+since the LoS is parallel to $\vec {\hat n} = (\cos\theta, 0, \sin\theta)$, the projection
+$B_\parallel = \vec B \cdot \vec{\hat n}\,$ is given by
+\[
+    B_\parallel = B_x \cos\theta + B_z \sin\theta,
+\]
+
+From this we can get the angle between $\vec B$ and the LoS
+\[
+    \beta = \arccos(B_\parallel/|\vec B|)
+\]
+and compute the perpendicular component
+\[
+    B_\perp = |\vec B|\sin\beta
+\]
+
+\section{Observables}
+
+All the integrations are, for the moment, performed using a simple trapezoidal rule
+(this can be substituted by something else, if needed).
+Thus, for each 2 grid points in the LoS path,
+\[
+ I_i = \frac{F_{i+1}+F_{i}}{2} \Delta l\,,
+\]
+with
+\[
+    \Delta l = \sqrt{ (x_{i+1}-x_i)^2 + (z_{i+1}-z_i)^2}\,,
+\]
+therefore, the total integral is
+\[
+ I = \sum_{i}^{N-1} I_i
+\]
+
+
+
+
+\subsection{RM}
+\[
+    \int 0.812 B_\parallel n_e \,\dd l
+\]
+
+Where we take $n_e=n$ (i.e. .
+\subsection{Emissivity}
+
+\[
+ \varepsilon = n_{cr} B_\perp^{(\alpha+1)/2}\lambda^{(\alpha-1)/2}
+\]
+
+We take (at least provisionally) $n_{cr} = n$ since $n_{cr}\propto b^2 \propto n$.
+
+\subsection{Stokes I}
+\[
+    \int \varepsilon  \,\dd l
+\]
+
+
+\end{document}

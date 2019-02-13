@@ -73,23 +73,12 @@ module LoSintegrate_aux
       ! Sets z-coord
       zc(:,i) = xc(:,i) / tan(data%theta) + impact_z
 
-      ! Bx = Br * x/R - Bp * y/R  (NB allocated on-the-fly)
+      ! Bx = Br * x/R - Bp * y/R
       Bx = props%Br(:,j) * xc(:,i)/props%Rcyl(:,j) - props%Bp(:,j)* impact_y/props%Rcyl(:,j)
-      ! By = Br * y/R + Bp * x/R (NB allocated on-the-fly)
-      By = props%Br(:,j) * impact_y/props%Rcyl(:,j) - props%Bp(:,j)* xc(:,i)/props%Rcyl(:,j)
-      ! Bz = Bzmod * ? (NB allocated on-the-fly)
-      Bz = props%Bz(:,j)
-
-      ! Simple vector calculations
-      ! |B|
-      Bmag = sqrt(Bx**2 + By**2 + Bz**2)
-      ! B_\parallel = dot(B,n), where n is the LoS direction
-      ! [NB  n = (cos(theta),0,sin(theta))  ]
-      Bpara_all(:,i) = Bx*cos(data%theta) + Bz*sin(data%theta)
-      ! angle = arccos(Bpara/|B|)
-      angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
-      ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
-      Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
+      ! By = Br * y/R + Bp * x/R
+      By = props%Br(:,j) * impact_y/props%Rcyl(:,j) + props%Bp(:,j)* xc(:,i)/props%Rcyl(:,j)
+      ! Bz = Bzmod * sign(z)
+      Bz = sign(props%Bz(:,j), zc(:,i))
 
       tmp = abs(zc(:,i))/props%h(:,j)
 
@@ -98,15 +87,30 @@ module LoSintegrate_aux
 
       if (data%B_scale_with_z) then
         ! Scale with z (coordinate)
-        Bperp_all(:,i) = Bperp_all(:,i) * exp(-tmp)
-        Bpara_all(:,i) = Bpara_all(:,i) * exp(-tmp)
+        Bx = Bx * exp(-tmp)
+        By = By * exp(-tmp)
+        Bz = Bz * exp(-tmp)
       else
         ! Constant for |z|<h, zero otherwise
         where (tmp>1)
-          Bperp_all(:,i) = 0d0
-          Bpara_all(:,i) = 0d0
+          Bx = 0d0
+          By = 0d0
+          Bz = 0d0
         endwhere
       endif
+
+      ! Simple vector calculations
+      ! |B|
+      Bmag = sqrt(Bx**2 + By**2 + Bz**2) + 1d-20
+
+      ! B_\parallel = dot(B,n), where n is the LoS direction
+      ! [NB  n = (cos(theta),0,sin(theta))  ]
+      Bpara_all(:,i) = Bx*cos(data%theta) + Bz*sin(data%theta)
+      ! angle = arccos(Bpara/|B|)
+      angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
+      ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
+      Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
+
     enddo
 
     if (.not.allocated(data%RM)) then
@@ -200,7 +204,7 @@ module LoSintegrate_aux
       aa = 3.0
     endif
 
-    emissivity = Bperp**((alpha+1.0)/2d0) * wavelength**((alpha-1.0)/2d0)
+    emissivity = ncr * Bperp**((alpha+1.0)/2d0) * wavelength**((alpha-1.0)/2d0)
   end function emissivity
 
 

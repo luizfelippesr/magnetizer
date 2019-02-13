@@ -16,7 +16,7 @@ program Observables
   integer :: igal, info_mpi
   integer :: i, j, u, v, k,l, o
   integer,dimension(8) :: time_vals
-  double precision :: impact_y, impact_z
+  double precision :: impact_y, impact_z, zmax
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
@@ -112,16 +112,19 @@ program Observables
   call IO_start(MPI_COMM_WORLD, info_mpi, .true., date)
 
   ! Selects individual galaxy -- For testing
-  igal = 2
+  call get_command_argument(2, command_argument)
+  igal = str2int(command_argument)
+
   ! Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
   ! Angle relative to the normal to the midplane
   data%theta = 0.7854 ! 45 degrees
   data%theta = 1.0471975511965976 ! 60 degrees
   data%theta = 1.5707963267948966 ! 90 degrees
-  call get_command_argument(2, command_argument)
+
+  call get_command_argument(3, command_argument)
   data%theta = str2dbl(command_argument)
-  print *, 'using ', str2dbl(command_argument)
+  print *, 'using theta=', str2dbl(command_argument)
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
   data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
   data%B_scale_with_z = .true.
@@ -131,7 +134,8 @@ program Observables
   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
   if (incomplete) then
-    stop
+    print *, 'Galaxy not complete'
+    stop 1
   endif
   ! Prepares a derived data type carrying the galaxy properties
   call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
@@ -158,19 +162,22 @@ program Observables
   open(newunit=k,file='y.dat', FORM='FORMATTED', status='replace')
   open(newunit=l,file='z.dat', FORM='FORMATTED',status='replace')
 
+  call get_command_argument(4, command_argument)
+  zmax = str2dbl(command_argument)
+  print *, 'Using zmax',zmax
+
 
   do j=1,nprint
-    impact_z = -1.5d0 + 3d0/dble(nprint)*j
-    impact_z = -.8d0 + 1.6d0/dble(nprint)*j
+    impact_z = -zmax + 2*zmax/dble(nprint)*j
     z = impact_z
     do i=1,nprint
       impact_y =  -10d0 + 20d0/dble(nprint)*i
       y(i) = impact_y
       call LoSintegrate(props, impact_y, impact_z, data)
 
-      I_im(1,i,j) = data%Stokes_I(35)
-      N_im(1,i,j) = data%number_of_cells(35)
-      RM_im(1,i,j) = data%RM(35)
+      I_im(1,i,j) = data%Stokes_I(1)
+      N_im(1,i,j) = data%number_of_cells(1)
+      RM_im(1,i,j) = data%RM(1)
 
     enddo
     write(u, '(60E15.5)') I_im(1,:,j)

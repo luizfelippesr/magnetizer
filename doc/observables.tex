@@ -81,7 +81,13 @@ To compute the $x$-, $y$- and $z$-components over the LoS, we do
 \[
 \widetilde B_{z,i} = |B^0_{z,j}| \times \text{sign}(z_i)
 \]
-NB $x/s = \sin\phi$ and $b_y/s = \cos\phi$
+% \[
+% \widetilde B_{x,i} = B^0_{r,j} \cos\phi - B^0_{\phi,j} \sin\phi
+% \]
+% \[
+% \widetilde B_{y,i} = B^0_{r,j} \sin\phi + B^0_{\phi,j} \cos\phi
+% \]
+NB $x/s = \cos\phi$ and $b_y/s = \sin\phi$
 
 Then, the $z$-dependence is added. There are two options, so far: scaling the same way
 as the gas,
@@ -97,20 +103,33 @@ or assuming constant values within a scale-height
 \]
 
 From these components, the projections are computed, using the initial $\theta$ value,
-since the LoS is parallel to $\vec {\hat n} = (\cos\theta, 0, \sin\theta)$, the projection
+since the LoS is parallel to $\vec {\hat n} = (\sin\theta, 0, \cos\theta)$, the projection
 $B_\parallel = \vec B \cdot \vec{\hat n}\,$ is given by
 \[
-    B_\parallel = B_x \cos\theta + B_z \sin\theta,
+    B_\parallel = B_x \sin\theta + B_z \cos\theta
+    \quad \text{and}\quad
+    \vec B_\parallel = B_\parallel \vec {\hat n}
 \]
-
-From this we can get the angle between $\vec B$ and the LoS
+and the perpendicular component is given by
 \[
-    \beta = \arccos(B_\parallel/|\vec B|)
+    \vec B_\perp = \vec B -\vec B_\parallel
 \]
-and compute the perpendicular component
+or
+% \[
+%  \vec B_\perp = \left( B_x - B_\parallel\sin\theta\,,
+%                  \; B_y\,,
+%                 \;  B_z -B_\parallel\cos\theta\right)
+% \]
 \[
-    B_\perp = |\vec B|\sin\beta
+ B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 +
+                 B_y^2 +
+                 (B_z -B_\parallel\cos\theta)^2
 \]
+% \begin{align}
+% \vec B_\perp =& \left[ B_x \cos^2\theta - B_z \sin\theta\cos\theta\right] \hat{\vec i}
+%                 + B_y \,\hat{\vec j}\\
+%                & + \left[ B_z \sin^2\theta - B_x \sin\theta\cos\theta\right] \hat{\vec k}
+% \end{align}
 
 \section{Observables}
 

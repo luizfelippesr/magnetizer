@@ -100,17 +100,21 @@ module LoSintegrate_aux
       endif
 
       ! Simple vector calculations
-      ! |B|
-      Bmag = sqrt(Bx**2 + By**2 + Bz**2) + 1d-20
 
       ! B_\parallel = dot(B,n), where n is the LoS direction
-      ! [NB  n = (cos(theta),0,sin(theta))  ]
-      Bpara_all(:,i) = Bx*cos(data%theta) + Bz*sin(data%theta)
-      ! angle = arccos(Bpara/|B|)
-      angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
-      ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
-      Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
+      ! [NB  n = (sin(theta),0,cos(theta))  ]
+      Bpara_all(:,i) = Bx*sin(data%theta) + Bz*cos(data%theta)
+!       ! |B|
+!       Bmag = sqrt(Bx**2 + By**2 + Bz**2) + 1d-20
+!       ! angle = arccos(Bpara/|B|)
+!       angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
+!       ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
+!       Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
 
+      Bperp_all(:,i) = ( Bx**2 - Bpara_all(:,i)*sin(data%theta) )**2 + &
+                         By**2  +                                      &
+                       ( Bz**2 - Bpara_all(:,i)*cos(data%theta) )**2
+      Bperp_all(:,i) = sqrt(Bperp_all(:,i))
     enddo
 
     if (.not.allocated(data%RM)) then

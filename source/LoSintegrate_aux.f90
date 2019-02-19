@@ -104,16 +104,11 @@ module LoSintegrate_aux
       ! B_\parallel = dot(B,n), where n is the LoS direction
       ! [NB  n = (sin(theta),0,cos(theta))  ]
       Bpara_all(:,i) = Bx*sin(data%theta) + Bz*cos(data%theta)
-!       ! |B|
-!       Bmag = sqrt(Bx**2 + By**2 + Bz**2) + 1d-20
-!       ! angle = arccos(Bpara/|B|)
-!       angle_B_LoS = acos(Bpara_all(:,i)/Bmag)
-!       ! B_\perp = |B|*sin(angle) -- magnitude of the perpendicular component
-!       Bperp_all(:,i) = Bmag*sin(angle_B_LoS)
-
-      Bperp_all(:,i) = ( Bx**2 - Bpara_all(:,i)*sin(data%theta) )**2 + &
-                         By**2  +                                      &
-                       ( Bz**2 - Bpara_all(:,i)*cos(data%theta) )**2
+      ! B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 + B_y^2 +
+      !                  + (B_z -B_\parallel\cos\theta)^2 }
+      Bperp_all(:,i) = ( Bx - Bpara_all(:,i)*sin(data%theta) )**2   &
+                         + By**2 +                                  &
+                       ( Bz - Bpara_all(:,i)*cos(data%theta) )**2
       Bperp_all(:,i) = sqrt(Bperp_all(:,i))
     enddo
 
@@ -209,6 +204,7 @@ module LoSintegrate_aux
     endif
 
     emissivity = ncr * Bperp**((alpha+1.0)/2d0) * wavelength**((alpha-1.0)/2d0)
+
   end function emissivity
 
 
@@ -217,8 +213,8 @@ module LoSintegrate_aux
     double precision, dimension(:), intent(in) :: integrand, x_path, z_path
     double precision :: dr, integral
     integer :: i
-    integral = 0
 
+    integral = 0
     do i=1, size(integrand)-1
         dr = sqrt((x_path(i+1)-x_path(i))**2d0 + (z_path(i+1)-z_path(i))**2d0)
         integral = integral + 0.5*(integrand(i)+integrand(i+1))*dr

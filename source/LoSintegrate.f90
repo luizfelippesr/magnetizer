@@ -166,6 +166,8 @@ program Observables
   zmax = str2dbl(command_argument)
   print *, 'Using zmax',zmax
 
+  I_im = 0
+  RM_im = 0
 
   do j=1,nprint
     impact_z = -zmax + 2*zmax/dble(nprint)*j

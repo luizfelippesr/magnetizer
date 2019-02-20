@@ -20,6 +20,7 @@ module LoSintegrate_aux
     double precision :: alpha = 3d0
     double precision :: theta = 0d0
     logical :: B_scale_with_z = .false.
+    integer :: nz_points = 600
   end type
 
   contains
@@ -31,14 +32,17 @@ module LoSintegrate_aux
     double precision, intent(in) :: impact_z  ! kpc, Impact parameter relative to z-direction
 
     double precision,dimension(props%n_redshifts,2*props%n_grid) :: Bpara_all, &
-                                                      Bperp_all, xc, zc, ne_all
+                                              Bperp_all, xc, zc, ne_all, h_all
     logical, dimension(props%n_redshifts,2*props%n_grid) :: valid
     double precision, allocatable, dimension(:) :: x_path, z_path
-    double precision, allocatable, dimension(:) :: Bpara, Bperp, ne
+    double precision, allocatable, dimension(:) :: Bpara, Bperp, ne, h
+    double precision, allocatable, dimension(:) :: z_path_new, x_path_new
     double precision, dimension(props%n_redshifts) :: Bx, By, Bz, Bmag
     double precision, dimension(props%n_redshifts) :: angle_B_LoS, tmp
+    double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
     integer :: i, j, it
+    logical, parameter :: ldense_z = .false.
 
     ! Allocates everything
     valid = .false.
@@ -80,24 +84,10 @@ module LoSintegrate_aux
       ! Bz = Bzmod * sign(z)
       Bz = sign(props%Bz(:,j), zc(:,i))
 
-      tmp = abs(zc(:,i))/props%h(:,j)
-
-      ! Scales the density with z (coordinate)
-      ne_all(:,i) = props%n(:,j) * exp(-tmp)
-
-      if (data%B_scale_with_z) then
-        ! Scale with z (coordinate)
-        Bx = Bx * exp(-tmp)
-        By = By * exp(-tmp)
-        Bz = Bz * exp(-tmp)
-      else
-        ! Constant for |z|<h, zero otherwise
-        where (tmp>1)
-          Bx = 0d0
-          By = 0d0
-          Bz = 0d0
-        endwhere
-      endif
+      ! Stores density and scale height
+      ! NB the scaling with of n with z will be done later!
+      ne_all(:,i) = props%n(:,j)
+      h_all(:,i) = props%h(:,j)
 
       ! Simple vector calculations
 
@@ -116,25 +106,77 @@ module LoSintegrate_aux
       allocate(data%RM(props%n_redshifts))
       allocate(data%Stokes_I(props%n_redshifts))
       allocate(data%number_of_cells(props%n_redshifts))
+      data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
     endif
 
     ! Now work is done for each redshift (as the valid section of each array may
     ! may be different)
     do it=1,props%n_redshifts
+      ! Skips cases where we are actually looking "outside" of the galaxy
+      if (abs(impact_y) >= maxval(props%Rcyl(it,:))) cycle
+
       ! Filters away invalid parts of the arrays
       Bpara = pack(Bpara_all(it,:),valid(it,:))
       Bperp = pack(Bperp_all(it,:),valid(it,:))
       ne = pack(ne_all(it,:),valid(it,:))
+      h = pack(h_all(it,:),valid(it,:))
       x_path = pack(xc(it,:),valid(it,:))
       z_path = pack(zc(it,:),valid(it,:))
 
+      ! The following makes the grid denser, to allow meaningful z-integration
+      ! This step is irrelevant for edge-on, but is important for face-on
+      if (ldense_z) then
+        ! Sets a tentative z-maximum to 3 times the scale-height
+        zmin = -4d0*h(1); zmax =  4d0*h(size(h))
+
+        ! Computes corresponding values for x
+        xmin = (zmin - impact_z)*tan(data%theta)
+        xmax = (zmax - impact_z)*tan(data%theta)
+        ! Forces x coordinate to live within the original grid
+        if (xmin < x_path(1)) then
+          xmin = x_path(1)
+          zmin = z_path(1)
+        endif
+        if (xmax > x_path(size(x_path))) then
+          xmax = x_path(size(x_path))
+          zmax = z_path(size(x_path))
+        endif
+
+        z_path_new = linspace(zmin,zmax, data%nz_points)
+        x_path_new = (z_path_new - impact_z)*tan(data%theta)
+
+        call densify(Bperp, x_path, x_path_new)
+        call densify(Bpara, x_path, x_path_new)
+        call densify(ne, x_path, x_path_new)
+        call densify(h, x_path, x_path_new)
+
+        z_path = z_path_new
+        x_path = x_path_new
+      endif
+
+      ! Adds the z dependence to the density
+      ne = ne  * exp(-abs(z_path)/h)
+      ! Adds the z dependence the magnetic field
+      if (data%B_scale_with_z) then
+        ! Scale with z (coordinate)
+        Bpara = Bpara * exp(-abs(z_path)/h)
+        Bperp = Bperp * exp(-abs(z_path)/h)
+      else
+        ! Constant for |z|<h, zero otherwise
+        where (abs(z_path)/h>1)
+          Bpara = 0d0
+          Bpara = 0d0
+          Bperp = 0d0
+        endwhere
+      endif
+
       data%number_of_cells(it) = size(x_path)
       ! Synchrotron emission
-      ! NB Using the total density as a proxi for cosmic ray electron density
+      ! NB Using the total density as a proxy for cosmic ray electron density
       data%Stokes_I(it) = Compute_Stokes_I(Bperp, ne, x_path, z_path, &
                                            data%wavelength, data%alpha)
       ! Faraday rotation (backlit)
-      ! NB Using the total density as a proxi for thermal electron density
+      ! NB Using the total density as a proxy for thermal electron density
       data%RM(it) = Compute_RM(Bpara, ne, x_path, z_path)
     enddo
   end subroutine LoSintegrate
@@ -232,5 +274,30 @@ module LoSintegrate_aux
     galprops%n_redshifts = nz
     galprops%n_grid = nr
   end subroutine alloc_Galaxy_Properties
+
+  function linspace(z_min, z_max, n) result(array)
+    double precision, intent(in) :: z_min,z_max
+    double precision, allocatable, dimension(:) :: array
+    double precision :: step
+    integer :: n,i
+    step = (z_max-z_min)/dble(n-1)
+    allocate(array(n))
+    array = (/( (i-1)*step+z_min, i=1 , n)/)
+  end function linspace
+
+  subroutine densify(array, x0, x_dense)
+    use interpolation
+    double precision, allocatable, dimension(:), intent(in) :: x0, x_dense
+    double precision, allocatable, dimension(:), intent(inout) :: array
+    double precision, allocatable, dimension(:) :: new_array
+    integer :: i, j
+
+    allocate(new_array(size(x_dense)))
+    call interpolate(x0, array, x_dense, new_array)
+
+    deallocate(array)
+    call move_alloc(new_array, array)
+  end subroutine
+
 
 end module LoSintegrate_aux

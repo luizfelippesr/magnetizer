@@ -176,7 +176,6 @@ program Observables
       impact_y =  -10d0 + 20d0/dble(nprint)*i
       y(i) = impact_y
       call LoSintegrate(props, impact_y, impact_z, data)
-
       I_im(1,i,j) = data%Stokes_I(1)
       N_im(1,i,j) = data%number_of_cells(1)
       RM_im(1,i,j) = data%RM(1)

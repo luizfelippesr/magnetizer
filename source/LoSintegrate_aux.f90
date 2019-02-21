@@ -126,18 +126,18 @@ module LoSintegrate_aux
       ! The following makes the grid denser, to allow meaningful z-integration
       ! This step is irrelevant for edge-on, but is important for face-on
       if (ldense_z) then
-        ! Sets a tentative z-maximum to 4 times the scale-height
-        zmin = -4d0*h(1); zmax =  4d0*h(size(h))
+        ! Sets a tentative z-maximum to 3.5 times the scale-height
+        zmin = -3.5d0*h(1); zmax = 3.5d0*h(size(h))
 
         ! Computes corresponding values for x
         xmin = (zmin - impact_z)*tan(data%theta)
         xmax = (zmax - impact_z)*tan(data%theta)
         ! Forces x coordinate to live within the original grid
-        if (xmin < x_path(1)) then
+        if (abs(xmin) > abs(x_path(1))) then
           xmin = x_path(1)
           zmin = z_path(1)
         endif
-        if (xmax > x_path(size(x_path))) then
+        if (abs(xmax) > abs(x_path(size(x_path)))) then
           xmax = x_path(size(x_path))
           zmax = z_path(size(x_path))
         endif
@@ -223,7 +223,8 @@ module LoSintegrate_aux
       integrand = emissivity(Bperp, ncr, wavelength)
     endif
 
-    Compute_Stokes_I = Integrator(integrand, x_path, z_path)
+    Compute_Stokes_I = Integrator(integrand, x_path, z_path) * 1d6
+
   end function Compute_Stokes_I
 
   pure function emissivity(Bperp, ncr, wavelength, alpha)

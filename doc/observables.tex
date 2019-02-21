@@ -8,6 +8,10 @@
 \newcommand{\ee}{\mathrm{e}}  %Euler's constant
 \newcommand{\dd}{\mathrm{d}}  %diferential
 \renewcommand{\vec}{\bm} % makes bold vectors
+\newcommand{\degree}{^\circ}
+\newcommand{\kpc}{\,\text{kpc}}  %kpc|
+\newcommand{\muG}{\,\mu{\rm G}}  %microgauss
+\newcommand{\cm}{\,{\rm cm}}
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{10pt}
@@ -19,6 +23,8 @@
 
 \section{Construction of LoS quantities}
 \subsection{Coordinates}
+
+\subsubsection{Sparse LoS-grid}
 
 In the original output we have the cylindrical radial coordinates: $s_1 .. s_N$.
 
@@ -33,142 +39,210 @@ intercepts the $yz$ plane, $(y, z)|_\text{intercept} \equiv(b_y,b_z)$.
 Now we construct $2N$ points using the following:
 
 If $i\leq N$, $j = N-i+1$ and
-\[
-    x_{i} = -\sqrt{s_j^2 - b_y^2}
-\]
+\begin{equation}
+    \widetilde{x}_{i} = -\sqrt{s_j^2 - b_y^2}
+\end{equation}
 But if $i>N$, $j = i-N$ and
-\[
-    x_{i} = \sqrt{s_j^2 - b_y^2}
-\]
+\begin{equation}
+    \widetilde x_{i} = \sqrt{s_j^2 - b_y^2}
+\end{equation}
 
 
 
-From our knowledge of $x_i$, we can construct the vertical coordinate:
-\[
-    z_i = \frac{x_i}{\tan\theta} + b_z
-\]
+From our knowledge of $\widetilde x_i$, we can construct the vertical coordinate:
+\begin{equation}
+    \widetilde z_i = \frac{\widetilde x_i}{\tan\theta} + b_z
+\end{equation}
 
-Thus, the $2N$ LoS points are given by $(x_i,b_y, z_i)$.
+Thus, the $2N$ LoS points are given by $(\widetilde x_i,b_y, \widetilde z_i)$.
 
 Any values of $i$ where ${s_j^2}<b_y^2$ are marked as invalid, and thus skipped
-and later removed from the calculation before the integrations.
+and later removed from the calculation just after the sparse LoS-grid.
 The removal is done using \textsc{Fortran} 95's \texttt{pack}
 function, which, given an array and a mask, outputs an array of smaller length.
+
+
+\subsubsection{Dense/interpolated LoS-grid}
+
+Working with the sparse LoS grid constructed in the previous sub-section works fine
+for (almost) edge-on galaxies. However, for (almost) face-on, it is problematic,
+as it will be illustrated below.
+
+Imagine we have a spacing $\Delta R=1\kpc$ and a LoS intercepting the mid-plane at
+an angle $\theta=1\degree$, this will correspond a distance of $\Delta z = 57\kpc$
+between the grid constructed over LoS. Because most quantities scale
+$\propto\exp(-|z|/h)$, this will lead to (artificially) $\approx\!0$ valued
+quantities in all our calculations.
+
+To tackle this, we construct a new grid, with fixed number of points $N_\text{dense}$
+along the LoS, linearly spaced\footnote{A different spacing may be useful --- e.g.
+to account for the exponential decay in $z$ --- and will probably be used in the future.
+The reason for keeping it linear for now is the fact that $h$ depends itself strongly on
+$\widetilde x$, making it harder to work out the optimal spacing.}
+in $z$ with $z_\text{min}<z<z_\text{max}$. We use $4\times$
+the scale-height as a limit (unless this is outside the available points),
+\begin{equation}
+ z_\text{min} = \max\left[\widetilde z_0,\; -4\times \widetilde h_0\right]
+ \quad\text{and}\quad
+ z_\text{max} = \min\left[\widetilde z_{2N},\; 4\times \widetilde h_{2N}\right]
+\end{equation}
+with $\widetilde h_i = h(\widetilde x_i) = h^\text{o}_j$ (the scale-height at position $j$ in
+the original output).
+
+All the quantities are computed in this new grid. The procedure is the following:
+first, the mid-plane values of the quantity, $q$, are found on the LoS
+\begin{equation}
+  \widetilde q_i = q^{o}_j
+\end{equation}
+this is linearly interpolated (in $x$) to get the value on a point of the new grid
+\begin{equation}
+ q'_k =  \widetilde q_i + \left(\widetilde q_{i+1}-\widetilde q_i\right) \frac{x_k - \widetilde x_i}{\widetilde  x_{i+1}-\widetilde x_i}
+%  y(j) + (y(j+1)-y(j)) * (xi(i) - x(j))/(x(j+1) - x(j))
+\label{eq:interp}
+\end{equation}
+with $\widetilde x_i < x_k < \widetilde x_{i+1}$.
+
+Only after this, the $z$-dependence is included,
+\begin{equation}
+ q_k = F(q'_k, h_k, z_k)
+\end{equation}
+where the function $F$ will depend on the quantity and $h_k=h'_k$ is the interpolated
+scale-height.
+
+
+
+
 
 \subsection{Density}
 
 Using the same conventions for $i$ and $j$ as previously, the density in the output,
-$n^0$, can be translated into the LoS-density, $n$, using
+$n^\text{o}$, can be translated into the LoS-density, $n$, using
 
-\[
-    n_i = n^0_j \times\ee^{-|z_i|/h^0_j}
-\]
-where $h^0$ is the scale-height in the output.
+\begin{equation}
+    \widetilde n_i = n^\text{o}_j\,
+\end{equation}
+$n'_k$ is computed from Eq.~\eqref{eq:interp} and
+\begin{equation}
+ n_k = n'_k \times \ee^{-|z_k|/h'_k}
+\end{equation}
 
-\clearpage
+
 \subsection{Magnetic field}
 
-We have $N$ values of $B^0_r$, $B^0_\phi$, $|B^0_z|$
+We have $N$ values of $B^\text{o}_r$, $B^\text{o}_\phi$, $|B^\text{o}_z|$
 on the mid-plane.
 
 To compute the $x$-, $y$- and $z$-components over the LoS, we do
-\[
-\widetilde B_{x,i} = B^0_{r,j} \frac{x_i}{s_j} - B^0_{\phi,j} \frac{b_y}{s_j}
-\]
-\[
-\widetilde B_{y,i} = B^0_{r,j} \frac{b_y}{s_j} + B^0_{\phi,j} \frac{x_i}{s_j}
-\]
-\[
-\widetilde B_{z,i} = |B^0_{z,j}| \times \text{sign}(z_i)
-\]
-% \[
-% \widetilde B_{x,i} = B^0_{r,j} \cos\phi - B^0_{\phi,j} \sin\phi
-% \]
-% \[
-% \widetilde B_{y,i} = B^0_{r,j} \sin\phi + B^0_{\phi,j} \cos\phi
-% \]
+\begin{equation}
+\widetilde B_{x,i} = B^\text{o}_{r,j} \frac{x_i}{s_j} - B^\text{o}_{\phi,j} \frac{b_y}{s_j}
+\end{equation}
+\begin{equation}
+\widetilde B_{y,i} = B^\text{o}_{r,j} \frac{b_y}{s_j} + B^\text{o}_{\phi,j} \frac{x_i}{s_j}
+\end{equation}
+\begin{equation}
+\widetilde B_{z,i} = |B^\text{o}_{z,j}| \times \text{sign}(z_i)
+\end{equation}
+% \begin{equation}
+% \widetilde B_{x,i} = B^\text{o}_{r,j} \cos\phi - B^\text{o}_{\phi,j} \sin\phi
+% \end{equation}
+% \begin{equation}
+% \widetilde B_{y,i} = B^\text{o}_{r,j} \sin\phi + B^\text{o}_{\phi,j} \cos\phi
+% \end{equation}
 NB $x/s = \cos\phi$ and $b_y/s = \sin\phi$
 
-Then, the $z$-dependence is added. There are two options, so far: scaling the same way
-as the gas,
-\[
-    B_{x/y/z,i} = \widetilde B_{x/y/z,i} \exp(-|z_i|/h^0_j)
-\]
-or assuming constant values within a scale-height
-\[
-    B_{x/y/z,i} = \begin{cases}
-                    \widetilde B_{x/y/z,i}\,, & |z_i| \leq h^0_j\\
-                                0\,,          & |z_i| >    h^0_j
-                  \end{cases}
-\]
+
 
 From these components, the projections are computed, using the initial $\theta$ value,
-since the LoS is parallel to $\vec {\hat n} = (\sin\theta, 0, \cos\theta)$, the projection
-$B_\parallel = \vec B \cdot \vec{\hat n}\,$ is given by
-\[
-    B_\parallel = B_x \sin\theta + B_z \cos\theta
+since the LoS is parallel to $\vec {\hat l} = (\sin\theta, 0, \cos\theta)$, the projection
+$B_\parallel = \vec B \cdot \vec{\hat l}\,$ is given by
+\begin{equation}
+    \widetilde  B_\parallel = B_x \sin\theta + B_z \cos\theta
     \quad \text{and}\quad
-    \vec B_\parallel = B_\parallel \vec {\hat n}
-\]
+    \widetilde {\vec B}_\parallel = \widetilde B_\parallel \vec {\hat l}
+\end{equation}
 and the perpendicular component is given by
-\[
+\begin{equation}
     \vec B_\perp = \vec B -\vec B_\parallel
-\]
+\end{equation}
 or
-% \[
+% \begin{equation}
 %  \vec B_\perp = \left( B_x - B_\parallel\sin\theta\,,
 %                  \; B_y\,,
 %                 \;  B_z -B_\parallel\cos\theta\right)
-% \]
-\[
- B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 +
-                 B_y^2 +
-                 (B_z -B_\parallel\cos\theta)^2
-\]
+% \end{equation}
+\begin{equation}
+ \widetilde B_\perp = \sqrt{ (\widetilde B_x - B_\parallel\sin\theta)^2 +
+                 \widetilde B_y^2 +
+                 (\widetilde B_z -\widetilde B_\parallel\cos\theta)^2}
+\end{equation}
 % \begin{align}
 % \vec B_\perp =& \left[ B_x \cos^2\theta - B_z \sin\theta\cos\theta\right] \hat{\vec i}
 %                 + B_y \,\hat{\vec j}\\
 %                & + \left[ B_z \sin^2\theta - B_x \sin\theta\cos\theta\right] \hat{\vec k}
 % \end{align}
 
+At this point, we do the interpolation into the ``dense'' LoS grid using Eq.~\ref{eq:interp},
+i.e. $\widetilde B_\parallel \rightarrow B'_\parallel$ and
+ $\widetilde B_\perp \rightarrow B'_\perp$ and then add the $z$-dependence is added.
+ There are two options, so far: scaling the same way as the gas,
+\begin{equation}
+    B_{\parallel/\perp, k} = B'_{\parallel/\perp, k} \exp(-|z_k|/h_k)
+\end{equation}
+% \begin{equation}
+%     B_{\parallel, k} = B'_{\parallel, k} \exp(-|z_k|/h_k)
+% \end{equation}
+% \begin{equation}
+%     B_{\perp, k} = B'_{\perp, k} \exp(-|z_k|/h_k)
+% \end{equation}
+or assuming constant values within a scale-height
+\begin{equation}
+    B_{{\parallel/\perp},k} = \begin{cases}
+                    B'_{{\parallel/\perp},k}\,, & |z_k| \leq h_k\\
+                      0\,,          & |z_k| >    h_k
+                  \end{cases}
+\end{equation}
+
 \section{Observables}
 
 All the integrations are, for the moment, performed using a simple trapezoidal rule
 (this can be substituted by something else, if needed).
 Thus, for each 2 grid points in the LoS path,
-\[
+\begin{equation}
  I_i = \frac{F_{i+1}+F_{i}}{2} \Delta l\,,
-\]
+\end{equation}
 with
-\[
+\begin{equation}
     \Delta l = \sqrt{ (x_{i+1}-x_i)^2 + (z_{i+1}-z_i)^2}\,,
-\]
+\end{equation}
 therefore, the total integral is
-\[
+\begin{equation}
  I = \sum_{i}^{N-1} I_i
-\]
+\end{equation}
+
+The number of points used is $N_\text{dense}$ (by default, this was arbitrarily chosen
+to be 500).
 
 
 
 
 \subsection{RM}
-\[
-    \int 0.812 B_\parallel n_e \,\dd l
-\]
+\begin{equation}
+    \left(812 \,\text{rad\,m}^{-2}\right) \times  \int{ \frac{B_\parallel}{1 \muG} \frac{n_e}{1 \cm^{-3}} \,\frac{\dd l}{1\kpc}}
+\end{equation}
 
 Where we take $n_e=n$ (i.e. .
 \subsection{Emissivity}
 
-\[
+\begin{equation}
  \varepsilon = n_{cr} B_\perp^{(\alpha+1)/2}\lambda^{(\alpha-1)/2}
-\]
+\end{equation}
 
 We take (at least provisionally) $n_{cr} = n$ since $n_{cr}\propto b^2 \propto n$.
 
 \subsection{Stokes I}
-\[
+\begin{equation}
     \int \varepsilon  \,\dd l
-\]
+\end{equation}
 
 
 \end{document}

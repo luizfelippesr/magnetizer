@@ -16,11 +16,11 @@ program Observables
   integer :: igal, info_mpi
   integer :: i, j, u, v, k,l, o
   integer,dimension(8) :: time_vals
-  double precision :: impact_y, impact_z, zmax
+  double precision :: impact_y, impact_z, zmax, ymax
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
-  integer, parameter :: nprint = 60
+  integer, parameter :: nprint = 35
 
   double precision, dimension(1,nprint,nprint) :: RM_im, I_im, N_im
   double precision, dimension(nprint) :: y, z
@@ -156,36 +156,43 @@ program Observables
   call IO_read_dataset_vector('n', igal, buffer, group='Output')
   props%n = buffer
   print *, '..............................'
-  open(newunit=u,file='I.dat', FORM='FORMATTED', status='replace')
-  open(newunit=v,file='RM.dat', FORM='FORMATTED',status='replace')
-  open(newunit=o,file='cells.dat', FORM='FORMATTED',status='replace')
-  open(newunit=k,file='y.dat', FORM='FORMATTED', status='replace')
-  open(newunit=l,file='z.dat', FORM='FORMATTED',status='replace')
+  open(newunit=u,file='/data/nlfsr/I.dat', FORM='FORMATTED', status='replace')
+  open(newunit=v,file='/data/nlfsr/RM.dat', FORM='FORMATTED',status='replace')
+  open(newunit=o,file='/data/nlfsr/cells.dat', FORM='FORMATTED',status='replace')
+  open(newunit=k,file='/data/nlfsr/y.dat', FORM='FORMATTED', status='replace')
+  open(newunit=l,file='/data/nlfsr/z.dat', FORM='FORMATTED',status='replace')
 
   call get_command_argument(4, command_argument)
   zmax = str2dbl(command_argument)
+  call get_command_argument(5, command_argument)
+  ymax = str2dbl(command_argument)
   print *, 'Using zmax',zmax
-
   I_im = 0
   RM_im = 0
+  N_im = 0
 
   do j=1,nprint
     impact_z = -zmax + 2*zmax/dble(nprint)*j
     z = impact_z
     do i=1,nprint
-      impact_y =  -10d0 + 20d0/dble(nprint)*i
+      impact_y =  -ymax + 2*ymax/dble(nprint)*i
       y(i) = impact_y
       call LoSintegrate(props, impact_y, impact_z, data)
       I_im(1,i,j) = data%Stokes_I(1)
       N_im(1,i,j) = data%number_of_cells(1)
       RM_im(1,i,j) = data%RM(1)
+!       print *, '----------------------------------------------------------'
+!       print *, data%Stokes_I(1), data%number_of_cells(1), data%RM(1)
+!       stop
+!       print *, 'bz', impact_z
+!       print *, 'by', impact_y
 
     enddo
-    write(u, '(60E15.5)') I_im(1,:,j)
-    write(v, '(60E15.5)') RM_im(1,:,j)
-    write(o, '(60E15.5)') N_im(1,:,j)
-    write(k, '(60E15.5)') y
-    write(l, '(60E15.5)') z
+    write(u, '(35E15.5)') I_im(1,:,j)
+    write(v, '(35E15.5)') RM_im(1,:,j)
+    write(o, '(35E15.5)') N_im(1,:,j)
+    write(k, '(35E15.5)') y
+    write(l, '(35E15.5)') z
 
   enddo
 

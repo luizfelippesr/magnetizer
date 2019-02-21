@@ -20,7 +20,7 @@ module LoSintegrate_aux
     double precision :: alpha = 3d0
     double precision :: theta = 0d0
     logical :: B_scale_with_z = .false.
-    integer :: nz_points = 600
+    integer :: nz_points = 500
   end type
 
   contains
@@ -37,12 +37,12 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: Bpara, Bperp, ne, h
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
-    double precision, dimension(props%n_redshifts) :: Bx, By, Bz, Bmag
-    double precision, dimension(props%n_redshifts) :: angle_B_LoS, tmp
+    double precision, dimension(props%n_redshifts) :: Bx, By, Bz
+    double precision, dimension(props%n_redshifts) :: tmp
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
     integer :: i, j, it
-    logical, parameter :: ldense_z = .false.
+    logical, parameter :: ldense_z = .true.
 
     ! Allocates everything
     valid = .false.
@@ -106,8 +106,8 @@ module LoSintegrate_aux
       allocate(data%RM(props%n_redshifts))
       allocate(data%Stokes_I(props%n_redshifts))
       allocate(data%number_of_cells(props%n_redshifts))
-      data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
     endif
+    data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
 
     ! Now work is done for each redshift (as the valid section of each array may
     ! may be different)
@@ -126,7 +126,7 @@ module LoSintegrate_aux
       ! The following makes the grid denser, to allow meaningful z-integration
       ! This step is irrelevant for edge-on, but is important for face-on
       if (ldense_z) then
-        ! Sets a tentative z-maximum to 3 times the scale-height
+        ! Sets a tentative z-maximum to 4 times the scale-height
         zmin = -4d0*h(1); zmax =  4d0*h(size(h))
 
         ! Computes corresponding values for x
@@ -150,10 +150,12 @@ module LoSintegrate_aux
         call densify(ne, x_path, x_path_new)
         call densify(h, x_path, x_path_new)
 
+!         print *, 'shape z_path', shape(z_path)
+!         print *, 'shape z_pathnew', shape(z_path_new)
         z_path = z_path_new
         x_path = x_path_new
+!         print *, z_path_new-z_path
       endif
-
       ! Adds the z dependence to the density
       ne = ne  * exp(-abs(z_path)/h)
       ! Adds the z dependence the magnetic field
@@ -290,7 +292,6 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:), intent(in) :: x0, x_dense
     double precision, allocatable, dimension(:), intent(inout) :: array
     double precision, allocatable, dimension(:) :: new_array
-    integer :: i, j
 
     allocate(new_array(size(x_dense)))
     call interpolate(x0, array, x_dense, new_array)

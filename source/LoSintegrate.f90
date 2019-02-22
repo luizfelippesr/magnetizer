@@ -20,10 +20,6 @@ program Observables
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
-  integer, parameter :: nprint = 35
-
-  double precision, dimension(1,nprint,nprint) :: RM_im, I_im, N_im
-  double precision, dimension(nprint) :: y, z
 
   ! Initializes MPI
   call MPI_INIT(ierr)
@@ -86,7 +82,6 @@ program Observables
     call read_global_parameters(trim(command_argument))
     call message('Using global parameters file: '// trim(command_argument), &
                  master_only=.true., set_info=info)
-
   endif
 
 
@@ -118,10 +113,6 @@ program Observables
   ! Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
   ! Angle relative to the normal to the midplane
-  data%theta = 0.7854 ! 45 degrees
-  data%theta = 1.0471975511965976 ! 60 degrees
-  data%theta = 1.5707963267948966 ! 90 degrees
-
   call get_command_argument(3, command_argument)
   data%theta = str2dbl(command_argument)
   print *, 'using theta=', str2dbl(command_argument)
@@ -142,7 +133,6 @@ program Observables
   ! The reading below requires the use of a buffer variable, possibly
   ! due to something in the HDF5 library
   allocate(buffer(number_of_redshifts,p_nx_ref))
-
   call IO_read_dataset_vector('r', igal, buffer, group='Output')
   props%Rcyl = buffer
   call IO_read_dataset_vector('Br', igal, buffer, group='Output')
@@ -155,49 +145,13 @@ program Observables
   props%h = buffer/1d3 ! Converts from pc to kpc
   call IO_read_dataset_vector('n', igal, buffer, group='Output')
   props%n = buffer
-  print *, '..............................'
-  open(newunit=u,file='/data/nlfsr/I.dat', FORM='FORMATTED', status='replace')
-  open(newunit=v,file='/data/nlfsr/RM.dat', FORM='FORMATTED',status='replace')
-  open(newunit=o,file='/data/nlfsr/cells.dat', FORM='FORMATTED',status='replace')
-  open(newunit=k,file='/data/nlfsr/y.dat', FORM='FORMATTED', status='replace')
-  open(newunit=l,file='/data/nlfsr/z.dat', FORM='FORMATTED',status='replace')
+
 
   call get_command_argument(4, command_argument)
   zmax = str2dbl(command_argument)
   call get_command_argument(5, command_argument)
   ymax = str2dbl(command_argument)
-  print *, 'Using zmax',zmax
-  I_im = 0
-  RM_im = 0
-  N_im = 0
 
-  do j=1,nprint
-    impact_z = -zmax + 2*zmax/dble(nprint)*j
-    z = impact_z
-    do i=1,nprint
-      impact_y =  -ymax + 2*ymax/dble(nprint)*i
-      y(i) = impact_y
-      call LoSintegrate(props, impact_y, impact_z, data)
-      I_im(1,i,j) = data%Stokes_I(1)
-      N_im(1,i,j) = data%number_of_cells(1)
-      RM_im(1,i,j) = data%RM(1)
-!       print *, '----------------------------------------------------------'
-!       print *, data%Stokes_I(1), data%number_of_cells(1), data%RM(1)
-!       stop
-!       print *, 'bz', impact_z
-!       print *, 'by', impact_y
-
-    enddo
-    write(u, '(35E15.5)') I_im(1,:,j)
-    write(v, '(35E15.5)') RM_im(1,:,j)
-    write(o, '(35E15.5)') N_im(1,:,j)
-    write(k, '(35E15.5)') y
-    write(l, '(35E15.5)') z
-
-  enddo
-
-  close(u)
-  close(v)
-  close(o)
-
+  call print_image(props, data, '/data/nlfsr/', ymax, zmax)
+  print *, zmax
 end program Observables

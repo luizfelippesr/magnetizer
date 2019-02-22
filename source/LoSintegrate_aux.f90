@@ -5,6 +5,7 @@ module LoSintegrate_aux
   public :: Compute_RM, Compute_Stokes_I,LoSintegrate
   public :: Galaxy_Properties, LoS_data
   public :: alloc_Galaxy_Properties
+  public :: print_image
 
   type Galaxy_Properties
     double precision, allocatable, dimension(:,:) :: Br, Bp, Bz
@@ -150,11 +151,8 @@ module LoSintegrate_aux
         call densify(ne, x_path, x_path_new)
         call densify(h, x_path, x_path_new)
 
-!         print *, 'shape z_path', shape(z_path)
-!         print *, 'shape z_pathnew', shape(z_path_new)
         z_path = z_path_new
         x_path = x_path_new
-!         print *, z_path_new-z_path
       endif
       ! Adds the z dependence to the density
       ne = ne  * exp(-abs(z_path)/h)
@@ -183,7 +181,6 @@ module LoSintegrate_aux
     enddo
   end subroutine LoSintegrate
 
-
   pure function Compute_RM(Bpara, ne, x_path, z_path)
     ! Computes the Faraday rotation measure for one specific line of sight
     !
@@ -196,8 +193,7 @@ module LoSintegrate_aux
     double precision, dimension(size(ne)) :: integrand
     double precision :: Compute_RM
 
-    integrand = 0.812 * Bpara * ne * 1d3
-    ! obs: last factor converts from kpc to pc
+    integrand = 812 * Bpara * ne
 
     Compute_RM = Integrator(integrand, x_path, z_path)
   end function Compute_RM
@@ -253,6 +249,60 @@ module LoSintegrate_aux
   end function emissivity
 
 
+  subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap)
+      use messages
+      character(len=*) :: directory
+      character(len=20) :: form
+      integer, optional, intent(in) :: nprint, isnap
+      integer :: n, i, j, it
+      integer, dimension(5) :: unit
+      double precision :: impact_y, impact_z, zmax, ymax
+      real, dimension(:,:), allocatable :: RM_im, I_im, N_im
+      real, dimension(:),allocatable :: y, z
+      type(Galaxy_Properties), intent(in) :: props
+      type(LoS_data), intent(inout) :: data
+
+      n = 60; it = 1 ! Default values
+      if (present(nprint)) n = nprint
+      if (present(isnap)) it = isnap
+
+      form ='('//str(n)//'E15.5)'
+
+      open(newunit=unit(1),file=directory//'I.dat', FORM='FORMATTED', status='replace')
+      open(newunit=unit(2),file=directory//'RM.dat', FORM='FORMATTED',status='replace')
+      open(newunit=unit(3),file=directory//'cells.dat', FORM='FORMATTED',status='replace')
+      open(newunit=unit(4),file=directory//'y.dat', FORM='FORMATTED', status='replace')
+      open(newunit=unit(5),file=directory//'z.dat', FORM='FORMATTED',status='replace')
+
+      allocate(I_im(n,n))
+      allocate(RM_im(n,n))
+      allocate(N_im(n,n))
+      allocate(y(n))
+      allocate(z(n))
+
+      do j=1,n
+        impact_z = -zmax + 2*zmax/dble(n)*j
+        z = impact_z
+        do i=1,n
+          impact_y =  -ymax + 2*ymax/dble(n)*i
+          y(i) = impact_y
+          call LoSintegrate(props, impact_y, impact_z, data)
+          I_im(i,j) = data%Stokes_I(it)
+          N_im(i,j) = data%number_of_cells(it)
+          RM_im(i,j) = data%RM(it)
+        enddo
+        write(unit(1), trim(form)) I_im(:,j)
+        write(unit(2), trim(form)) RM_im(:,j)
+        write(unit(3), trim(form)) N_im(:,j)
+        write(unit(4), trim(form)) y
+        write(unit(5), trim(form)) z
+      enddo
+
+      do i=1,5
+        close(unit(i))
+      enddo
+  end subroutine print_image
+
   pure function Integrator(integrand, x_path, z_path) result(integral)
     ! Basic trapezoidal rule integrator (used for LOS integration)
     double precision, dimension(:), intent(in) :: integrand, x_path, z_path
@@ -300,6 +350,5 @@ module LoSintegrate_aux
     deallocate(array)
     call move_alloc(new_array, array)
   end subroutine
-
 
 end module LoSintegrate_aux

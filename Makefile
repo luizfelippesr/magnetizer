@@ -9,7 +9,7 @@ OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 FCFLAGS+= -lfgsl -I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
 
 FCFLAGS_TEST=-g -Wall
-FCFLAGS_PROD=-O2
+FCFLAGS_PROD=-O3
 
 help:
 	@echo '---------------------'
@@ -45,7 +45,7 @@ integrate: $(OBJ) ${builddir}/path_integrate.o
 	$(FC) $^ $(FCFLAGS) -o path_integrate.exe
 
 # Other programs
-LoSintegrate: TST ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
+LoSintegrate: PRD ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
 	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o  -o LoSintegrate.exe
 
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
@@ -81,7 +81,7 @@ $(srcdir)/pressureEquilibrium.f90: ${builddir}/root_finder.o ${builddir}/constan
 $(srcdir)/outflow.f90: ${builddir}/input_parameters.o
 $(srcdir)/grid.f90: ${builddir}/constants.o ${builddir}/global_input_parameters.o ${builddir}/messages.o ${builddir}/interpolation.o
 $(srcdir)/deriv.f90: ${builddir}/grid.o
-$(srcdir)/LoSintegrate_aux.f90: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o
+$(srcdir)/LoSintegrate_aux.f90: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/messages.o
 $(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/IO_hdf5.o
 $(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o ${builddir}/floor_field.o ${builddir}/seed_field.o
 $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o ${builddir}/interpolation.o ${builddir}/tsDataObj.o

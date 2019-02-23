@@ -26,11 +26,11 @@ module LoSintegrate_aux
 
   contains
 
-  subroutine LoSintegrate(props, impact_y, impact_z, data)
+  subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data)
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
-    double precision, intent(in) :: impact_y ! kpc, Impact parameter in y-direction
-    double precision, intent(in) :: impact_z  ! kpc, Impact parameter relative to z-direction
+    ! Impact parameter in y- and z-directions in units of rmax
+    double precision, intent(in) :: impactz_rmax, impacty_rmax
 
     double precision,dimension(props%n_redshifts,2*props%n_grid) :: Bpara_all, &
                                               Bperp_all, xc, zc, ne_all, h_all
@@ -38,8 +38,8 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: Bpara, Bperp, ne, h
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
-    double precision, dimension(props%n_redshifts) :: Bx, By, Bz
-    double precision, dimension(props%n_redshifts) :: tmp
+    double precision, dimension(props%n_redshifts) :: Bx, By, Bz, rmax
+    double precision, dimension(props%n_redshifts) :: tmp, impact_y, impact_z
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
     integer :: i, j, it
@@ -47,6 +47,20 @@ module LoSintegrate_aux
 
     ! Allocates everything
     valid = .false.
+
+    if (.not.allocated(data%RM)) then
+      allocate(data%RM(props%n_redshifts))
+      allocate(data%Stokes_I(props%n_redshifts))
+      allocate(data%number_of_cells(props%n_redshifts))
+    endif
+    data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
+
+    if (impacty_rmax>1) return
+
+    rmax = props%Rcyl(:,props%n_grid)
+    impact_y = impacty_rmax * rmax
+    impact_z = impactz_rmax * rmax
+
 
     ! Works on all redshifts simultaneously, looping over the radial grid-points
     ! i -> index for quantities in a cartesian box
@@ -68,7 +82,7 @@ module LoSintegrate_aux
       end if
 
       ! The available values for x are x_i = sqrt(R_i^2-b^2)
-      tmp = props%Rcyl(:,j)**2-impact_y**2 ! NB allocated on-the-fly: Fortran2003 feature
+      tmp = props%Rcyl(:,j)**2-impact_y(:)**2 ! NB allocated on-the-fly: Fortran2003 feature
       where (tmp>=0)
         xc(:,i) = xc(:,i) * sqrt(tmp)
         ! Stores a mask to be used with the Fortran 2003 'pack' intrinsic function
@@ -76,12 +90,12 @@ module LoSintegrate_aux
       endwhere
 
       ! Sets z-coord
-      zc(:,i) = xc(:,i) / tan(data%theta) + impact_z
+      zc(:,i) = xc(:,i) / tan(data%theta) + impact_z(:)
 
       ! Bx = Br * x/R - Bp * y/R
-      Bx = props%Br(:,j) * xc(:,i)/props%Rcyl(:,j) - props%Bp(:,j)* impact_y/props%Rcyl(:,j)
+      Bx = props%Br(:,j) * xc(:,i)/props%Rcyl(:,j) - props%Bp(:,j)*impact_y(:)/props%Rcyl(:,j)
       ! By = Br * y/R + Bp * x/R
-      By = props%Br(:,j) * impact_y/props%Rcyl(:,j) + props%Bp(:,j)* xc(:,i)/props%Rcyl(:,j)
+      By = props%Br(:,j) * impact_y(:)/props%Rcyl(:,j) + props%Bp(:,j)* xc(:,i)/props%Rcyl(:,j)
       ! Bz = Bzmod * sign(z)
       Bz = sign(props%Bz(:,j), zc(:,i))
 
@@ -103,18 +117,11 @@ module LoSintegrate_aux
       Bperp_all(:,i) = sqrt(Bperp_all(:,i))
     enddo
 
-    if (.not.allocated(data%RM)) then
-      allocate(data%RM(props%n_redshifts))
-      allocate(data%Stokes_I(props%n_redshifts))
-      allocate(data%number_of_cells(props%n_redshifts))
-    endif
-    data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
-
     ! Now work is done for each redshift (as the valid section of each array may
     ! may be different)
     do it=1,props%n_redshifts
-      ! Skips cases where we are actually looking "outside" of the galaxy
-      if (abs(impact_y) >= maxval(props%Rcyl(it,:))) cycle
+      ! Skips empty cells
+      if (all(.not.valid(it,:))) cycle
 
       ! Filters away invalid parts of the arrays
       Bpara = pack(Bpara_all(it,:),valid(it,:))
@@ -131,8 +138,8 @@ module LoSintegrate_aux
         zmin = -3.5d0*h(1); zmax = 3.5d0*h(size(h))
 
         ! Computes corresponding values for x
-        xmin = (zmin - impact_z)*tan(data%theta)
-        xmax = (zmax - impact_z)*tan(data%theta)
+        xmin = (zmin - impact_z(it))*tan(data%theta)
+        xmax = (zmax - impact_z(it))*tan(data%theta)
         ! Forces x coordinate to live within the original grid
         if (abs(xmin) > abs(x_path(1))) then
           xmin = x_path(1)
@@ -144,7 +151,7 @@ module LoSintegrate_aux
         endif
 
         z_path_new = linspace(zmin,zmax, data%nz_points)
-        x_path_new = (z_path_new - impact_z)*tan(data%theta)
+        x_path_new = (z_path_new - impact_z(it))*tan(data%theta)
 
         call densify(Bperp, x_path, x_path_new)
         call densify(Bpara, x_path, x_path_new)
@@ -256,7 +263,7 @@ module LoSintegrate_aux
       integer, optional, intent(in) :: nprint, isnap
       integer :: n, i, j, it
       integer, dimension(5) :: unit
-      double precision :: impact_y, impact_z, zmax, ymax
+      double precision :: impact_y, impact_z, zmax, ymax, rmax
       real, dimension(:,:), allocatable :: RM_im, I_im, N_im
       real, dimension(:),allocatable :: y, z
       type(Galaxy_Properties), intent(in) :: props
@@ -265,6 +272,8 @@ module LoSintegrate_aux
       n = 60; it = 1 ! Default values
       if (present(nprint)) n = nprint
       if (present(isnap)) it = isnap
+
+      rmax = props%Rcyl(it,props%n_grid)
 
       form ='('//str(n)//'E15.5)'
 
@@ -280,13 +289,15 @@ module LoSintegrate_aux
       allocate(y(n))
       allocate(z(n))
 
+
+
       do j=1,n
         impact_z = -zmax + 2*zmax/dble(n)*j
         z = impact_z
         do i=1,n
           impact_y =  -ymax + 2*ymax/dble(n)*i
           y(i) = impact_y
-          call LoSintegrate(props, impact_y, impact_z, data)
+          call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data)
           I_im(i,j) = data%Stokes_I(it)
           N_im(i,j) = data%number_of_cells(it)
           RM_im(i,j) = data%RM(it)

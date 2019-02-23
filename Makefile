@@ -45,7 +45,7 @@ integrate: $(OBJ) ${builddir}/path_integrate.o
 	$(FC) $^ $(FCFLAGS) -o path_integrate.exe
 
 # Other programs
-LoSintegrate: PRD ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
+LoSintegrate: TST ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
 	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o  -o LoSintegrate.exe
 
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o

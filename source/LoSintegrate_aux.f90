@@ -5,7 +5,7 @@ module LoSintegrate_aux
   public :: Compute_RM, Compute_Stokes_I,LoSintegrate
   public :: Galaxy_Properties, LoS_data
   public :: alloc_Galaxy_Properties
-  public :: print_image
+  public :: print_image, IntegrateImage
 
 
 
@@ -380,32 +380,82 @@ module LoSintegrate_aux
     enddo
   end subroutine LoSintegrate_all_redshifts
 
-!   subroutine IntegrateImage(props, data, iz)
-!     use fgsl
-!     use, intrinsic :: iso_c_binding
-!
-!     ! Global variables for the integration
-!     type(fgsl_monte_vegas_state) :: v
-!     type(fgsl_monte_function) :: gfun
-!     data_glb = data
-!     props_glb = props
-!     iz_glb = iz
-!
-!   end subroutine
-!
-!   function IntegrandImage(v_c, n, params) bind(c)
-!     use fgsl
-!     use, intrinsic :: iso_c_binding
-!
-!     integer(c_size_t), value :: n
-!     type(c_ptr), value :: v_c, params
-!     real(c_double) :: g
-!     real(c_double), dimension(:), pointer :: v
-!     call c_f_pointer(v_c, v, [n])
-!     call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
-!                                    RM_out=.false., I_out=.true.)
-!     IntegrandImage = data_glb%Stokes_I(iz_glb)
-!   end function IntegrandImage
+  function IntegrateImage(props,data,iz,number_of_calls,method,error) result(res)
+    use fgsl
+    use, intrinsic :: iso_c_binding
+    type(Galaxy_Properties), intent(in) :: props
+    type(LoS_data), intent(inout) :: data
+    integer, intent(in) :: iz
+    integer, intent(in), optional :: number_of_calls
+    character(len=*), intent(in), optional :: method
+    type(fgsl_monte_function) :: gfun
+    type(fgsl_rng) :: r
+    type(fgsl_rng_type) :: t
+    type(fgsl_monte_plain_state) :: s
+    type(fgsl_monte_miser_state) :: m
+    type(fgsl_monte_vegas_state) :: v
+    integer(fgsl_size_t) :: calls
+    real(fgsl_double) :: chisq, xl(2), xu(2), res, err, y, yy, yyy
+    double precision, optional, intent(out) :: error
+    type(c_ptr) :: ptr
+    integer(fgsl_int) :: status
+    character(len=10) :: mthd
+
+    calls = 5000
+    if (present(number_of_calls)) calls = number_of_calls
+    mthd = 'MISER'
+    if (present(method)) mthd = method
+
+    ! Global variables for the integration
+    data_glb = data
+    props_glb = props
+    iz_glb = iz
+
+    xl = -1
+    xu = 1
+
+    ! Sets up FGSL stuff
+    t = fgsl_rng_env_setup()
+    r = fgsl_rng_alloc(t)
+    gfun = fgsl_monte_function_init(IntegrandImage, 2_fgsl_size_t, ptr)
+
+    select case (trim(mthd))
+      case('MISER')
+        m = fgsl_monte_miser_alloc(2_fgsl_size_t)
+        status = fgsl_monte_miser_integrate(gfun, xl, xu, 2_fgsl_size_t, &
+                                            calls, r, m, res, err)
+        call fgsl_monte_miser_free(m)
+      case('VEGAS')
+        v = fgsl_monte_vegas_alloc(2_fgsl_size_t)
+        status = fgsl_monte_vegas_integrate(gfun, xl, xu, 2_fgsl_size_t, &
+                                            calls, r, v, res, err)
+        call fgsl_monte_vegas_free(v)
+      case('plain')
+        s = fgsl_monte_plain_alloc(2_fgsl_size_t)
+        status = fgsl_monte_plain_integrate(gfun, xl, xu, 2_fgsl_size_t, &
+                                            calls, r, s, res, err)
+        call fgsl_monte_plain_free(s)
+    end select
+
+    if (present(error)) error=err
+  end function IntegrateImage
+
+  function IntegrandImage(v_c, n, params) bind(c)
+    ! Wrapper to allow using LoSintegrate with FGSL
+    use fgsl
+    use, intrinsic :: iso_c_binding
+
+    integer(c_size_t), value :: n
+    type(c_ptr), value :: v_c, params
+    real(c_double) :: IntegrandImage
+    real(c_double), dimension(:), pointer :: v
+    ! Reads the memory address
+    call c_f_pointer(v_c, v, [n])
+    data_glb%Stokes_I(iz_glb) = 0d0
+    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
+                                   RM_out=.false., I_out=.true.)
+    IntegrandImage = data_glb%Stokes_I(iz_glb)
+  end function IntegrandImage
 
 
   pure function Compute_RM(Bpara, ne, x_path, z_path)

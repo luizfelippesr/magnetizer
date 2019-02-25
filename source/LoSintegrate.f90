@@ -15,10 +15,11 @@ program Observables
   integer :: rank, nproc, ierr, rc
   integer :: igal, info_mpi
   integer,dimension(8) :: time_vals
-  double precision :: impact_y, impact_z, zmax, ymax
+  double precision :: impact_y, impact_z, zmax, ymax, error
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
+  double precision :: tstart,tfinish, res
   integer :: it, i, j, k, n
 
   ! Initializes MPI
@@ -58,17 +59,17 @@ program Observables
   endif
 
   ! Welcome messages
-  if (nproc==1) then
-    call message('Magnetizer', rank=-1)
-    call message(' ', rank=-1)
-    call message('Runnning on a single processor')
-  else
-    call message('Magnetizer', rank=rank, set_info=info, &
-                 master_only=.true., info=0)
-    call message(' ', master_only=.true.)
-    call message('Runnning on', val_int=nproc, msg_end='processors', &
-                 master_only=.true., info=0)
-  endif
+!   if (nproc==1) then
+!     call message('Magnetizer', rank=-1)
+!     call message(' ', rank=-1)
+!     call message('Runnning on a single processor')
+!   else
+!     call message('Magnetizer', rank=rank, set_info=info, &
+!                  master_only=.true., info=0)
+!     call message(' ', master_only=.true.)
+!     call message('Runnning on', val_int=nproc, msg_end='processors', &
+!                  master_only=.true., info=0)
+!   endif
 
   if (len_trim(command_argument) == 0) then
     ! Uses example parameter file if nothing was found
@@ -80,10 +81,11 @@ program Observables
   else
     ! Uses specified parameter file
     call read_global_parameters(trim(command_argument))
-    call message('Using global parameters file: '// trim(command_argument), &
-                 master_only=.true., set_info=info)
+!     call message('Using global parameters file: '// trim(command_argument), &
+!                  master_only=.true., set_info=info)
   endif
 
+    call message('', master_only=.true., set_info=info)
 
 
   if (rank==master_rank) then
@@ -153,7 +155,7 @@ program Observables
   ymax = str2dbl(command_argument)
 
   it = 1
-!   call print_image(props, data, '/data/nlfsr/', ymax, zmax, isnap=it)
+  call print_image(props, data, '/data/nlfsr/', ymax, zmax, nprint=120, isnap=it)
 
     ! Silly integration
 !     n=500
@@ -168,18 +170,46 @@ program Observables
 !         if (mod(k,1000)==0)   print *, k, data%Stokes_I(it) /dble(k)
 !       enddo
 !     enddo
+    call get_command_argument(6, command_argument)
+    n = str2int(command_argument)
+!     n = 2000
 
+    tstart = MPI_WTime()
     ! MC integration
-    n=500
-    k=0
-    do k=1,6500
-      call random_number(impact_y)
-      impact_y = impact_y*2d0-1d0
-      call random_number(impact_z)
-      impact_z = impact_z*2d0-1d0
-      call LoSintegrate(props, impact_y, impact_z, data, it)
+    do i=1,2
+      do k=1,n
+        call random_number(impact_y)
+        impact_y = impact_y*2d0-1d0
+        call random_number(impact_z)
+        impact_z = impact_z*2d0-1d0
+        call LoSintegrate(props, impact_y, impact_z, data, it)
+      enddo
     enddo
-    print *, k, data%Stokes_I(it) /dble(k)
+    res = data%Stokes_I(it) /dble(k) * 4d0 /dble(i-1)
+    tfinish= MPI_WTime()
+    print *, 'basic ', (tfinish-tstart)/dble(i-1), res
+
+    tstart = MPI_WTime()
+    do i=1,2
+      res = IntegrateImage(props, data, it, n,'MISER', error)
+    enddo
+    tfinish= MPI_WTime()
+    print *, 'MISER ', (tfinish-tstart)/dble(i-1), res, error
+
+    tstart = MPI_WTime()
+    do i=1,2
+      res = IntegrateImage(props, data, it, n,'VEGAS', error)
+    enddo
+    tfinish= MPI_WTime()
+    print *, 'VEGAS ', (tfinish-tstart)/dble(i-1), res, error
+
+
+    tstart = MPI_WTime()
+    do i=1,2
+      res = IntegrateImage(props, data, it, n,'plain', error)
+    enddo
+    tfinish= MPI_WTime()
+    print *, 'plain ', (tfinish-tstart)/dble(i-1), res, error
 
 
 end program Observables

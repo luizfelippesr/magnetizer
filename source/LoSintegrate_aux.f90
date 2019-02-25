@@ -406,6 +406,13 @@ module LoSintegrate_aux
     mthd = 'MISER'
     if (present(method)) mthd = method
 
+    if (.not.allocated(data%RM)) then
+      allocate(data%RM(props%n_redshifts))
+      allocate(data%Stokes_I(props%n_redshifts))
+      allocate(data%number_of_cells(props%n_redshifts))
+      data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
+    endif
+
     ! Global variables for the integration
     data_glb = data
     props_glb = props

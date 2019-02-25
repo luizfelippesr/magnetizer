@@ -14,12 +14,12 @@ program Observables
   integer, parameter :: master_rank = 0
   integer :: rank, nproc, ierr, rc
   integer :: igal, info_mpi
-  integer :: i, j, u, v, k,l, o
   integer,dimension(8) :: time_vals
   double precision :: impact_y, impact_z, zmax, ymax
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
+  integer :: it, i, j, k, n
 
   ! Initializes MPI
   call MPI_INIT(ierr)
@@ -115,14 +115,14 @@ program Observables
   ! Angle relative to the normal to the midplane
   call get_command_argument(3, command_argument)
   data%theta = str2dbl(command_argument)
-  print *, 'using theta=', str2dbl(command_argument)
+!   print *, 'using theta=', str2dbl(command_argument)
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
   data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
   data%B_scale_with_z = .true.
   impact_y = 0. ! kpc, Impact parameter in y-direction
   impact_z =  0. ! kpc, Impact parameter relative to z-direction
 
-  print *, 'Starting Galaxy', igal
+!   print *, 'Starting Galaxy', igal
   incomplete = IO_start_galaxy(igal)
   if (incomplete) then
     print *, 'Galaxy not complete'
@@ -152,6 +152,34 @@ program Observables
   call get_command_argument(5, command_argument)
   ymax = str2dbl(command_argument)
 
-  call print_image(props, data, '/data/nlfsr/', ymax, zmax)
-  print *, zmax
+  it = 1
+!   call print_image(props, data, '/data/nlfsr/', ymax, zmax, isnap=it)
+
+    ! Silly integration
+!     n=500
+!     k=0
+!     do i=-n,n
+!       do j=-n,n
+!         k=k+1
+!         impact_y = dble(i)/dble(n)+0.001
+!         impact_z = dble(j)/dble(n)+0.001
+!         call LoSintegrate(props, impact_y, impact_z, data, it)
+!
+!         if (mod(k,1000)==0)   print *, k, data%Stokes_I(it) /dble(k)
+!       enddo
+!     enddo
+
+    ! MC integration
+    n=500
+    k=0
+    do k=1,6500
+      call random_number(impact_y)
+      impact_y = impact_y*2d0-1d0
+      call random_number(impact_z)
+      impact_z = impact_z*2d0-1d0
+      call LoSintegrate(props, impact_y, impact_z, data, it)
+    enddo
+    print *, k, data%Stokes_I(it) /dble(k)
+
+
 end program Observables

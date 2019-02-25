@@ -7,6 +7,8 @@ module LoSintegrate_aux
   public :: alloc_Galaxy_Properties
   public :: print_image
 
+
+
   type Galaxy_Properties
     double precision, allocatable, dimension(:,:) :: Br, Bp, Bz
     double precision, allocatable, dimension(:,:) :: Rcyl, h, n
@@ -24,17 +26,193 @@ module LoSintegrate_aux
     integer :: nz_points = 500
   end type
 
-  contains
+  ! Global variables for the integration
+  type(LoS_data) :: data_glb
+  type(Galaxy_Properties) :: props_glb
+  integer :: iz_glb
 
-  subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data)
+  contains
+  subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, &
+                                       iz, RM_out, I_out)
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
+    logical, intent(in), optional :: RM_out, I_out
+    double precision,dimension(2*props%n_grid) :: Bpara_all, &
+                                              Bperp_all, xc, zc, ne_all, h_all
+    logical, dimension(2*props%n_grid) :: valid
+    logical :: lRM, lI
+    double precision, allocatable, dimension(:) :: x_path, z_path
+    double precision, allocatable, dimension(:) :: Bpara, Bperp, ne, h
+    double precision, allocatable, dimension(:) :: z_path_new, x_path_new
+    double precision :: Bx, By, Bz, rmax
+    double precision :: tmp, impact_y, impact_z
+    double precision :: zmin, zmax, xmin, xmax
+    integer, dimension(2*props%n_grid) :: js
+    integer :: i, j, iz
+    logical, parameter :: ldense_z = .true.
 
+    ! Allocates/initialises everything
+    valid = .false.
+    if (.not.allocated(data%RM)) then
+      allocate(data%RM(props%n_redshifts))
+      allocate(data%Stokes_I(props%n_redshifts))
+      allocate(data%number_of_cells(props%n_redshifts))
+      data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
+    endif
+    ! Skips if outside the galaxy
+    if (abs(impacty_rmax)>1) return
+
+    lRM = .false.; lI = .true. ! Default values
+    if (present(RM_out)) lRM = RM_out
+    if (present(I_out)) lI = I_out
+
+    rmax = props%Rcyl(iz,props%n_grid)
+    impact_y = impacty_rmax * rmax
+    impact_z = impactz_rmax * rmax
+
+    ! Works on all redshifts simultaneously, looping over the radial grid-points
+    ! i -> index for quantities in a cartesian box
+    ! j -> index for axi-symmetric quantities
+    do i=1,2*props%n_grid
+      ! Constructs coordinates and auxiliary indices js
+      if (i<props%n_grid+1) then
+        ! Index for behind the x-z plane
+        j=props%n_grid-i+1
+        js(i) = j
+        ! sign for x coordinate
+        xc(i) = -1
+      else
+        ! Index ahead of the x-z plane
+        j = i-props%n_grid
+        js(i) = j
+        ! sign for x coordinate
+        xc(i) = 1
+      end if
+
+      ! The available values for x are x_i = sqrt(R_i^2-b^2)
+      tmp = props%Rcyl(iz,j)**2-impact_y**2
+      if (tmp>=0) then
+        xc(i) = xc(i) * sqrt(tmp)
+        ! Stores a mask to be used with the Fortran 2003 'pack' intrinsic function
+        valid(i) = .true.
+      endif
+
+      ! Sets z-coord
+      zc(i) = xc(i) / tan(data%theta) + impact_z
+
+      ! Bx = Br * x/R - Bp * y/R
+      Bx = props%Br(iz,j) * xc(i)/props%Rcyl(iz,j) - props%Bp(iz,j)*impact_y/props%Rcyl(iz,j)
+      ! By = Br * y/R + Bp * x/R
+      By = props%Br(iz,j) * impact_y/props%Rcyl(iz,j) + props%Bp(iz,j)* xc(i)/props%Rcyl(iz,j)
+      ! Bz = Bzmod * sign(z)
+      Bz = sign(props%Bz(iz,j), zc(i))
+
+      ! Stores density and scale height
+      ! NB the scaling with of n with z will be done later!
+      ne_all(i) = props%n(iz,j)
+      h_all(i) = props%h(iz,j)
+
+      ! Simple vector calculations
+
+      ! B_\parallel = dot(B,n), where n is the LoS direction
+      ! [NB  n = (sin(theta),0,cos(theta))  ]
+      Bpara_all(i) = Bx*sin(data%theta) + Bz*cos(data%theta)
+      ! B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 + B_y^2 +
+      !                  + (B_z -B_\parallel\cos\theta)^2 }
+      Bperp_all(i) = ( Bx - Bpara_all(i)*sin(data%theta) )**2   &
+                         + By**2 +                                  &
+                       ( Bz - Bpara_all(i)*cos(data%theta) )**2
+      Bperp_all(i) = sqrt(Bperp_all(i))
+    enddo
+
+    ! Now work is done over the whole grid
+    ! Skips empty cells
+    if (all(.not.valid(:))) return
+
+    ! Filters away invalid parts of the arrays
+    Bpara = pack(Bpara_all(:),valid(:))
+    Bperp = pack(Bperp_all(:),valid(:))
+    ne = pack(ne_all(:),valid(:))
+    h = pack(h_all(:),valid(:))
+    x_path = pack(xc(:),valid(:))
+    z_path = pack(zc(:),valid(:))
+
+    ! The following makes the grid denser, to allow meaningful z-integration
+    ! This step is irrelevant for edge-on, but is important for face-on
+    if (ldense_z) then
+      ! Sets a tentative z-maximum to 3.5 times the scale-height
+      zmin = -3.5d0*h(1); zmax = 3.5d0*h(size(h))
+
+      ! Computes corresponding values for x
+      xmin = (zmin - impact_z)*tan(data%theta)
+      xmax = (zmax - impact_z)*tan(data%theta)
+      ! Forces x coordinate to live within the original grid
+      if (abs(xmin) > abs(x_path(1))) then
+        xmin = x_path(1)
+        zmin = z_path(1)
+      endif
+      if (abs(xmax) > abs(x_path(size(x_path)))) then
+        xmax = x_path(size(x_path))
+        zmax = z_path(size(x_path))
+      endif
+
+      z_path_new = linspace(zmin,zmax, data%nz_points)
+      x_path_new = (z_path_new - impact_z)*tan(data%theta)
+
+      call densify(Bperp, x_path, x_path_new)
+      call densify(Bpara, x_path, x_path_new)
+      call densify(ne, x_path, x_path_new)
+      call densify(h, x_path, x_path_new)
+
+      z_path = z_path_new
+      x_path = x_path_new
+    endif
+    ! Adds the z dependence to the density
+    ne = ne  * exp(-abs(z_path)/h)
+    ! Adds the z dependence the magnetic field
+    if (data%B_scale_with_z) then
+      ! Scale with z (coordinate)
+      Bpara = Bpara * exp(-abs(z_path)/h)
+      Bperp = Bperp * exp(-abs(z_path)/h)
+    else
+      ! Constant for |z|<h, zero otherwise
+      where (abs(z_path)/h>1)
+        Bpara = 0d0
+        Bpara = 0d0
+        Bperp = 0d0
+      endwhere
+    endif
+
+    data%number_of_cells(iz) = data%number_of_cells(iz) + size(x_path)
+    if (lI) then
+      ! Synchrotron emission
+      ! NB Using the total density as a proxy for cosmic ray electron density
+      ! NB2 Increments previous calculation
+      data%Stokes_I(iz) = data%Stokes_I(iz)+Compute_Stokes_I(Bperp, ne,      &
+                                                              x_path, z_path, &
+                                                              data%wavelength,&
+                                                              data%alpha)
+    endif
+    if (lRM) then
+      ! Faraday rotation (backlit)
+      ! NB Using the total density as a proxy for thermal electron density
+      data%RM(iz) = Compute_RM(Bpara, ne, x_path, z_path)
+    endif
+
+  end subroutine LoSintegrate
+
+  subroutine LoSintegrate_all_redshifts(props, impacty_rmax, impactz_rmax, data, RM_out, I_out)
+    type(Galaxy_Properties), intent(in) :: props
+    type(LoS_data), intent(inout) :: data
+    ! Impact parameter in y- and z-directions in units of rmax
+    double precision, intent(in) :: impactz_rmax, impacty_rmax
+    logical, intent(in), optional :: RM_out, I_out
     double precision,dimension(props%n_redshifts,2*props%n_grid) :: Bpara_all, &
                                               Bperp_all, xc, zc, ne_all, h_all
     logical, dimension(props%n_redshifts,2*props%n_grid) :: valid
+    logical :: lRM, lI
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: Bpara, Bperp, ne, h
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
@@ -45,17 +223,21 @@ module LoSintegrate_aux
     integer :: i, j, it
     logical, parameter :: ldense_z = .true.
 
-    ! Allocates everything
+    ! Allocates/initialises everything
     valid = .false.
-
     if (.not.allocated(data%RM)) then
       allocate(data%RM(props%n_redshifts))
       allocate(data%Stokes_I(props%n_redshifts))
       allocate(data%number_of_cells(props%n_redshifts))
+      data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
     endif
-    data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
+    ! Skips if outside the galaxy
+    if (abs(impacty_rmax)>1) return
 
-    if (impacty_rmax>1) return
+    lRM = .false.; lI = .true. ! Default values
+    if (present(RM_out)) lRM = RM_out
+    if (present(I_out)) lI = I_out
+
 
     rmax = props%Rcyl(:,props%n_grid)
     impact_y = impacty_rmax * rmax
@@ -131,6 +313,9 @@ module LoSintegrate_aux
       x_path = pack(xc(it,:),valid(it,:))
       z_path = pack(zc(it,:),valid(it,:))
 
+      ! Skips (bogus) empty cells
+!       if (maxval(z_path)-minval(z_path)<1d-6) cycle
+
       ! The following makes the grid denser, to allow meaningful z-integration
       ! This step is irrelevant for edge-on, but is important for face-on
       if (ldense_z) then
@@ -177,16 +362,51 @@ module LoSintegrate_aux
         endwhere
       endif
 
-      data%number_of_cells(it) = size(x_path)
-      ! Synchrotron emission
-      ! NB Using the total density as a proxy for cosmic ray electron density
-      data%Stokes_I(it) = Compute_Stokes_I(Bperp, ne, x_path, z_path, &
-                                           data%wavelength, data%alpha)
-      ! Faraday rotation (backlit)
-      ! NB Using the total density as a proxy for thermal electron density
-      data%RM(it) = Compute_RM(Bpara, ne, x_path, z_path)
+      data%number_of_cells(it) = data%number_of_cells(it) + size(x_path)
+      if (lI) then
+        ! Synchrotron emission
+        ! NB Using the total density as a proxy for cosmic ray electron density
+        ! NB2 Increments previous calculation
+        data%Stokes_I(it) = data%Stokes_I(it)+Compute_Stokes_I(Bperp, ne,      &
+                                                               x_path, z_path, &
+                                                               data%wavelength,&
+                                                               data%alpha)
+      endif
+      if (lRM) then
+        ! Faraday rotation (backlit)
+        ! NB Using the total density as a proxy for thermal electron density
+        data%RM(it) = Compute_RM(Bpara, ne, x_path, z_path)
+      endif
     enddo
-  end subroutine LoSintegrate
+  end subroutine LoSintegrate_all_redshifts
+
+!   subroutine IntegrateImage(props, data, iz)
+!     use fgsl
+!     use, intrinsic :: iso_c_binding
+!
+!     ! Global variables for the integration
+!     type(fgsl_monte_vegas_state) :: v
+!     type(fgsl_monte_function) :: gfun
+!     data_glb = data
+!     props_glb = props
+!     iz_glb = iz
+!
+!   end subroutine
+!
+!   function IntegrandImage(v_c, n, params) bind(c)
+!     use fgsl
+!     use, intrinsic :: iso_c_binding
+!
+!     integer(c_size_t), value :: n
+!     type(c_ptr), value :: v_c, params
+!     real(c_double) :: g
+!     real(c_double), dimension(:), pointer :: v
+!     call c_f_pointer(v_c, v, [n])
+!     call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
+!                                    RM_out=.false., I_out=.true.)
+!     IntegrandImage = data_glb%Stokes_I(iz_glb)
+!   end function IntegrandImage
+
 
   pure function Compute_RM(Bpara, ne, x_path, z_path)
     ! Computes the Faraday rotation measure for one specific line of sight
@@ -297,10 +517,16 @@ module LoSintegrate_aux
         do i=1,n
           impact_y =  -ymax + 2*ymax/dble(n)*i
           y(i) = impact_y
-          call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data)
+!           call LoSintegrate_all_redshifts(props, impact_y/rmax, impact_z/rmax, data, &
+!                             I_out=.true., RM_out=.true.)
+          call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
+                            I_out=.true., RM_out=.true.)
           I_im(i,j) = data%Stokes_I(it)
+          data%Stokes_I(it) = 0
           N_im(i,j) = data%number_of_cells(it)
+          data%number_of_cells(it) = 0
           RM_im(i,j) = data%RM(it)
+          data%RM(it) = 0
         enddo
         write(unit(1), trim(form)) I_im(:,j)
         write(unit(2), trim(form)) RM_im(:,j)
@@ -356,7 +582,7 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: new_array
 
     allocate(new_array(size(x_dense)))
-    call interpolate(x0, array, x_dense, new_array)
+      call interpolate(x0, array, x_dense, new_array)
 
     deallocate(array)
     call move_alloc(new_array, array)

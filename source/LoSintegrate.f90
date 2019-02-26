@@ -15,12 +15,12 @@ program Observables
   integer :: rank, nproc, ierr, rc
   integer :: igal, info_mpi
   integer,dimension(8) :: time_vals
-  double precision :: impact_y, impact_z, zmax, ymax, error
+  double precision :: zmax, ymax, error
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
-  double precision :: tstart,tfinish, res
-  integer :: it, i, j, k, n
+  double precision :: res
+  integer :: it, i
 
   ! Initializes MPI
   call MPI_INIT(ierr)
@@ -59,30 +59,32 @@ program Observables
   endif
 
   ! Welcome messages
-!   if (nproc==1) then
-!     call message('Magnetizer', rank=-1)
-!     call message(' ', rank=-1)
-!     call message('Runnning on a single processor')
-!   else
-!     call message('Magnetizer', rank=rank, set_info=info, &
-!                  master_only=.true., info=0)
-!     call message(' ', master_only=.true.)
-!     call message('Runnning on', val_int=nproc, msg_end='processors', &
-!                  master_only=.true., info=0)
-!   endif
+  if (nproc==1) then
+    call message('Magnetizer', rank=-1)
+    call message(' ', rank=-1)
+    call message('Runnning on a single processor')
+  else
+    call message('Magnetizer', rank=rank, set_info=info, &
+                 master_only=.true., info=0)
+    call message(' ', master_only=.true.)
+    call message('Runnning on', val_int=nproc, msg_end='processors', &
+                 master_only=.true., info=0)
+  endif
 
   if (len_trim(command_argument) == 0) then
-    ! Uses example parameter file if nothing was found
-    command_argument = 'example/example_global_parameters.in'
-    call read_global_parameters(trim(command_argument))
-    call message('No parameter file provided. Using standard: '// &
-                  trim(command_argument), master_only=.true.,&
-                   set_info=info)
+    ! Exits if nothing was found
+    call message('Usage: LoSintegrate <parameters_file> <gal_id> <iz>'// &
+                  ' <theta> [ymax] [zmax] [image_dir]', master_only=.true.)
+    call message('', master_only=.true.)
+    call message('If the 3 last arguments are present, images are produced' //&
+                 ' in [image_dir], otherwise the code will only compute '   //&
+                 'the synchrotron intensity and exit.', master_only=.true.)
+    stop
   else
     ! Uses specified parameter file
     call read_global_parameters(trim(command_argument))
-!     call message('Using global parameters file: '// trim(command_argument), &
-!                  master_only=.true., set_info=info)
+    call message('Using global parameters file: '// trim(command_argument), &
+                 master_only=.true., set_info=info)
   endif
 
     call message('', master_only=.true., set_info=info)
@@ -108,27 +110,28 @@ program Observables
   ! Initializes IO (this also reads ngals from the hdf5 input file)
   call IO_start(MPI_COMM_WORLD, info_mpi, .true., date)
 
-  ! Selects individual galaxy -- For testing
+  ! Reads the other command arguments
+  ! <gal_id>
   call get_command_argument(2, command_argument)
   igal = str2int(command_argument)
-
-  ! Relative orientation of the galaxy/LoS
+  ! <iz> - Index of the selected redshift
+  call get_command_argument(3, command_argument)
+  it = str2int(command_argument)
+  ! <theta> - Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
   ! Angle relative to the normal to the midplane
-  call get_command_argument(3, command_argument)
+  call get_command_argument(4, command_argument)
   data%theta = str2dbl(command_argument)
-!   print *, 'using theta=', str2dbl(command_argument)
+
+  ! Sets other parameters (currently, hard-coded)
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
   data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
   data%B_scale_with_z = .true.
-  impact_y = 0. ! kpc, Impact parameter in y-direction
-  impact_z =  0. ! kpc, Impact parameter relative to z-direction
 
-!   print *, 'Starting Galaxy', igal
+  ! Initializes Magnetizer IO and reads relevant galaxy properties
   incomplete = IO_start_galaxy(igal)
   if (incomplete) then
-    print *, 'Galaxy not complete'
-    stop 1
+    call error_message('','Galaxy not complete', abort=.true.)
   endif
   ! Prepares a derived data type carrying the galaxy properties
   call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
@@ -148,68 +151,27 @@ program Observables
   call IO_read_dataset_vector('n', igal, buffer, group='Output')
   props%n = buffer
 
-
-  call get_command_argument(4, command_argument)
-  zmax = str2dbl(command_argument)
+  ! Prepares image if the last arguments are present
   call get_command_argument(5, command_argument)
-  ymax = str2dbl(command_argument)
-
-  it = 1
-  call print_image(props, data, '/data/nlfsr/', ymax, zmax, nprint=120, isnap=it)
-
-    ! Silly integration
-!     n=500
-!     k=0
-!     do i=-n,n
-!       do j=-n,n
-!         k=k+1
-!         impact_y = dble(i)/dble(n)+0.001
-!         impact_z = dble(j)/dble(n)+0.001
-!         call LoSintegrate(props, impact_y, impact_z, data, it)
-!
-!         if (mod(k,1000)==0)   print *, k, data%Stokes_I(it) /dble(k)
-!       enddo
-!     enddo
+  if (len_trim(command_argument) /= 0) then
+    print*, command_argument
+    ! [ymax]
+    ymax = str2dbl(command_argument)
+    ! [zmax]
     call get_command_argument(6, command_argument)
-    n = str2int(command_argument)
-!     n = 2000
+    zmax = str2dbl(command_argument)
+    ! [image_dir]
+    call get_command_argument(7, command_argument)
+    i = len_trim(command_argument)
+    if (command_argument(i:i)/='/') then
+      command_argument = trim(command_argument)//'/'
+    endif
+    call print_image(props, data, command_argument, ymax, zmax, &
+                     nprint=90, isnap=it)
+  endif
 
-    tstart = MPI_WTime()
-    ! MC integration
-    do i=1,2
-      do k=1,n
-        call random_number(impact_y)
-        impact_y = impact_y*2d0-1d0
-        call random_number(impact_z)
-        impact_z = impact_z*2d0-1d0
-        call LoSintegrate(props, impact_y, impact_z, data, it)
-      enddo
-    enddo
-    res = data%Stokes_I(it) /dble(k) * 4d0 /dble(i-1)
-    tfinish= MPI_WTime()
-    print *, 'basic ', (tfinish-tstart)/dble(i-1), res
-
-    tstart = MPI_WTime()
-    do i=1,2
-      res = IntegrateImage(props, data, it, n,'MISER', error)
-    enddo
-    tfinish= MPI_WTime()
-    print *, 'MISER ', (tfinish-tstart)/dble(i-1), res, error
-
-    tstart = MPI_WTime()
-    do i=1,2
-      res = IntegrateImage(props, data, it, n,'VEGAS', error)
-    enddo
-    tfinish= MPI_WTime()
-    print *, 'VEGAS ', (tfinish-tstart)/dble(i-1), res, error
-
-
-    tstart = MPI_WTime()
-    do i=1,2
-      res = IntegrateImage(props, data, it, n,'plain', error)
-    enddo
-    tfinish= MPI_WTime()
-    print *, 'plain ', (tfinish-tstart)/dble(i-1), res, error
-
+  res = IntegrateImage(props, data, it, 1700,'VEGAS', error)
+  print *, 'Total synchrotron intensity:'
+  print *, res
 
 end program Observables

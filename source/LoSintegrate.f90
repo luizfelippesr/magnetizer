@@ -127,6 +127,7 @@ program Observables
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
   data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
   data%B_scale_with_z = .true.
+  data%ignore_small_scale_field = .false.
 
   ! Initializes Magnetizer IO and reads relevant galaxy properties
   incomplete = IO_start_galaxy(igal)

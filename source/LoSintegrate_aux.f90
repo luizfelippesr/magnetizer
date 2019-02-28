@@ -192,8 +192,9 @@ module LoSintegrate_aux
       Brnd = ne*0d0
     else
       ! Computes the random field in microgauss, assuming hydrogen mass and:
-      !                       v0=10km/s f=0.5
-      Brnd = sqrt(4*pi*ne*Hmass)*10d3 * 0.5d0 * 1d6
+      !                      v0=1e5cm/s f=0.5  1d6\muG
+      Brnd = sqrt(4*pi*ne*Hmass)*10d5 * 0.5d0 *1d6
+
       ! TODO change this to the values used in the simulation
     endif
 
@@ -339,7 +340,7 @@ module LoSintegrate_aux
       integrand = emissivity(Bperp, Brnd, ncr, wavelength)
     endif
 
-    Compute_Stokes_I = Integrator(integrand, x_path, z_path) * 1d6
+    Compute_Stokes_I = Integrator(integrand, x_path, z_path)
 
   end function Compute_Stokes_I
 
@@ -364,7 +365,7 @@ module LoSintegrate_aux
       aa = 3.0
     endif
 
-    Bperp_tot2 = Bperp**2+Brnd**2
+    Bperp_tot2 = Bperp**2 + Brnd**2
     emissivity = ncr * Bperp_tot2**((alpha+1.0)/4d0) * wavelength**((alpha-1.0)/2d0)
 
   end function emissivity
@@ -391,11 +392,11 @@ module LoSintegrate_aux
 
       form ='('//str(n)//'E15.5)'
 
-      open(newunit=unit(1),file=directory//'I.dat', FORM='FORMATTED', status='replace')
-      open(newunit=unit(2),file=directory//'RM.dat', FORM='FORMATTED',status='replace')
-      open(newunit=unit(3),file=directory//'cells.dat', FORM='FORMATTED',status='replace')
-      open(newunit=unit(4),file=directory//'y.dat', FORM='FORMATTED', status='replace')
-      open(newunit=unit(5),file=directory//'z.dat', FORM='FORMATTED',status='replace')
+      open(newunit=unit(1),file=trim(directory)//'I.dat', FORM='FORMATTED', status='replace')
+      open(newunit=unit(2),file=trim(directory)//'RM.dat', FORM='FORMATTED',status='replace')
+      open(newunit=unit(3),file=trim(directory)//'cells.dat', FORM='FORMATTED',status='replace')
+      open(newunit=unit(4),file=trim(directory)//'y.dat', FORM='FORMATTED', status='replace')
+      open(newunit=unit(5),file=trim(directory)//'z.dat', FORM='FORMATTED',status='replace')
 
       allocate(I_im(n,n))
       allocate(RM_im(n,n))

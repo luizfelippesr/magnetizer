@@ -454,7 +454,7 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     integer, dimension(2) :: data_shape
     integer(hsize_t), dimension(3) :: dimsf_vec
     integer(hsize_t), dimension(3) :: dimsf_vec_1gal
-
+    logical :: exists
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
@@ -466,7 +466,8 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      if (lresuming_run) then
+      call h5lexists_f(group_id_actual, dataset_name, exists, error)
+      if (exists) then
         idx = open_dset(dataset_name, group_id=output_group_id)
       else
         idx = create_dset(dataset_name, dimsf_vec=dimsf_vec)

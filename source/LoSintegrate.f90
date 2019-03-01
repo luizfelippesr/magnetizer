@@ -74,7 +74,8 @@ program Observables
   if (len_trim(command_argument) == 0) then
     ! Exits if nothing was found
     call message('Usage: LoSintegrate <parameters_file> <gal_id> <iz>'// &
-                  ' <theta> [ymax] [zmax] [image_dir]', master_only=.true.)
+                  ' <theta> <ignore small scale field> [ymax] [zmax] [image_dir]',&
+                  master_only=.true.)
     call message('', master_only=.true.)
     call message('If the 3 last arguments are present, images are produced' //&
                  ' in [image_dir], otherwise the code will only compute '   //&
@@ -127,8 +128,12 @@ program Observables
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
   data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
   data%B_scale_with_z = .true.
-  data%ignore_small_scale_field = .false.
-
+  call get_command_argument(5, command_argument)
+  if (str2int(command_argument)==1) then
+    data%ignore_small_scale_field = .true.
+  else
+    data%ignore_small_scale_field = .false.
+  endif
   ! Initializes Magnetizer IO and reads relevant galaxy properties
   incomplete = IO_start_galaxy(igal)
   if (incomplete) then
@@ -153,16 +158,16 @@ program Observables
   props%n = buffer
 
   ! Prepares image if the last arguments are present
-  call get_command_argument(5, command_argument)
+  call get_command_argument(6, command_argument)
   if (len_trim(command_argument) /= 0) then
     print*, command_argument
     ! [ymax]
     ymax = str2dbl(command_argument)
     ! [zmax]
-    call get_command_argument(6, command_argument)
+    call get_command_argument(7, command_argument)
     zmax = str2dbl(command_argument)
     ! [image_dir]
-    call get_command_argument(7, command_argument)
+    call get_command_argument(8, command_argument)
     i = len_trim(command_argument)
     if (command_argument(i:i)/='/') then
       command_argument = trim(command_argument)//'/'

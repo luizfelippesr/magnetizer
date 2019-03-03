@@ -73,7 +73,7 @@ program Observables
 
   if (len_trim(command_argument) == 0) then
     ! Exits if nothing was found
-    call message('Usage: LoSintegrate <parameters_file> <gal_id> <iz>'// &
+    call message('Usage: Observables <parameters_file> <gal_id> <iz>'// &
                   ' <theta> <ignore small scale field> [ymax] [zmax] [image_dir]',&
                   master_only=.true.)
     call message('', master_only=.true.)

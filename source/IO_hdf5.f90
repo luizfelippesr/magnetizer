@@ -219,7 +219,7 @@ contains
     integer, parameter :: rank = 2
     integer(hssize_t), dimension(2) :: offset
     integer, dimension(1) :: data_shape
-
+    logical :: exists
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
 
@@ -240,7 +240,8 @@ contains
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      if (lresuming_run) then
+      call h5lexists_f(group_id, dataset_name, exists, error)
+      if (exists) then
         idx = open_dset(dataset_name, group_id=group_id)
       else
         idx = create_dset(dataset_name, scalar=.true., dimsf_sca=dimsf_sca, &
@@ -466,7 +467,7 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      call h5lexists_f(group_id_actual, dataset_name, exists, error)
+      call h5lexists_f(output_group_id, dataset_name, exists, error)
       if (exists) then
         idx = open_dset(dataset_name, group_id=output_group_id)
       else
@@ -513,7 +514,7 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     integer, parameter :: rank = 2
     integer(hssize_t), dimension(2) :: offset
     integer, dimension(1) :: data_shape
-
+    logical :: exists
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
 
@@ -534,7 +535,8 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     idx = find_dset(dataset_name)
     ! If it wasn't previously opened, creates it (collectively)
     if (idx < 0) then
-      if (lresuming_run) then
+      call h5lexists_f(group_id, dataset_name, exists, error)
+      if (exists) then
         idx = open_dset(dataset_name, group_id=group_id)
       else
         ! Flag 'is_log' can be used to choose the group 'Log' instead of 'Output'

@@ -8,7 +8,8 @@ program Observables
   use global_input_parameters
   use LoSintegrate_aux
   implicit none
-  character(len=100) :: command_argument
+  character(len=300) :: command_argument, image_dir
+  character(len=50) :: run_type
   character(len=100) :: date
   logical :: incomplete
   integer, parameter :: master_rank = 0
@@ -19,7 +20,7 @@ program Observables
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
-  double precision :: res
+  double precision :: res, impact_y, impact_z
   integer :: it, i
 
   ! Initializes MPI
@@ -37,44 +38,15 @@ program Observables
     call MPI_Abort(MPI_COMM_WORLD, rc, ierr)
   endif
 
-  ! Tries to read the parameter filename from the command argument (or --help)
-  call get_command_argument(1, command_argument)
-  ! If --help is detected, prints help information
-  if (trim(command_argument)=='--help' .or. trim(command_argument)=='-h') then
-    call get_command_argument(0, command_argument)
-    if (rank==master_rank) then
-      print *, 'Magnetizer '
-      print *,
-      print *, 'Computes ISM properties and solves mean field dynamo equation'&
-               //' for the output of a semi-analytic galaxy formation model.'
-      print *,
-      print *, 'Usage:'
-      print *, trim(command_argument), ' <input_parameters_file> [galaxy number] [-f]'
-      print *,
-      print *, 'For more details please visit: '&
-             //'https://github.com/luizfelippesr/magnetizer'
-      print *,
-    endif
-    stop
-  endif
-
-  ! Welcome messages
-  if (nproc==1) then
-    call message('Magnetizer', rank=-1)
-    call message(' ', rank=-1)
-    call message('Runnning on a single processor')
-  else
-    call message('Magnetizer', rank=rank, set_info=info, &
-                 master_only=.true., info=0)
-    call message(' ', master_only=.true.)
-    call message('Runnning on', val_int=nproc, msg_end='processors', &
-                 master_only=.true., info=0)
-  endif
-
+  ! Tries to read the parameter filename from the command argument
+  call get_command_argument(2, command_argument)
   if (len_trim(command_argument) == 0) then
     ! Exits if nothing was found
-    call message('Usage: LoSintegrate <parameters_file> <gal_id> <iz>'// &
-                  ' <theta> [ymax] [zmax] [image_dir]', master_only=.true.)
+    call get_command_argument(0, command_argument)
+
+    call message('Usage: '//trim(command_argument)//' <type> <parameters_file> <gal_id> <iz>'// &
+                  ' <theta> <ignore small scale field> [ymax] [zmax] [image_dir]',&
+                  master_only=.true.)
     call message('', master_only=.true.)
     call message('If the 3 last arguments are present, images are produced' //&
                  ' in [image_dir], otherwise the code will only compute '   //&
@@ -87,7 +59,24 @@ program Observables
                  master_only=.true., set_info=info)
   endif
 
-    call message('', master_only=.true., set_info=info)
+  call get_command_argument(1, command_argument)
+  run_type = trim(command_argument)
+
+  ! Welcome messages
+  if (nproc==1) then
+!     call message('Magnetizer', rank=-1)
+    call message(' ', rank=-1)
+!     call message('Runnning on a single processor')
+  else
+    stop
+!     call message('Magnetizer', rank=rank, set_info=info, &
+!                  master_only=.true., info=0)
+!     call message(' ', master_only=.true.)
+!     call message('Runnning on', val_int=nproc, msg_end='processors', &
+!                  master_only=.true., info=0)
+  endif
+
+!     call message('', master_only=.true., set_info=info)
 
 
   if (rank==master_rank) then
@@ -112,23 +101,27 @@ program Observables
 
   ! Reads the other command arguments
   ! <gal_id>
-  call get_command_argument(2, command_argument)
+  call get_command_argument(3, command_argument)
   igal = str2int(command_argument)
   ! <iz> - Index of the selected redshift
-  call get_command_argument(3, command_argument)
+  call get_command_argument(4, command_argument)
   it = str2int(command_argument)
   ! <theta> - Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
   ! Angle relative to the normal to the midplane
-  call get_command_argument(4, command_argument)
+  call get_command_argument(5, command_argument)
   data%theta = str2dbl(command_argument)
 
   ! Sets other parameters (currently, hard-coded)
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
   data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
   data%B_scale_with_z = .true.
-  data%ignore_small_scale_field = .false.
-
+  call get_command_argument(6, command_argument)
+  if (str2int(command_argument)==1) then
+    data%ignore_small_scale_field = .true.
+  else
+    data%ignore_small_scale_field = .false.
+  endif
   ! Initializes Magnetizer IO and reads relevant galaxy properties
   incomplete = IO_start_galaxy(igal)
   if (incomplete) then
@@ -152,27 +145,94 @@ program Observables
   call IO_read_dataset_vector('n', igal, buffer, group='Output')
   props%n = buffer
 
-  ! Prepares image if the last arguments are present
-  call get_command_argument(5, command_argument)
+  ! Prepares image if y and zarguments are present
+  call get_command_argument(7, command_argument)
   if (len_trim(command_argument) /= 0) then
-    print*, command_argument
     ! [ymax]
-    ymax = str2dbl(command_argument)
-    ! [zmax]
-    call get_command_argument(6, command_argument)
-    zmax = str2dbl(command_argument)
-    ! [image_dir]
-    call get_command_argument(7, command_argument)
-    i = len_trim(command_argument)
-    if (command_argument(i:i)/='/') then
-      command_argument = trim(command_argument)//'/'
-    endif
-    call print_image(props, data, command_argument, ymax, zmax, &
-                     nprint=90, isnap=it)
+    impact_y = str2dbl(command_argument)
+  else
+    impact_y = -1000d0
   endif
 
-  res = IntegrateImage(props, data, it, 1700,'VEGAS', error)
-  print *, 'Total synchrotron intensity:'
-  print *, res
+  call get_command_argument(8, command_argument)
+  if (len_trim(command_argument) /= 0) then
+    ! [zmax]
+    impact_z = str2dbl(command_argument)
+  else
+    impact_y = -1000d0
+  endif
+
+   ! [image_dir]
+   call get_command_argument(9, command_argument)
+   if (len_trim(command_argument) /= 0) then
+     i = len_trim(command_argument)
+     if (command_argument(i:i)/='/') then
+        command_argument = trim(command_argument)//'/'
+     endif
+     image_dir = command_argument
+   endif
+
+  select case (trim(run_type))
+    case ('Image')
+      call message('Preparing images for Q, U, I and RM', gal_id=igal, &
+                   msg_end='saving to dir: '//image_dir)
+      ! [image_dir]
+      call get_command_argument(9, command_argument)
+      if (len_trim(command_argument) /= 0) then
+        i = len_trim(command_argument)
+        if (command_argument(i:i)/='/') then
+          command_argument = trim(command_argument)//'/'
+        endif
+        call print_image(props, data, command_argument, ymax, zmax, &
+                        nprint=90, isnap=it)
+      endif
+
+    case ('I')
+      call message('Computed integrated synchrotron intensity for this choie of theta', gal_id=igal)
+      res = IntegrateImage(props, data, it, 1700,'VEGAS', error)
+      print *, 'Total synchrotron intensity:'
+      print *, res
+
+    case ('RM')
+      call message('Computing RM for this choice of y, z and theta', gal_id=igal)
+      call LoSintegrate(props, impact_y, impact_z, data, it, RM_out=.true., &
+                        I_out=.false., Q_out=.false., U_out=.false.)
+      print *, 'RM:'
+      print *, data%RM(it)
+
+    case ('RM_study')
+      call message('Computing RM for this of theta', gal_id=igal)
+      do i=1,1000000
+        call random_number(impact_y)
+        impact_y = (impact_y*2d0-1d0)!/2.
+        call random_number(impact_z)
+        impact_z = (impact_z*2d0-1d0)!/2.
+        res = sqrt(impact_z**2 + impact_y**2)
+        if (res<0.04) cycle
+        impact_z = impact_z/sin(data%theta)
+        call LoSintegrate(props, impact_y, impact_z, data, it, RM_out=.true., &
+                          I_out=.false., Q_out=.false., U_out=.false.)
+        print *, data%RM(it), res, impact_y, impact_z
+      enddo
+    case ('RM_study_r')
+      call message('Computing RM for this choice of y, z and theta', gal_id=igal)
+      do i=1,100000
+        call random_number(res)
+        if (res<0.04) cycle
+
+        call random_number(impact_y)
+        impact_y = (impact_y*2d0-1d0)*res
+        call random_number(impact_z)
+        impact_z = (impact_z*2d0-1d0)
+        impact_z = sign(sqrt(res**2-impact_y**2), impact_z)
+        impact_z = impact_z/sin(data%theta)
+        call LoSintegrate(props, impact_y, impact_z, data, it, RM_out=.true., &
+                          I_out=.false., Q_out=.false., U_out=.false.)
+        print *, data%RM(it), res, impact_y, impact_z
+      enddo
+    case default
+      stop '?'
+
+  end select
 
 end program Observables

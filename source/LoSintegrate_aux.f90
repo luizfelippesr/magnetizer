@@ -2,7 +2,7 @@ module LoSintegrate_aux
   ! Auxiliary functions used by the program LoSintegrate
   implicit none
   private
-  public :: Compute_RM, Compute_Stokes_I,LoSintegrate
+  public :: LoSintegrate
   public :: Galaxy_Properties, LoS_data
   public :: alloc_Galaxy_Properties
   public :: print_image, IntegrateImage
@@ -17,8 +17,11 @@ module LoSintegrate_aux
 
   type LoS_data
     double precision, allocatable, dimension(:) :: Stokes_I
+    double precision, allocatable, dimension(:) :: Stokes_Q
+    double precision, allocatable, dimension(:) :: Stokes_U
     double precision, allocatable, dimension(:) :: RM
     double precision, allocatable, dimension(:) :: number_of_cells
+    double precision, allocatable, dimension(:) :: psi0
     double precision :: wavelength = 20d-2 ! 20 cm or 1.49 GHz
     double precision :: alpha = 3d0
     double precision :: theta = 0d0
@@ -34,21 +37,23 @@ module LoSintegrate_aux
 
   contains
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, &
-                                       iz, RM_out, I_out)
+                                       iz, RM_out, I_out, Q_out, U_out, psi0_out)
     use input_constants
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
-    logical, intent(in), optional :: RM_out, I_out
-    double precision,dimension(2*props%n_grid) :: Bpara_all, &
-                                              Bperp_all, xc, zc, ne_all, h_all
+    logical, intent(in), optional :: RM_out, I_out, Q_out, U_out, psi0_out
+    double precision,dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
+    double precision,dimension(2*props%n_grid) :: Bpara_all, Bperp_all
+    double precision,dimension(2*props%n_grid) :: psi0_all
     logical, dimension(2*props%n_grid) :: valid
-    logical :: lRM, lI
+    logical :: lRM, lI, lQ, lU, lpsi0
     double precision, allocatable, dimension(:) :: x_path, z_path
+    double precision, allocatable, dimension(:) :: psi, psi0
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
-    double precision :: Bx, By, Bz, rmax
+    double precision :: Bx, By, Bz, rmax, B2_perp_not_y
     double precision :: tmp, impact_y, impact_z
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
@@ -60,21 +65,28 @@ module LoSintegrate_aux
     if (.not.allocated(data%RM)) then
       allocate(data%RM(props%n_redshifts))
       allocate(data%Stokes_I(props%n_redshifts))
+      allocate(data%Stokes_Q(props%n_redshifts))
+      allocate(data%Stokes_U(props%n_redshifts))
       allocate(data%number_of_cells(props%n_redshifts))
-      data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
+      data%RM = 0; data%number_of_cells = 0;
+      data%Stokes_I = 0; data%Stokes_U = 0; data%Stokes_Q = 0
     endif
     ! Skips if outside the galaxy
     if (abs(impacty_rmax)>1) return
 
-    lRM = .false.; lI = .true. ! Default values
+    ! Sets optional arguments and their default values
+    lRM=.false.; lI=.true.; lQ=.true.; lU=.true.; lpsi0=.false.
     if (present(RM_out)) lRM = RM_out
     if (present(I_out)) lI = I_out
+    if (present(Q_out)) lQ = Q_out
+    if (present(U_out)) lU = U_out
+    if (present(psi0_out)) lpsi0 = psi0_out
 
     rmax = props%Rcyl(iz,props%n_grid)
     impact_y = impacty_rmax * rmax
     impact_z = impactz_rmax * rmax
 
-    ! Works on all redshifts simultaneously, looping over the radial grid-points
+    ! Loops over the radial grid-points
     ! i -> index for quantities in a cartesian box
     ! j -> index for axi-symmetric quantities
     do i=1,2*props%n_grid
@@ -121,12 +133,22 @@ module LoSintegrate_aux
       ! B_\parallel = dot(B,n), where n is the LoS direction
       ! [NB  n = (sin(theta),0,cos(theta))  ]
       Bpara_all(i) = Bx*sin(data%theta) + Bz*cos(data%theta)
-      ! B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 + B_y^2 +
-      !                  + (B_z -B_\parallel\cos\theta)^2 }
-      Bperp_all(i) = ( Bx - Bpara_all(i)*sin(data%theta) )**2   &
-                         + By**2 +                                  &
+!       ! B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 + B_y^2 +
+!       !                  + (B_z -B_\parallel\cos\theta)^2 }
+!       Bperp_all(i) = ( Bx - Bpara_all(i)*sin(data%theta) )**2   &
+!                          + By**2 +                                  &
+!                        ( Bz - Bpara_all(i)*cos(data%theta) )**2
+!       Bperp_all(i) = sqrt(Bperp_all(i))
+
+      ! Magnitude of the field perpendicular to both y and the LoS
+      B2_perp_not_y = ( Bx - Bpara_all(i)*sin(data%theta) )**2   + &
                        ( Bz - Bpara_all(i)*cos(data%theta) )**2
-      Bperp_all(i) = sqrt(Bperp_all(i))
+      ! Magnitude of the total perpendicular field
+      Bperp_all(i) = sqrt(B2_perp_not_y + By**2)
+      ! Intrinsic polarization angle
+      psi0_all(i) = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
+      if (psi0_all(i)>pi)   psi0_all(i) = psi0_all(i)-2d0*pi
+
     enddo
 
     ! Now work is done over the whole grid
@@ -136,6 +158,7 @@ module LoSintegrate_aux
     ! Filters away invalid parts of the arrays
     Bpara = pack(Bpara_all(:),valid(:))
     Bperp = pack(Bperp_all(:),valid(:))
+    psi0 = pack(psi0_all(:),valid(:))
     ne = pack(ne_all(:),valid(:))
     h = pack(h_all(:),valid(:))
     x_path = pack(xc(:),valid(:))
@@ -165,6 +188,7 @@ module LoSintegrate_aux
 
       call densify(Bperp, x_path, x_path_new)
       call densify(Bpara, x_path, x_path_new)
+      call densify(psi0, x_path, x_path_new)
       call densify(ne, x_path, x_path_new)
       call densify(h, x_path, x_path_new)
 
@@ -203,11 +227,26 @@ module LoSintegrate_aux
       ! Synchrotron emission
       ! NB Using the total density as a proxy for cosmic ray electron density
       ! NB2 Increments previous calculation
-      data%Stokes_I(iz) = data%Stokes_I(iz)+Compute_Stokes_I(Bperp, Brnd, ne, &
-                                                              x_path, z_path, &
-                                                              data%wavelength,&
-                                                              data%alpha)
+      data%Stokes_I(iz) = Compute_Stokes('I', Bperp, Brnd, ne, x_path, z_path,&
+                                           data%wavelength, alpha=data%alpha)
     endif
+
+    if (lQ .or. lU) then
+      allocate(psi(size(z_path)))
+      do i=1, size(z_path)
+        psi(i) = psi0(i) + Compute_RM(Bpara(1:i),ne(1:i),x_path(1:i),z_path(1:i))
+      enddo
+
+      if (lQ) then
+        data%Stokes_Q(iz) = Compute_Stokes('Q', Bperp, Brnd, ne, x_path, z_path,&
+                                           data%wavelength, psi, data%alpha)
+      endif
+      if (lU) then
+        data%Stokes_U(iz) = Compute_Stokes('U', Bperp, Brnd, ne, x_path, z_path,&
+                                           data%wavelength, psi, data%alpha)
+      endif
+    endif
+
     if (lRM) then
       ! Faraday rotation (backlit)
       ! NB Using the total density as a proxy for thermal electron density
@@ -319,8 +358,9 @@ module LoSintegrate_aux
     Compute_RM = Integrator(integrand, x_path, z_path)
   end function Compute_RM
 
-  pure function Compute_Stokes_I(Bperp, Brnd, ncr, x_path, z_path, wavelength, alpha)
-    ! Computes Stokes parameter I along a line of sight
+  pure function Compute_Stokes(S, Bperp, Brnd, ncr, x_path, z_path, &
+                                 wavelength, psi, alpha)
+    ! Computes Stokes parameter I, Q or U along a line of sight
     !
     ! Input: Bperp -> 1d-array, B parallel to the LoS, in microgauss
     !        ne -> 1d-array, number of thermal electrons, in cm^-3
@@ -328,23 +368,37 @@ module LoSintegrate_aux
     !        alpha -> real, spectral index of the CR electrons, default: 3
     !        x_path,z_path -> 1d-array, positions along path, in kpc
     ! Output: total synchrotron emissivity in arbitrary units
+    character(len=*), intent(in) :: S
     double precision, dimension(:), intent(in) :: Bperp, Brnd, ncr, x_path, z_path
-    double precision, dimension(size(ncr)) :: integrand
     double precision, intent(in) :: wavelength
+    double precision, dimension(:), optional, intent(in) :: psi
     double precision, optional, intent(in) :: alpha
-    double precision :: Compute_Stokes_I
+    double precision, dimension(size(ncr)) :: integrand, emissivity
+    double precision :: p0
+    double precision :: Compute_Stokes
 
     if (present(alpha)) then
-      integrand = emissivity(Bperp, Brnd, ncr, wavelength, alpha)
+      emissivity = compute_emissivity(Bperp, Brnd, ncr, wavelength, alpha)
+      p0 = (alpha+1d0)/(alpha+7d0/3d0)
     else
-      integrand = emissivity(Bperp, Brnd, ncr, wavelength)
+      emissivity = compute_emissivity(Bperp, Brnd, ncr, wavelength)
+      p0 = 0.75
     endif
 
-    Compute_Stokes_I = Integrator(integrand, x_path, z_path)
+    select case (S)
+      case('I')
+        integrand = emissivity
+      case('Q')
+        integrand = p0*emissivity*cos(2d0*psi)
+      case('U')
+        integrand = p0*emissivity*sin(2d0*psi)
+    end select
 
-  end function Compute_Stokes_I
+    Compute_Stokes = Integrator(integrand, x_path, z_path)
 
-  pure function emissivity(Bperp, Brnd, ncr, wavelength, alpha)
+  end function Compute_Stokes
+
+  pure function compute_emissivity(Bperp, Brnd, ncr, wavelength, alpha)
     ! Synchrotron emissivity
     !
     ! Input: Bperp -> 1d-array, magnitude of B perpendicular to LoS, in microgauss
@@ -356,7 +410,7 @@ module LoSintegrate_aux
     double precision, dimension(:), intent(in) :: Bperp, Brnd, ncr
     double precision, intent(in) :: wavelength
     double precision, optional, intent(in) :: alpha
-    double precision, dimension(size(ncr)) :: emissivity, Bperp_tot2
+    double precision, dimension(size(ncr)) :: compute_emissivity, Bperp_tot2
     double precision :: aa
 
     if (present(alpha)) then
@@ -366,10 +420,8 @@ module LoSintegrate_aux
     endif
 
     Bperp_tot2 = Bperp**2 + Brnd**2
-    emissivity = ncr * Bperp_tot2**((alpha+1.0)/4d0) * wavelength**((alpha-1.0)/2d0)
-
-  end function emissivity
-
+    compute_emissivity = ncr * Bperp_tot2**((alpha+1.0)/4d0) * wavelength**((alpha-1.0)/2d0)
+  end function compute_emissivity
 
   subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap)
       use messages
@@ -412,8 +464,7 @@ module LoSintegrate_aux
         do i=1,n
           impact_y =  -ymax + 2*ymax/dble(n)*i
           y(i) = impact_y
-!           call LoSintegrate_all_redshifts(props, impact_y/rmax, impact_z/rmax, data, &
-!                             I_out=.true., RM_out=.true.)
+
           call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
                             I_out=.true., RM_out=.true.)
           I_im(i,j) = data%Stokes_I(it)

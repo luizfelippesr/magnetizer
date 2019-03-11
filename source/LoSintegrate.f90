@@ -45,12 +45,36 @@ program Observables
     call get_command_argument(0, command_argument)
 
     call message('Usage: '//trim(command_argument)//' <type> <parameters_file> <gal_id> <iz>'// &
-                  ' <theta> <ignore small scale field> [ymax] [zmax] [image_dir]',&
+                  ' <theta> <ignore_small_scale_field> [y] [z] [image_dir]',&
                   master_only=.true.)
     call message('', master_only=.true.)
-    call message('If the 3 last arguments are present, images are produced' //&
-                 ' in [image_dir], otherwise the code will only compute '   //&
-                 'the synchrotron intensity and exit.', master_only=.true.)
+    call message('type ',&
+                    master_only=.true.)
+    call message('      "RM": compute backlit RM along LoS; ',&
+                    master_only=.true.)
+    call message('      "I": total integrated synchrotron emission;',&
+                    master_only=.true.)
+    call message('      "Image": outputs images of Stokes I,U,Q and RM to image_dir',&
+                    master_only=.true.)
+    call message('      "RM_study": computes RM for various LoS with the same theta.',&
+                    master_only=.true.)
+    call message('parameters_file - Magnetizer parameters file used for the run', &
+                 master_only=.true.)
+    call message('gal_id - galaxy index', &
+                 master_only=.true.)
+    call message('iz - redshift index', &
+                 master_only=.true.)
+    call message('theta - angle of the line of sight (radians)', &
+                 master_only=.true.)
+    call message('ignore_small_scale_field - If 1, only the mean field will be used', &
+                 master_only=.true.)
+    call message('y - if "RM", position at which the LoS intercepts the x-z ' &
+                //'plane (in units of rmax), if "Image", maximum y-intercept (kpc)',&
+                 master_only=.true.)
+
+    call message('z - if "RM", position at which the LoS intercepts the x-y ' &
+                //'plane (in units of rmax), if "Image", maximum z-intercept (kpc)',&
+                 master_only=.true.)
     stop
   else
     ! Uses specified parameter file
@@ -232,7 +256,5 @@ program Observables
       enddo
     case default
       stop '?'
-
   end select
-
 end program Observables

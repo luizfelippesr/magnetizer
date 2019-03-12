@@ -12,7 +12,7 @@ module LoSintegrate_aux
   type Galaxy_Properties
     double precision, allocatable, dimension(:,:) :: Br, Bp, Bz
     double precision, allocatable, dimension(:,:) :: Rcyl, h, n
-    integer :: n_redshifts, n_grid
+    integer :: n_redshifts, n_grid, igal
   end type
 
   type LoS_data
@@ -224,6 +224,9 @@ module LoSintegrate_aux
 
     data%number_of_cells(iz) = data%number_of_cells(iz) + size(x_path)
     if (lI) then
+      if (.not.allocated(data%Stokes_I)) then
+          allocate(data%Stokes_I(props%n_redshifts))
+      endif
       ! Synchrotron emission
       ! NB Using the total density as a proxy for cosmic ray electron density
       ! NB2 Increments previous calculation
@@ -238,16 +241,27 @@ module LoSintegrate_aux
       enddo
 
       if (lQ) then
+        if (.not.allocated(data%Stokes_Q)) then
+          allocate(data%Stokes_Q(props%n_redshifts))
+        endif
+
         data%Stokes_Q(iz) = Compute_Stokes('Q', Bperp, Brnd, ne, x_path, z_path,&
                                            data%wavelength, psi, data%alpha)
       endif
       if (lU) then
+        if (.not.allocated(data%Stokes_U)) then
+          allocate(data%Stokes_U(props%n_redshifts))
+        endif
+
         data%Stokes_U(iz) = Compute_Stokes('U', Bperp, Brnd, ne, x_path, z_path,&
                                            data%wavelength, psi, data%alpha)
       endif
     endif
 
     if (lRM) then
+      if (.not.allocated(data%RM)) then
+        allocate(data%RM(props%n_redshifts))
+      endif
       ! Faraday rotation (backlit)
       ! NB Using the total density as a proxy for thermal electron density
       data%RM(iz) = Compute_RM(Bpara, ne, x_path, z_path)
@@ -256,9 +270,10 @@ module LoSintegrate_aux
   end subroutine LoSintegrate
 
 
-  function IntegrateImage(props,data,iz,number_of_calls,method,error) result(res)
+  function IntegrateImage(im_type, props,data,iz,number_of_calls,method,error) result(res)
     use fgsl
     use, intrinsic :: iso_c_binding
+    character(len=*), intent(in) :: im_type
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
     integer, intent(in) :: iz
@@ -277,20 +292,15 @@ module LoSintegrate_aux
     integer(fgsl_int) :: status
     character(len=10) :: mthd
 
-    calls = 5000
+    calls = 2000
     if (present(number_of_calls)) calls = number_of_calls
     mthd = 'MISER'
     if (present(method)) mthd = method
 
-    if (.not.allocated(data%RM)) then
-      allocate(data%RM(props%n_redshifts))
-      allocate(data%Stokes_I(props%n_redshifts))
-      allocate(data%number_of_cells(props%n_redshifts))
-      data%RM = 0; data%number_of_cells = 0; data%Stokes_I = 0
-    endif
-
     ! Global variables for the integration
     data_glb = data
+!     allocate(data_glb%Stokes_U(props%n_redshifts))
+!     endif
     props_glb = props
     iz_glb = iz
 
@@ -300,7 +310,13 @@ module LoSintegrate_aux
     ! Sets up FGSL stuff
     t = fgsl_rng_env_setup()
     r = fgsl_rng_alloc(t)
-    gfun = fgsl_monte_function_init(IntegrandImage, 2_fgsl_size_t, ptr)
+    if (im_type=='I') then
+      gfun = fgsl_monte_function_init(IntegrandImage_I, 2_fgsl_size_t, ptr)
+    elseif (im_type=='PI') then
+      gfun = fgsl_monte_function_init(IntegrandImage_PI, 2_fgsl_size_t, ptr)
+    else
+      stop 'Error.'
+    endif
 
     select case (trim(mthd))
       case('MISER')
@@ -323,23 +339,42 @@ module LoSintegrate_aux
     if (present(error)) error=err
   end function IntegrateImage
 
-  function IntegrandImage(v_c, n, params) bind(c)
+  function IntegrandImage_I(v_c, n, params) bind(c)
     ! Wrapper to allow using LoSintegrate with FGSL
     use fgsl
     use, intrinsic :: iso_c_binding
 
     integer(c_size_t), value :: n
     type(c_ptr), value :: v_c, params
-    real(c_double) :: IntegrandImage
+    real(c_double) :: IntegrandImage_I
     real(c_double), dimension(:), pointer :: v
     ! Reads the memory address
     call c_f_pointer(v_c, v, [n])
-    data_glb%Stokes_I(iz_glb) = 0d0
+!     data_glb%Stokes_I(iz_glb) = 0d0
     call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
-                                   RM_out=.false., I_out=.true.)
-    IntegrandImage = data_glb%Stokes_I(iz_glb)
-  end function IntegrandImage
+                                   RM_out=.false., I_out=.true., &
+                                   Q_out=.false., U_out=.false.)
+    IntegrandImage_I = data_glb%Stokes_I(iz_glb)
+  end function IntegrandImage_I
 
+  function IntegrandImage_PI(v_c, n, params) bind(c)
+    ! Wrapper to allow using LoSintegrate with FGSL
+    use fgsl
+    use, intrinsic :: iso_c_binding
+
+    integer(c_size_t), value :: n
+    type(c_ptr), value :: v_c, params
+    real(c_double) :: IntegrandImage_PI
+    real(c_double), dimension(:), pointer :: v
+    ! Reads the memory address
+    call c_f_pointer(v_c, v, [n])
+!     data_glb%Stokes_Q(iz_glb) = 0d0
+!     data_glb%Stokes_U(iz_glb) = 0d0
+    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
+                                   RM_out=.false., I_out=.false., &
+                                   Q_out=.true., U_out=.true.)
+    IntegrandImage_PI = sqrt(data_glb%Stokes_Q(iz_glb)**2 + data_glb%Stokes_U(iz_glb)**2)
+  end function IntegrandImage_PI
 
   pure function Compute_RM(Bpara, ne, x_path, z_path)
     ! Computes the Faraday rotation measure for one specific line of sight
@@ -425,65 +460,113 @@ module LoSintegrate_aux
 
   subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap)
       use messages
+      use IO
       character(len=*) :: directory
       character(len=20) :: form
       integer, optional, intent(in) :: nprint, isnap
-      integer :: n, i, j, it
-      integer, dimension(5) :: unit
+      integer :: n, i, j, it, iz, it_max, it_min
+      integer, dimension(7) :: unit
       double precision :: impact_y, impact_z, zmax, ymax, rmax
-      real, dimension(:,:), allocatable :: RM_im, I_im, N_im
+      real, dimension(:,:), allocatable :: RM_im, I_im, Q_im, U_im, N_im
       real, dimension(:),allocatable :: y, z
       type(Galaxy_Properties), intent(in) :: props
       type(LoS_data), intent(inout) :: data
+      logical :: to_file = .true.
 
-      n = 60; it = 1 ! Default values
+      n = 60; iz = 1 ! Default values
       if (present(nprint)) n = nprint
-      if (present(isnap)) it = isnap
+      if (present(isnap)) iz = isnap
 
-      rmax = props%Rcyl(it,props%n_grid)
+      if (trim(directory)=='-') to_file = .false.
+
+      rmax = props%Rcyl(iz,props%n_grid)
 
       form ='('//str(n)//'E15.5)'
 
-      open(newunit=unit(1),file=trim(directory)//'I.dat', FORM='FORMATTED', status='replace')
-      open(newunit=unit(2),file=trim(directory)//'RM.dat', FORM='FORMATTED',status='replace')
-      open(newunit=unit(3),file=trim(directory)//'cells.dat', FORM='FORMATTED',status='replace')
-      open(newunit=unit(4),file=trim(directory)//'y.dat', FORM='FORMATTED', status='replace')
-      open(newunit=unit(5),file=trim(directory)//'z.dat', FORM='FORMATTED',status='replace')
+      if (to_file) then
+        open(newunit=unit(1),file=trim(directory)//'I.dat', FORM='FORMATTED', status='replace')
+        open(newunit=unit(2),file=trim(directory)//'Q.dat', FORM='FORMATTED', status='replace')
+        open(newunit=unit(3),file=trim(directory)//'U.dat', FORM='FORMATTED', status='replace')
+        open(newunit=unit(4),file=trim(directory)//'RM.dat', FORM='FORMATTED',status='replace')
+        open(newunit=unit(5),file=trim(directory)//'cells.dat', FORM='FORMATTED',status='replace')
+        open(newunit=unit(6),file=trim(directory)//'y.dat', FORM='FORMATTED', status='replace')
+        open(newunit=unit(7),file=trim(directory)//'z.dat', FORM='FORMATTED',status='replace')
+      endif
+
 
       allocate(I_im(n,n))
+      allocate(Q_im(n,n))
+      allocate(U_im(n,n))
       allocate(RM_im(n,n))
       allocate(N_im(n,n))
       allocate(y(n))
       allocate(z(n))
 
+      if (to_file) then
+        it_min=iz
+        it_max=iz
+      else
+        it_min=1
+        it_max=props%n_redshifts
+      endif
 
+      do it=it_min, it_max
+        do j=1,n
+          impact_z = -zmax + 2*zmax/dble(n)*j
+          z = impact_z
+          do i=1,n
+            impact_y =  -ymax + 2*ymax/dble(n)*i
+            y(i) = impact_y
 
-      do j=1,n
-        impact_z = -zmax + 2*zmax/dble(n)*j
-        z = impact_z
-        do i=1,n
-          impact_y =  -ymax + 2*ymax/dble(n)*i
-          y(i) = impact_y
+            call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
+                              I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
 
-          call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
-                            I_out=.true., RM_out=.true.)
-          I_im(i,j) = data%Stokes_I(it)
-          data%Stokes_I(it) = 0
-          N_im(i,j) = data%number_of_cells(it)
-          data%number_of_cells(it) = 0
-          RM_im(i,j) = data%RM(it)
-          data%RM(it) = 0
+            I_im(i,j) = data%Stokes_I(it)
+            data%Stokes_I(it) = 0
+
+            Q_im(i,j) = data%Stokes_Q(it)
+            data%Stokes_Q(it) = 0
+
+            U_im(i,j) = data%Stokes_U(it)
+            data%Stokes_U(it) = 0
+
+            N_im(i,j) = data%number_of_cells(it)
+            data%number_of_cells(it) = 0
+
+            RM_im(i,j) = data%RM(it)
+            data%RM(it) = 0
+          enddo
+
+          if (to_file) then
+            write(unit(1), trim(form)) I_im(:,j)
+            write(unit(2), trim(form)) Q_im(:,j)
+            write(unit(3), trim(form)) U_im(:,j)
+            write(unit(4), trim(form)) RM_im(:,j)
+            write(unit(5), trim(form)) N_im(:,j)
+            write(unit(6), trim(form)) y
+            write(unit(7), trim(form)) z
+          endif
         enddo
-        write(unit(1), trim(form)) I_im(:,j)
-        write(unit(2), trim(form)) RM_im(:,j)
-        write(unit(3), trim(form)) N_im(:,j)
-        write(unit(4), trim(form)) y
-        write(unit(5), trim(form)) z
       enddo
 
-      do i=1,5
-        close(unit(i))
-      enddo
+      if (to_file) then
+        do i=1,7
+          close(unit(i))
+        enddo
+!       else
+!
+!       call IO_write_dataset('Q', gal_id,                        &
+!                             ,                                &
+!                           units='s',                                &
+!                           description='Running time of the galaxy', &
+!                           group='Log')
+
+
+      endif
+
+      deallocate(I_im); deallocate(Q_im); deallocate(U_im); deallocate(RM_im);
+      deallocate(N_im); deallocate(y); deallocate(z)
+
   end subroutine print_image
 
   pure function Integrator(integrand, x_path, z_path) result(integral)

@@ -14,7 +14,7 @@ program Observables
   logical :: incomplete
   integer, parameter :: master_rank = 0
   integer :: rank, nproc, ierr, rc
-  integer :: igal, info_mpi
+  integer :: info_mpi
   integer,dimension(8) :: time_vals
   double precision :: zmax, ymax, error
   type(Galaxy_Properties) :: props
@@ -126,7 +126,7 @@ program Observables
   ! Reads the other command arguments
   ! <gal_id>
   call get_command_argument(3, command_argument)
-  igal = str2int(command_argument)
+  props%igal = str2int(command_argument)
   ! <iz> - Index of the selected redshift
   call get_command_argument(4, command_argument)
   it = str2int(command_argument)
@@ -147,7 +147,7 @@ program Observables
     data%ignore_small_scale_field = .false.
   endif
   ! Initializes Magnetizer IO and reads relevant galaxy properties
-  incomplete = IO_start_galaxy(igal)
+  incomplete = IO_start_galaxy(props%igal)
   if (incomplete) then
     call error_message('','Galaxy not complete', abort=.true.)
   endif
@@ -156,18 +156,19 @@ program Observables
   ! The reading below requires the use of a buffer variable, possibly
   ! due to something in the HDF5 library
   allocate(buffer(number_of_redshifts,p_nx_ref))
-  call IO_read_dataset_vector('r', igal, buffer, group='Output')
+  call IO_read_dataset_vector('r', props%igal, buffer, group='Output')
   props%Rcyl = buffer
-  call IO_read_dataset_vector('Br', igal, buffer, group='Output')
+  call IO_read_dataset_vector('Br', props%igal, buffer, group='Output')
   props%Br = buffer
-  call IO_read_dataset_vector('Bp', igal, buffer, group='Output')
+  call IO_read_dataset_vector('Bp', props%igal, buffer, group='Output')
   props%Bp = buffer
-  call IO_read_dataset_vector('Bzmod', igal, buffer, group='Output')
+  call IO_read_dataset_vector('Bzmod', props%igal, buffer, group='Output')
   props%Bz = buffer
-  call IO_read_dataset_vector('h', igal, buffer, group='Output')
+  call IO_read_dataset_vector('h', props%igal, buffer, group='Output')
   props%h = buffer/1d3 ! Converts from pc to kpc
-  call IO_read_dataset_vector('n', igal, buffer, group='Output')
+  call IO_read_dataset_vector('n', props%igal, buffer, group='Output')
   props%n = buffer
+
 
   ! Prepares image if y and zarguments are present
   call get_command_argument(7, command_argument)
@@ -183,7 +184,7 @@ program Observables
     ! [zmax]
     impact_z = str2dbl(command_argument)
   else
-    impact_y = -1000d0
+    impact_z = -1000d0
   endif
 
    ! [image_dir]
@@ -198,7 +199,7 @@ program Observables
 
   select case (trim(run_type))
     case ('Image')
-      call message('Preparing images for Q, U, I and RM', gal_id=igal, &
+      call message('Preparing images for Q, U, I and RM', gal_id=props%igal, &
                    msg_end='saving to dir: '//image_dir)
       ! [image_dir]
       call get_command_argument(9, command_argument)
@@ -207,25 +208,31 @@ program Observables
         if (command_argument(i:i)/='/') then
           command_argument = trim(command_argument)//'/'
         endif
-        call print_image(props, data, command_argument, ymax, zmax, &
+        call print_image(props, data, command_argument, impact_y, impact_z, &
                         nprint=90, isnap=it)
       endif
 
     case ('I')
-      call message('Computed integrated synchrotron intensity for this choie of theta', gal_id=igal)
-      res = IntegrateImage(props, data, it, 1700,'VEGAS', error)
+      call message('Computed integrated synchrotron intensity for this choie of theta', gal_id=props%igal)
+      res = IntegrateImage('I', props, data, it, 1700,'VEGAS', error)
       print *, 'Total synchrotron intensity:'
       print *, res
 
+    case ('PI')
+      call message('Computed integrated synchrotron intensity for this choie of theta', gal_id=props%igal)
+      res = IntegrateImage('PI', props, data, it, 1700,'VEGAS', error)
+      print *, 'Total synchrotron polarised intensity:'
+      print *, res
+
     case ('RM')
-      call message('Computing RM for this choice of y, z and theta', gal_id=igal)
+      call message('Computing RM for this choice of y, z and theta', gal_id=props%igal)
       call LoSintegrate(props, impact_y, impact_z, data, it, RM_out=.true., &
                         I_out=.false., Q_out=.false., U_out=.false.)
       print *, 'RM:'
       print *, data%RM(it)
 
     case ('RM_study')
-      call message('Computing RM for this of theta', gal_id=igal)
+      call message('Computing RM for this of theta', gal_id=props%igal)
       do i=1,1000000
         call random_number(impact_y)
         impact_y = (impact_y*2d0-1d0)!/2.
@@ -239,7 +246,7 @@ program Observables
         print *, data%RM(it), res, impact_y, impact_z
       enddo
     case ('RM_study_r')
-      call message('Computing RM for this choice of y, z and theta', gal_id=igal)
+      call message('Computing RM for this choice of y, z and theta', gal_id=props%igal)
       do i=1,100000
         call random_number(res)
         if (res<0.04) cycle

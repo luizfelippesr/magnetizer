@@ -48,10 +48,8 @@ program Observables
                   ' <theta> <ignore_small_scale_field> [y] [z] [image_dir]',&
                   master_only=.true.)
     call message('', master_only=.true.)
-    call message('type ',&
-                    master_only=.true.)
-    call message('      "RM": compute backlit RM along LoS; ',&
-                    master_only=.true.)
+    call message('type ', master_only=.true.)
+    call message('      "RM": compute backlit RM along LoS; ', master_only=.true.)
     call message('      "I": total integrated synchrotron emission;',&
                     master_only=.true.)
     call message('      "Image": outputs images of Stokes I,U,Q and RM to image_dir',&
@@ -60,12 +58,10 @@ program Observables
                     master_only=.true.)
     call message('parameters_file - Magnetizer parameters file used for the run', &
                  master_only=.true.)
-    call message('gal_id - galaxy index', &
-                 master_only=.true.)
-    call message('iz - redshift index', &
-                 master_only=.true.)
-    call message('theta - angle of the line of sight (radians)', &
-                 master_only=.true.)
+    call message('gal_id - galaxy index', master_only=.true.)
+    call message('iz - redshift index', master_only=.true.)
+    call message('theta - angle of the line of sight (radians)', master_only=.true.)
+    call message('wavelength - in meters', master_only=.true.)
     call message('ignore_small_scale_field - If 1, only the mean field will be used', &
                  master_only=.true.)
     call message('y - if "RM", position at which the LoS intercepts the x-z ' &
@@ -136,11 +132,14 @@ program Observables
   call get_command_argument(5, command_argument)
   data%theta = str2dbl(command_argument)
 
+  call get_command_argument(6, command_argument)
+  data%wavelength = str2dbl(command_argument)
+
   ! Sets other parameters (currently, hard-coded)
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
-  data%wavelength = 20e-2 ! 20 cm, 1.49 GHz
-  data%B_scale_with_z = .true.
-  call get_command_argument(6, command_argument)
+
+  data%B_scale_with_z = .false.
+  call get_command_argument(7, command_argument)
   if (str2int(command_argument)==1) then
     data%ignore_small_scale_field = .true.
   else
@@ -171,7 +170,7 @@ program Observables
 
 
   ! Prepares image if y and zarguments are present
-  call get_command_argument(7, command_argument)
+  call get_command_argument(8, command_argument)
   if (len_trim(command_argument) /= 0) then
     ! [ymax]
     impact_y = str2dbl(command_argument)
@@ -179,7 +178,7 @@ program Observables
     impact_y = -1000d0
   endif
 
-  call get_command_argument(8, command_argument)
+  call get_command_argument(9, command_argument)
   if (len_trim(command_argument) /= 0) then
     ! [zmax]
     impact_z = str2dbl(command_argument)
@@ -188,7 +187,7 @@ program Observables
   endif
 
    ! [image_dir]
-   call get_command_argument(9, command_argument)
+   call get_command_argument(10, command_argument)
    if (len_trim(command_argument) /= 0) then
      i = len_trim(command_argument)
      if (command_argument(i:i)/='/') then
@@ -202,16 +201,8 @@ program Observables
       call message('Preparing images for Q, U, I and RM', gal_id=props%igal, &
                    msg_end='saving to dir: '//image_dir)
       ! [image_dir]
-      call get_command_argument(9, command_argument)
-      if (len_trim(command_argument) /= 0) then
-        i = len_trim(command_argument)
-        if (command_argument(i:i)/='/') then
-          command_argument = trim(command_argument)//'/'
-        endif
-        call print_image(props, data, command_argument, impact_y, impact_z, &
-                        nprint=90, isnap=it)
-      endif
-
+      call print_image(props, data, image_dir, impact_y, impact_z, &
+                        nprint=70, isnap=it)
     case ('I')
       call message('Computed integrated synchrotron intensity for this choie of theta', gal_id=props%igal)
       res = IntegrateImage('I', props, data, it, 1700,'VEGAS', error)

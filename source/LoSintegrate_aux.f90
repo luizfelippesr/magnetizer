@@ -230,14 +230,17 @@ module LoSintegrate_aux
       ! Synchrotron emission
       ! NB Using the total density as a proxy for cosmic ray electron density
       ! NB2 Increments previous calculation
-      data%Stokes_I(iz) = Compute_Stokes('I', Bperp, Brnd, ne, x_path, z_path,&
-                                           data%wavelength, alpha=data%alpha)
+      data%Stokes_I(iz) = Compute_Stokes('I', Bperp, ne, x_path, z_path,&
+                                         data%wavelength, data%alpha, Brnd)
     endif
 
     if (lQ .or. lU) then
       allocate(psi(size(z_path)))
       do i=1, size(z_path)
-        psi(i) = psi0(i) + Compute_RM(Bpara(1:i),ne(1:i),x_path(1:i),z_path(1:i))
+        ! Integrates (i.e. computes RM) until the i-th layer
+        psi(i) = psi0(i) &
+                + (data%wavelength)**2 * Compute_RM(Bpara(1:i),ne(1:i), &
+                                                    x_path(1:i),z_path(1:i))
       enddo
 
       if (lQ) then
@@ -245,16 +248,16 @@ module LoSintegrate_aux
           allocate(data%Stokes_Q(props%n_redshifts))
         endif
 
-        data%Stokes_Q(iz) = Compute_Stokes('Q', Bperp, Brnd, ne, x_path, z_path,&
-                                           data%wavelength, psi, data%alpha)
+        data%Stokes_Q(iz) = Compute_Stokes('Q', Bperp, ne, x_path, z_path,&
+                                           data%wavelength, data%alpha, psi)
       endif
       if (lU) then
         if (.not.allocated(data%Stokes_U)) then
           allocate(data%Stokes_U(props%n_redshifts))
         endif
 
-        data%Stokes_U(iz) = Compute_Stokes('U', Bperp, Brnd, ne, x_path, z_path,&
-                                           data%wavelength, psi, data%alpha)
+        data%Stokes_U(iz) = Compute_Stokes('U', Bperp, ne, x_path, z_path,&
+                                           data%wavelength, data%alpha, psi)
       endif
     endif
 
@@ -297,10 +300,7 @@ module LoSintegrate_aux
     mthd = 'MISER'
     if (present(method)) mthd = method
 
-    ! Global variables for the integration
     data_glb = data
-!     allocate(data_glb%Stokes_U(props%n_redshifts))
-!     endif
     props_glb = props
     iz_glb = iz
 
@@ -393,8 +393,8 @@ module LoSintegrate_aux
     Compute_RM = Integrator(integrand, x_path, z_path)
   end function Compute_RM
 
-  pure function Compute_Stokes(S, Bperp, Brnd, ncr, x_path, z_path, &
-                                 wavelength, psi, alpha)
+  pure function Compute_Stokes(S, Bperp, ncr, x_path, z_path, &
+                                 wavelength, alpha, Brnd_or_psi)
     ! Computes Stokes parameter I, Q or U along a line of sight
     !
     ! Input: Bperp -> 1d-array, B parallel to the LoS, in microgauss
@@ -404,36 +404,44 @@ module LoSintegrate_aux
     !        x_path,z_path -> 1d-array, positions along path, in kpc
     ! Output: total synchrotron emissivity in arbitrary units
     character(len=*), intent(in) :: S
-    double precision, dimension(:), intent(in) :: Bperp, Brnd, ncr, x_path, z_path
+    double precision, dimension(:), intent(in) :: Bperp, Brnd_or_psi, ncr, x_path, z_path
     double precision, intent(in) :: wavelength
-    double precision, dimension(:), optional, intent(in) :: psi
     double precision, optional, intent(in) :: alpha
-    double precision, dimension(size(ncr)) :: integrand, emissivity
+    double precision, dimension(size(ncr)) :: integrand, emissivity, psi, Brnd
     double precision :: p0
+    double precision :: aa
     double precision :: Compute_Stokes
 
     if (present(alpha)) then
-      emissivity = compute_emissivity(Bperp, Brnd, ncr, wavelength, alpha)
       p0 = (alpha+1d0)/(alpha+7d0/3d0)
+      aa = alpha
     else
-      emissivity = compute_emissivity(Bperp, Brnd, ncr, wavelength)
       p0 = 0.75
+      aa = 3d0
     endif
 
-    select case (S)
-      case('I')
-        integrand = emissivity
-      case('Q')
+    if (S=='I') then
+      Brnd = Brnd_or_psi
+      integrand = compute_emissivity(Bperp, ncr, wavelength, aa, Brnd)
+    else
+      psi = Brnd_or_psi
+      ! Intrinsic polarization
+      p0 = (aa+1d0)/(aa+7d0/3d0)
+      ! The random field should not influence the polarized emission
+      emissivity = compute_emissivity(Bperp, ncr, wavelength, aa)
+
+      if (S=='Q') then
         integrand = p0*emissivity*cos(2d0*psi)
-      case('U')
+      else
         integrand = p0*emissivity*sin(2d0*psi)
-    end select
+      endif
+    endif
 
     Compute_Stokes = Integrator(integrand, x_path, z_path)
 
   end function Compute_Stokes
 
-  pure function compute_emissivity(Bperp, Brnd, ncr, wavelength, alpha)
+  pure function compute_emissivity(Bperp, ncr, wavelength, alpha, Brnd)
     ! Synchrotron emissivity
     !
     ! Input: Bperp -> 1d-array, magnitude of B perpendicular to LoS, in microgauss
@@ -442,20 +450,19 @@ module LoSintegrate_aux
     !        alpha -> real, spectral index of the CR electrons, default: 3
     ! Output: emissivity -> 1d-array, in arbitrary units
     !
-    double precision, dimension(:), intent(in) :: Bperp, Brnd, ncr
-    double precision, intent(in) :: wavelength
-    double precision, optional, intent(in) :: alpha
+    double precision, dimension(:), intent(in) :: Bperp, ncr
+    double precision, intent(in) :: wavelength, alpha
+    double precision, dimension(:), optional, intent(in) :: Brnd
     double precision, dimension(size(ncr)) :: compute_emissivity, Bperp_tot2
-    double precision :: aa
 
-    if (present(alpha)) then
-      aa = alpha
+
+    if (present(Brnd)) then
+      Bperp_tot2 = Bperp**2 + Brnd**2
     else
-      aa = 3.0
+      Bperp_tot2 = Bperp**2
     endif
-
-    Bperp_tot2 = Bperp**2 + Brnd**2
     compute_emissivity = ncr * Bperp_tot2**((alpha+1.0)/4d0) * wavelength**((alpha-1.0)/2d0)
+
   end function compute_emissivity
 
   subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap)

@@ -45,15 +45,15 @@ module LoSintegrate_aux
     double precision, intent(in) :: impactz_rmax, impacty_rmax
     logical, intent(in), optional :: RM_out, I_out, Q_out, U_out, psi0_out
     double precision,dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
-    double precision,dimension(2*props%n_grid) :: Bpara_all, Bperp_all
-    double precision,dimension(2*props%n_grid) :: psi0_all
+    double precision,dimension(2*props%n_grid) :: Bx_all, By_all, Bz_all
     logical, dimension(2*props%n_grid) :: valid
     logical :: lRM, lI, lQ, lU, lpsi0
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: psi, psi0
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
+    double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
-    double precision :: Bx, By, Bz, rmax, B2_perp_not_y
+    double precision :: rmax
     double precision :: tmp, impact_y, impact_z
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
@@ -117,38 +117,18 @@ module LoSintegrate_aux
       zc(i) = xc(i) / tan(data%theta) + impact_z
 
       ! Bx = Br * x/R - Bp * y/R
-      Bx = props%Br(iz,j) * xc(i)/props%Rcyl(iz,j) - props%Bp(iz,j)*impact_y/props%Rcyl(iz,j)
+      Bx_all(i) =   props%Br(iz,j) * xc(i)/props%Rcyl(iz,j)    &
+                  - props%Bp(iz,j)*impact_y/props%Rcyl(iz,j)
       ! By = Br * y/R + Bp * x/R
-      By = props%Br(iz,j) * impact_y/props%Rcyl(iz,j) + props%Bp(iz,j)* xc(i)/props%Rcyl(iz,j)
+      By_all(i) = props%Br(iz,j) * impact_y/props%Rcyl(iz,j)   &
+                  + props%Bp(iz,j)* xc(i)/props%Rcyl(iz,j)
       ! Bz = Bzmod * sign(z)
-      Bz = sign(props%Bz(iz,j), zc(i))
+      Bz_all(i) = sign(props%Bz(iz,j), zc(i))
 
       ! Stores density and scale height
       ! NB the scaling with of n with z will be done later!
       ne_all(i) = props%n(iz,j)
       h_all(i) = props%h(iz,j)
-
-      ! Simple vector calculations
-
-      ! B_\parallel = dot(B,n), where n is the LoS direction
-      ! [NB  n = (sin(theta),0,cos(theta))  ]
-      Bpara_all(i) = Bx*sin(data%theta) + Bz*cos(data%theta)
-!       ! B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 + B_y^2 +
-!       !                  + (B_z -B_\parallel\cos\theta)^2 }
-!       Bperp_all(i) = ( Bx - Bpara_all(i)*sin(data%theta) )**2   &
-!                          + By**2 +                                  &
-!                        ( Bz - Bpara_all(i)*cos(data%theta) )**2
-!       Bperp_all(i) = sqrt(Bperp_all(i))
-
-      ! Magnitude of the field perpendicular to both y and the LoS
-      B2_perp_not_y = ( Bx - Bpara_all(i)*sin(data%theta) )**2   + &
-                       ( Bz - Bpara_all(i)*cos(data%theta) )**2
-      ! Magnitude of the total perpendicular field
-      Bperp_all(i) = sqrt(B2_perp_not_y + By**2)
-      ! Intrinsic polarization angle
-      psi0_all(i) = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
-      if (psi0_all(i)>pi)   psi0_all(i) = psi0_all(i)-2d0*pi
-
     enddo
 
     ! Now work is done over the whole grid
@@ -156,9 +136,9 @@ module LoSintegrate_aux
     if (all(.not.valid(:))) return
 
     ! Filters away invalid parts of the arrays
-    Bpara = pack(Bpara_all(:),valid(:))
-    Bperp = pack(Bperp_all(:),valid(:))
-    psi0 = pack(psi0_all(:),valid(:))
+    Bx = pack(Bx_all(:),valid(:))
+    By = pack(By_all(:),valid(:))
+    Bz = pack(Bz_all(:),valid(:))
     ne = pack(ne_all(:),valid(:))
     h = pack(h_all(:),valid(:))
     x_path = pack(xc(:),valid(:))
@@ -186,15 +166,37 @@ module LoSintegrate_aux
       z_path_new = linspace(zmin,zmax, data%nz_points)
       x_path_new = (z_path_new - impact_z)*tan(data%theta)
 
-      call densify(Bperp, x_path, x_path_new)
-      call densify(Bpara, x_path, x_path_new)
-      call densify(psi0, x_path, x_path_new)
+      call densify(Bx, x_path, x_path_new)
+      call densify(By, x_path, x_path_new)
+      call densify(Bz, x_path, x_path_new)
       call densify(ne, x_path, x_path_new)
       call densify(h, x_path, x_path_new)
 
       z_path = z_path_new
       x_path = x_path_new
     endif
+
+    ! Simple vector calculations
+    ! B_\parallel = dot(B,n), where n is the LoS direction
+    ! [NB  n = (sin(theta),0,cos(theta))  ]
+    Bpara = Bx*sin(data%theta) + Bz*cos(data%theta)
+    ! B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 + B_y^2 +
+    !                  + (B_z -B_\parallel\cos\theta)^2 }
+    ! Magnitude of the field perpendicular to both y and the LoS
+    B2_perp_not_y = ( Bx - Bpara*sin(data%theta) )**2 + &
+                    ( Bz - Bpara*cos(data%theta) )**2
+
+    ! Magnitude of the total perpendicular field
+    allocate(Bperp(size(By)))
+    Bperp = sqrt(B2_perp_not_y + By**2)
+    ! Intrinsic polarization angle
+!     where(By==0)
+!       By
+    psi0 = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
+    where (psi0>pi)
+      psi0 = psi0-2d0*pi
+    endwhere
+
     ! Adds the z dependence to the density
     ne = ne  * exp(-abs(z_path)/h)
     ! Adds the z dependence the magnetic field
@@ -240,7 +242,7 @@ module LoSintegrate_aux
         ! Integrates (i.e. computes RM) until the i-th layer
         psi(i) = psi0(i) &
                 + (data%wavelength)**2 * Compute_RM(Bpara(1:i),ne(1:i), &
-                                                    x_path(1:i),z_path(1:i))
+                                                   x_path(1:i),z_path(1:i))
       enddo
 
       if (lQ) then
@@ -289,7 +291,7 @@ module LoSintegrate_aux
     type(fgsl_monte_miser_state) :: m
     type(fgsl_monte_vegas_state) :: v
     integer(fgsl_size_t) :: calls
-    real(fgsl_double) :: chisq, xl(2), xu(2), res, err, y, yy, yyy
+    real(fgsl_double) :: xl(2), xu(2), res, err
     double precision, optional, intent(out) :: error
     type(c_ptr) :: ptr
     integer(fgsl_int) :: status

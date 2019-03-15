@@ -36,12 +36,11 @@ module dynamo
   public dynamo_run
 
   contains
-    subroutine dynamo_run(gal_id, test_run, rank, error)
+    subroutine dynamo_run(gal_id, test_run, error)
       use interpolation
       use floor_field
       double precision :: cpu_time_start
       integer, intent(in) :: gal_id
-      integer, intent(in), optional :: rank
       logical, intent(in) :: test_run
       logical, intent(out) :: error
       logical :: ok, able_to_construct_profiles, elliptical, timestep_ok
@@ -54,12 +53,6 @@ module dynamo
       call set_random_seed(gal_id, p_random_seed)
 
       call initialize_floor_sign()
-
-      if (present(rank)) then
-          rank_actual = rank
-      else
-          rank_actual = 0
-      endif
 
       call cpu_time(cpu_time_start)
 
@@ -110,8 +103,6 @@ module dynamo
             elliptical = .true.
             ! Resets the f array
             f = 0d0
-            !! Adds a seed field
-            !call init_seed_field(f)
         else
             ! If galaxy was an elliptical during previous snapshot,
             ! reconstruct the profiles
@@ -138,9 +129,6 @@ module dynamo
             able_to_construct_profiles = construct_profiles()
             ! If unable to construct the profiles, write output and exit loop
             if (.not. able_to_construct_profiles) then
-!                 next_output = .true.
-!               call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau,&
-!                                   alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
               last_output = .true.
               exit
             endif
@@ -195,8 +183,6 @@ module dynamo
               able_to_construct_profiles = construct_profiles(sqrt(Btmp))
               ! If not able to construct profiles, flags and exit the loop
               if (.not.able_to_construct_profiles) then
-!                 call make_ts_arrays(it,this_t,f,Bzmod,h,om,G,l,v,etat,tau, &
-!                                     alp_k,alp,Uz,Ur,n,Beq,rmax,delta_r)
                 ok = .false.
                 exit
               endif

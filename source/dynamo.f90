@@ -49,7 +49,7 @@ module dynamo
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
       elliptical = .false. ;  ok = .true.
-      print *, 'dynamo_run', gal_id
+
       call set_random_seed(gal_id, p_random_seed)
 
       call initialize_floor_sign()

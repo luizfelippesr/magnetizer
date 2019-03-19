@@ -50,8 +50,6 @@ program magnetizer
   ! Skips previously run galaxies
   call jobs_prepare(completed=.false., incomplete=.true.)
   galaxies_list = jobs_reads_galaxy_list(2)
-  print *, galaxies_list
-!   stop
   call jobs_distribute(dynamo_run, p_no_magnetic_fields_test_run, galaxies_list)
 
 end program magnetizer

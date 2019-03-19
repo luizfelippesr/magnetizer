@@ -3,7 +3,7 @@ FC=h5pfc
 srcdir=source
 builddir=build
 
-_OBJ= tsDataObj.o bessel_functions.o root_finder.o constants.o grid.o floor_field.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o IO_hdf5.o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o seed_field.o
+_OBJ= tsDataObj.o bessel_functions.o root_finder.o constants.o grid.o floor_field.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o IO_hdf5.o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o seed_field.o distributor.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 FCFLAGS+= -lfgsl -I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
@@ -59,6 +59,9 @@ testPressureEquilibrium: ${builddir}/constants.o ${builddir}/messages.o ${buildd
 	$(FC) ${builddir}/constants.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.pressureEquilibrium.o $(FCFLAGS) -o testPressureEquilibrium.exe
 testIntegration: ${builddir}/integration.o ${builddir}/tests.integration.o
 	$(FC) $(FCFLAGS) ${builddir}/integration.o ${builddir}/tests.integration.o -o testIntegration.exe
+
+testDistributor:  ${builddir}/distributor.o  ${builddir}/tests.distributor.o ${builddir}/messages.o ${builddir}/global_input_parameters.o
+	$(FC) $(FCFLAGS) ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/distributor.o  ${builddir}/IO_hdf5.o ${builddir}/grid.o ${builddir}/interpolation.o ${builddir}/tests.distributor.o -o testDistributor.exe
 # All programs
 all: test testRoots testProfiles
 
@@ -93,3 +96,5 @@ $(srcdir)/Magnetizer.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/me
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
 $(srcdir)/floor_field.f90: ${builddir}/grid.o ${builddir}/global_input_parameters.o
 $(srcdir)/seed_field.f90: ${builddir}/grid.o ${builddir}/profiles.o ${builddir}/global_input_parameters.o
+$(srcdir)/distributor.f90: ${builddir}/global_input_parameters.o ${builddir}/input_parameters.o ${builddir}/IO_hdf5.o ${builddir}/messages.o
+$(srcdir)/tests.distributor.f90:  ${builddir}/grid.o ${builddir}/distributor.o ${builddir}/messages.o

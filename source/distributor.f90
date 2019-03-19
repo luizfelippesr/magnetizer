@@ -82,6 +82,8 @@ contains
   subroutine jobs_prepare(completed, incomplete)
     ! Initializes MPI and sets the scene for distributing work between processors
     logical, intent(in), optional :: incomplete, completed
+    character(len=100) :: command_argument
+
     integer :: ierr, rc, info_mpi
     integer,dimension(8) :: time_vals
 
@@ -102,13 +104,38 @@ contains
       call MPI_Abort(MPI_COMM_WORLD, rc, ierr)
     endif
 
+    if (nproc==1) then
+      call message('Magnetizer', rank=-1)
+      call message(' ', rank=-1)
+      call message('Runnning on a single processor')
+    else
+      call message('Magnetizer', rank=rank, master_only=.true.)
+      call message(' ', master_only=.true.)
+      call message('Runnning on', val_int=nproc, msg_end='processors', &
+                   master_only=.true.)
+    endif
+
+    call get_command_argument(1, command_argument)
+    if (len_trim(command_argument) == 0) then
+      ! Uses example parameter file if nothing was found
+      command_argument = 'example/example_global_parameters.in'
+      call read_global_parameters(trim(command_argument))
+      call message('No parameter file provided. Using standard: '// &
+                    trim(command_argument), master_only=.true.,&
+                    set_info=info)
+    else
+      ! Uses specified parameter file
+      call read_global_parameters(trim(command_argument))
+      call message('Using global parameters file: '// trim(command_argument), &
+                  master_only=.true., set_info=info)
+    endif
+
     if (rank == master_rank) then !Only the master (rank 0)
       tstart = MPI_wtime()
     else
       tstart = -1
       tfinish = -1
     endif
-
     ! Checks whether this is a new run or if one is resuming an older run
     ! Note: resuming runs currently only works for separate output files
     if (p_IO_separate_output) then
@@ -135,6 +162,7 @@ contains
     call MPI_Info_create(info_mpi, IERR)
     call MPI_Info_set(info_mpi, "romio_ds_write", "disable", ierr)
     call MPI_Info_set(info_mpi, "romio_ds_read", "disable", ierr)
+
 
     ! Initializes IO (this also reads ngals from the hdf5 input file)
     call IO_start(MPI_COMM_WORLD, info_mpi, lresuming_run, date)
@@ -170,15 +198,15 @@ contains
 
     if ((ngals==1) .and. (rank == master_rank)) then
       ncycles = 0
-      call message('Starting',gal_id=galaxies_list(igal), rank=rank)
+      call message('Starting',gal_id=galaxies_list(1), rank=rank)
       ! Check whether the galaxy was processed previously
-      start_galaxy = IO_start_galaxy(galaxies_list(igal))
+      start_galaxy = IO_start_galaxy(galaxies_list(1))
       if (decide_run(start_galaxy)) then
-        call work_routine(galaxies_list(igal), p_no_magnetic_fields_test_run, rank, error)
+        call work_routine(galaxies_list(1), p_no_magnetic_fields_test_run, rank, error)
         nmygals = nmygals + 1
-        mygals(nmygals) = galaxies_list(igal)
+        mygals(nmygals) = galaxies_list(1)
       else
-        call message('Skipping.', gal_id=galaxies_list(igal), info=2)
+        call message('Skipping.', gal_id=galaxies_list(1), info=2)
       endif
     else
       ! Before distributing work between workers, ALL processes will try to run
@@ -221,7 +249,6 @@ contains
             if (igal > igal_last) igal=ngals+1
             call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, ierr)
         enddo
-
         ! Loops sending and receiving
         do igal=nproc+igal_first-1, igal_last
           ! Sends finished work from worker
@@ -237,6 +264,8 @@ contains
               call work_routine(galaxies_list(igal), p_no_magnetic_fields_test_run, rank, error)
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
+            else
+              call message('Skipping',gal_id=galaxies_list(igal), rank=rank)
             endif
           else
             ! Receives finished work from worker
@@ -262,7 +291,6 @@ contains
         ! the data to the disk
         i = 0
         do iproc=1, nproc-1
-            print *, 'aqui',iproc
             ! Receives whatever message it is sending
             call MPI_Recv(igal_finished, 1, MPI_INTEGER, iproc, finished_tag, &
                           MPI_COMM_WORLD, status, ierr)
@@ -280,7 +308,7 @@ contains
         ! Tells the master to stop
         if (lstop) exit
         ! Tells the master to flush
-!         call IO_flush()
+        call IO_flush()
       enddo
     ! ----------
     !   Worker
@@ -291,6 +319,7 @@ contains
           call MPI_Recv(igal, 1, MPI_INTEGER, 0, newjob_tag, MPI_COMM_WORLD, status, ierr)
           ! If received an exit flag, exits
           if (igal<0) then
+            call IO_flush()
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
             call message('Exiting', rank=rank)
             exit
@@ -313,6 +342,7 @@ contains
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
 
           else
+            call IO_flush()
             ! Invalid galaxy. Probably, more processors than galaxies!) Nothing is done.
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
           endif
@@ -320,8 +350,8 @@ contains
     endif
 
 
-!     print *, 'adsasdasdasdasdasdasdasd'
-!     call IO_flush()
+
+    call IO_flush()
     call message('All computing done', info=0)
 
     call MPI_BARRIER(MPI_COMM_WORLD,ierr)

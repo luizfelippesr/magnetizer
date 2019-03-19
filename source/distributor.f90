@@ -37,8 +37,8 @@ module jobs
 
   ! Function to be passed as argument
   abstract interface
-    subroutine work_routine_template(gal_id, switch, myrank, error)
-      integer, intent(in) :: gal_id, myrank
+    subroutine work_routine_template(gal_id, switch, error)
+      integer, intent(in) :: gal_id
       logical, intent(in) :: switch
       logical, intent(out) :: error
     end subroutine work_routine_template
@@ -180,7 +180,6 @@ contains
     logical :: lstop, error
     logical :: lresuming_run = .false.
     logical :: start_galaxy = .false.
-    double precision :: tstart,tfinish
     integer :: ierr, ncycles, flush_signal, ngals
     integer, parameter :: finished_tag = 0
     integer, parameter :: newjob_tag = 17
@@ -202,7 +201,7 @@ contains
       ! Check whether the galaxy was processed previously
       start_galaxy = IO_start_galaxy(galaxies_list(1))
       if (decide_run(start_galaxy)) then
-        call work_routine(galaxies_list(1), p_no_magnetic_fields_test_run, rank, error)
+        call work_routine(galaxies_list(1), func_flag, error)
         nmygals = nmygals + 1
         mygals(nmygals) = galaxies_list(1)
       else
@@ -216,7 +215,7 @@ contains
       do igal=1, ngals
         start_galaxy = IO_start_galaxy(galaxies_list(igal))
         if (decide_run(start_galaxy)) then
-          call work_routine(galaxies_list(igal), p_no_magnetic_fields_test_run, rank, error)
+          call work_routine(galaxies_list(igal), func_flag, error)
           if (error) cycle
           if (rank == master_rank) then
             nmygals = nmygals + 1
@@ -261,7 +260,7 @@ contains
             start_galaxy = IO_start_galaxy(galaxies_list(igal))
             if (decide_run(start_galaxy)) then
               ! If it is a new galaxy, runs it!
-              call work_routine(galaxies_list(igal), p_no_magnetic_fields_test_run, rank, error)
+              call work_routine(galaxies_list(igal), func_flag, error)
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
             else
@@ -330,9 +329,11 @@ contains
             start_galaxy = IO_start_galaxy(galaxies_list(igal))
             if (decide_run(start_galaxy)) then
               ! If it is a new galaxy, runs it!
-              call work_routine(galaxies_list(igal), p_no_magnetic_fields_test_run, rank, error)
+              call work_routine(galaxies_list(igal), func_flag, error)
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
+            else
+              call message('Skipping',gal_id=galaxies_list(igal), rank=rank)
             endif
 
             ! Sends the result (to mark it done)
@@ -342,7 +343,7 @@ contains
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
 
           else
-            call IO_flush()
+            ! call IO_flush() ! No need in this case!
             ! Invalid galaxy. Probably, more processors than galaxies!) Nothing is done.
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
           endif

@@ -20,12 +20,12 @@ module test_dist
 
   contains
 
-  subroutine print_and_exit(gal_id, switch, rank, error)
-    integer, intent(in) :: gal_id, rank
+  subroutine print_and_exit(gal_id, switch, error)
+    use messages
+    integer, intent(in) :: gal_id
     logical, intent(in) :: switch
     logical, intent(out) :: error
-!     call sleep(1)
-    print *, 'rank=',rank,' galaxy=',gal_id
+    call message('Fake work', gal_id=gal_id, info=1)
     error = .false.
   end subroutine print_and_exit
 
@@ -81,7 +81,7 @@ program test_distributor
     stop
   endif
 
-  call jobs_prepare(.true.,.false.)
+  call jobs_prepare(.false.,.true.)
   galaxies_list = jobs_reads_galaxy_list(2)
   call jobs_distribute(print_and_exit, .true., galaxies_list)
 

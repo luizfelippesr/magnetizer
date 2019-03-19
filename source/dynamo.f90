@@ -45,11 +45,11 @@ module dynamo
       logical, intent(out) :: error
       logical :: ok, able_to_construct_profiles, elliptical, timestep_ok
       logical :: next_output
-      integer :: fail_count, rank_actual
+      integer :: fail_count
       double precision, dimension(nx) :: Btmp
       double precision :: this_t
       elliptical = .false. ;  ok = .true.
-
+      print *, 'dynamo_run', gal_id
       call set_random_seed(gal_id, p_random_seed)
 
       call initialize_floor_sign()

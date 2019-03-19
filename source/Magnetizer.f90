@@ -24,21 +24,6 @@ program magnetizer
   use messages
   use jobs
   implicit none
-
-  integer :: igal, nmygals, igal_first, igal_last, igal_finished
-  integer :: info_mpi
-  integer, parameter :: master_rank = 0
-  character(len=100) :: command_argument
-  logical :: lforce = .false.
-  logical :: lsingle_galaxy_mode = .false.
-  logical :: start_galaxy = .false.
-  logical :: lresuming_run = .false.
-  double precision :: tstart,tfinish
-
-  integer, parameter :: finished_tag = 0
-  integer, parameter :: newjob_tag = 17
-  integer, dimension(MPI_STATUS_SIZE) :: status
-  integer,dimension(8) :: time_vals
   integer, allocatable, dimension(:) :: galaxies_list
 
   ! Tries to read the parameter filename from the command argument (or --help)

@@ -69,11 +69,12 @@ contains
     props%n = buffer
 
     ts_I = -99999d0; ts_PI = -99999d0
+    call message('Computing observables', gal_id=gal_id, info=2)
     do iz=1, number_of_redshifts
       if (props%Rcyl(iz,1)>0d0) then
-        call message('Computing I', gal_id=gal_id, val_int=iz, info=1)
+        call message('calculating I', gal_id=gal_id, val_int=iz, info=4)
         ts_I(iz) = IntegrateImage('I', props, gbl_data,iz)
-        call message('Computing PI', gal_id=gal_id, val_int=iz, info=1)
+        call message('calculating PI', gal_id=gal_id, val_int=iz, info=4)
         ts_PI(iz) = IntegrateImage('PI', props, gbl_data,iz)
       endif
     enddo

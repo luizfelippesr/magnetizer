@@ -1,4 +1,4 @@
-program Observables
+program Observables_single
   use grid
   use IO
   use mpi
@@ -255,4 +255,4 @@ program Observables
     case default
       stop '?'
   end select
-end program Observables
+end program Observables_single

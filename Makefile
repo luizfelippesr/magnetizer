@@ -48,6 +48,9 @@ integrate: $(OBJ) ${builddir}/path_integrate.o
 Observables_single: TST ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
 	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o  -o Observables_single.exe
 
+Observables: TST ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/Observables.o ${builddir}/distributor.o ${builddir}/random.o
+	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/distributor.o ${builddir}/random.o ${builddir}/Observables.o  -o Observables_single.exe
+
 testProfiles: ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
 	$(FC) $(FCFLAGS) ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe
 
@@ -85,6 +88,7 @@ $(srcdir)/outflow.f90: ${builddir}/input_parameters.o
 $(srcdir)/grid.f90: ${builddir}/constants.o ${builddir}/global_input_parameters.o ${builddir}/messages.o ${builddir}/interpolation.o
 $(srcdir)/deriv.f90: ${builddir}/grid.o
 $(srcdir)/LoSintegrate_aux.f90: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/messages.o  ${builddir}/IO_hdf5.o
+$(srcdir)/Observables.f90: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/messages.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate_aux.o ${builddir}/distributor.o
 $(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/IO_hdf5.o
 $(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o ${builddir}/floor_field.o ${builddir}/seed_field.o
 $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o ${builddir}/interpolation.o ${builddir}/tsDataObj.o
@@ -92,7 +96,7 @@ $(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o ${builddir}/ts
 $(srcdir)/output.f90: ${builddir}/IO_hdf5.o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o ${builddir}/tsDataObj.o
 $(srcdir)/IO_hdf5.f90: ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/profiles.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o ${builddir}/grid.o
-$(srcdir)/Magnetizer.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o
+$(srcdir)/Magnetizer.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o ${builddir}/distributor.o
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
 $(srcdir)/floor_field.f90: ${builddir}/grid.o ${builddir}/global_input_parameters.o
 $(srcdir)/seed_field.f90: ${builddir}/grid.o ${builddir}/profiles.o ${builddir}/global_input_parameters.o

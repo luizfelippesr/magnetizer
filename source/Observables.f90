@@ -21,22 +21,17 @@ module Observables_aux
   private
   public Compute_I_and_PI
   type(LoS_data),public :: gbl_data
-  double precision, public, parameter :: random_theta = 4242d0
 
 contains
-  subroutine obs_setup(data)
-    type(LoS_data), intent(in) :: data
-    gbl_data = data
-  end subroutine obs_setup
 
-  subroutine Compute_I_and_PI(gal_id, switch, error)
+  subroutine Compute_I_and_PI(gal_id, random_theta, error)
     use messages
     use math_constants
     use global_input_parameters
     use IO
     use random
     integer, intent(in) :: gal_id
-    logical, intent(in) :: switch
+    logical, intent(in) :: random_theta
     logical, intent(out) :: error
     type(Galaxy_Properties) :: props
     double precision, allocatable, dimension(:,:) :: buffer
@@ -45,8 +40,8 @@ contains
 
     ! Unless a fixed angle is signaled, selects a random inclination
     ! from a uniform distribution between 0 and 90 degrees
-    call set_random_seed(gal_id, p_random_seed)
-    if (gbl_data%theta==random_theta) then
+    if (random_theta) then
+      call set_random_seed(gal_id, p_random_seed)
       call random_number(gbl_data%theta)
       gbl_data%theta = gbl_data%theta * pi * 0.5d0
     endif
@@ -137,7 +132,6 @@ program Observables
 
   gbl_data%B_scale_with_z = .false.
   gbl_data%ignore_small_scale_field = .false.
-  gbl_data%theta = random_theta
   galaxies_list = jobs_reads_galaxy_list(4)
-  call jobs_distribute(Compute_I_and_PI, .false., galaxies_list)
+  call jobs_distribute(Compute_I_and_PI, .true., galaxies_list)
 end program Observables

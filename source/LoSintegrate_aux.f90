@@ -44,7 +44,7 @@ module LoSintegrate_aux
     double precision :: theta = 0d0
     logical :: B_scale_with_z = .true.
     logical :: ignore_small_scale_field = .false.
-    integer :: nz_points = 500
+    integer :: nz_points = 300
   end type
 
   ! Global variables for the integration

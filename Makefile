@@ -88,7 +88,7 @@ $(srcdir)/outflow.f90: ${builddir}/input_parameters.o
 $(srcdir)/grid.f90: ${builddir}/constants.o ${builddir}/global_input_parameters.o ${builddir}/messages.o ${builddir}/interpolation.o
 $(srcdir)/deriv.f90: ${builddir}/grid.o
 $(srcdir)/LoSintegrate_aux.f90: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/messages.o  ${builddir}/IO_hdf5.o
-$(srcdir)/Observables.f90: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/messages.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate_aux.o ${builddir}/distributor.o
+$(srcdir)/Observables.f90: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/messages.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate_aux.o ${builddir}/distributor.o ${builddir}/random.o
 $(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/IO_hdf5.o
 $(srcdir)/gutsdynamo.f90: ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o ${builddir}/floor_field.o ${builddir}/seed_field.o
 $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o ${builddir}/interpolation.o ${builddir}/tsDataObj.o

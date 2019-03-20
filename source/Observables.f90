@@ -91,7 +91,6 @@ end module Observables_aux
 
 program Observables
   use mpi
-  use dynamo
   use input_params
   use global_input_parameters
   use IO
@@ -139,7 +138,6 @@ program Observables
   gbl_data%B_scale_with_z = .false.
   gbl_data%ignore_small_scale_field = .false.
   gbl_data%theta = random_theta
-  galaxies_list = jobs_reads_galaxy_list(3)
-  print *, galaxies_list
+  galaxies_list = jobs_reads_galaxy_list(4)
   call jobs_distribute(Compute_I_and_PI, .false., galaxies_list)
 end program Observables

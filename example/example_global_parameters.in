@@ -6,8 +6,13 @@
 /
 &io_parameters	!Sets io paths, details of HDF5 configuration
   p_io_separate_output = .true.	 !set to F if you want output saved inside the input file
-  input_file_name = "example/example_SAM_input.hdf5"
-  output_file_name = "example/example_magnetized_SAM_output.hdf5"
+  input_file_name = "example/example_input.hdf5"
+  output_file_name = "example/example_output.hdf5"
+  output_quantities_list = 'rkpc', 'Omega','Shear',
+                           'etat', 'alp','alp_k',
+                           'n', 'h', 'l',
+                           'Bmax', 'Br','Bp','Bzmod','Bmax_idx',
+                           'Uz', 'rmax','Bavg','Beavg'
 /
 &grid_parameters  !Sets up grid
 /

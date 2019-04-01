@@ -76,8 +76,7 @@ contains
 
     call IO_write_dataset('I', gal_id, ts_I, units='arbitrary', &
                           description='Integrated synchrotron emission')
-
-    call IO_write_dataset('PI', gal_id, ts_I, units='arbitrary', &
+    call IO_write_dataset('PI', gal_id, ts_PI, units='arbitrary', &
                         description='Integrated polarised synchrotron emission')
     call IO_write_dataset('theta', gal_id, [gbl_data%theta], units='radians', &
                         description='Inclination')

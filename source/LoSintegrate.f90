@@ -224,13 +224,12 @@ program Observables_single
 
     case ('RM_study')
       call message('Computing RM for this of theta', gal_id=props%igal)
-      do i=1,1000000
+      do i=1,200000
         call random_number(impact_y)
         impact_y = (impact_y*2d0-1d0)!/2.
         call random_number(impact_z)
         impact_z = (impact_z*2d0-1d0)!/2.
         res = sqrt(impact_z**2 + impact_y**2)
-        if (res<0.04) cycle
         impact_z = impact_z/sin(data%theta)
         call LoSintegrate(props, impact_y, impact_z, data, it, RM_out=.true., &
                           I_out=.false., Q_out=.false., U_out=.false.)
@@ -240,8 +239,6 @@ program Observables_single
       call message('Computing RM for this choice of y, z and theta', gal_id=props%igal)
       do i=1,100000
         call random_number(res)
-        if (res<0.04) cycle
-
         call random_number(impact_y)
         impact_y = (impact_y*2d0-1d0)*res
         call random_number(impact_z)

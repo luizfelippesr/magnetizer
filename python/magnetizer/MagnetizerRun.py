@@ -466,5 +466,6 @@ units_dict = {
               'kpc km/s' : u.kpc*u.km/u.s,
               'microgauss' : u.microgauss,
               'pc' : u.pc,
-              's' : u.s
+              's' : u.s,
+              'arbitrary' : 1.0,
              }

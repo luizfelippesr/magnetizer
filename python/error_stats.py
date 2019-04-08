@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# Copyright (C) 2018  Luiz Felippe S. Rodrigues, Luke Chamandy
+# Copyright (C) 2018,2019 Luiz Felippe S. Rodrigues, Luke Chamandy
 #
 # This file is part of Magnetizer.
 #

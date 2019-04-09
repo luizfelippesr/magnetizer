@@ -96,41 +96,22 @@ program Observables
   character(len=300) :: command_argument
   integer, allocatable, dimension(:) :: galaxies_list
 
-  ! Tries to read the parameter filename from the command argument (or --help)
-!   call get_command_argument(1, command_argument)
-!   ! If --help is detected, prints help information
-!   if (trim(command_argument)=='--help' .or. trim(command_argument)=='-h') then
-!     call get_command_argument(0, command_argument)
-!     if (rank==master_rank) then
-!       print *, 'Magnetizer '
-!       print *,
-!       print *, 'Computes ISM properties and solves mean field dynamo equation'&
-!                //' for the output of a semi-analytic galaxy formation model.'
-!       print *,
-!       print *, 'Usage:'
-!       print *, trim(command_argument), ' <input_parameters_file> [galaxy number] [-f]'
-!       print *,
-!       print *, 'For more details please visit: '&
-!              //'https://github.com/luizfelippesr/magnetizer'
-!       print *,
-!     endif
-!     stop
-!   endif
-
-  ! Skips previously run galaxies
+  ! Prints welcome message and prepares to distribute jobs
+  ! By default, only previously run galaxies will be selected
   call jobs_prepare(completed=.true., incomplete=.false.)
 
   ! Reads the command arguments
-  ! wavelength
+  ! Sets the wavelength in m
   call get_command_argument(2, command_argument)
   gbl_data%wavelength = str2dbl(command_argument)
-
-  ! Sets spectral index of the cr energy distribution
+  ! Sets spectral index of the CR energy distribution
   call get_command_argument(3, command_argument)
   gbl_data%alpha = str2dbl(command_argument)
-
+  ! Hard-coded parameters (varied for testing only)
   gbl_data%B_scale_with_z = .false.
   gbl_data%ignore_small_scale_field = .false.
+  ! Tries to read a list of galaxy numbers from argument 4 onwards
   galaxies_list = jobs_reads_galaxy_list(4)
+  ! Computes I and PI for the galaxies in the sample
   call jobs_distribute(Compute_I_and_PI, .true., galaxies_list)
 end program Observables

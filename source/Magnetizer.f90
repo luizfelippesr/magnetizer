@@ -26,30 +26,12 @@ program magnetizer
   implicit none
   integer, allocatable, dimension(:) :: galaxies_list
 
-  ! Tries to read the parameter filename from the command argument (or --help)
-!   call get_command_argument(1, command_argument)
-!   ! If --help is detected, prints help information
-!   if (trim(command_argument)=='--help' .or. trim(command_argument)=='-h') then
-!     call get_command_argument(0, command_argument)
-!     if (rank==master_rank) then
-!       print *, 'Magnetizer '
-!       print *,
-!       print *, 'Computes ISM properties and solves mean field dynamo equation'&
-!                //' for the output of a semi-analytic galaxy formation model.'
-!       print *,
-!       print *, 'Usage:'
-!       print *, trim(command_argument), ' <input_parameters_file> [galaxy number] [-f]'
-!       print *,
-!       print *, 'For more details please visit: '&
-!              //'https://github.com/luizfelippesr/magnetizer'
-!       print *,
-!     endif
-!     stop
-!   endif
-
-  ! Skips previously run galaxies
+  ! Prints welcome message and prepares to distribute jobs
+  ! By default, previously run galaxies will be skipped
   call jobs_prepare(completed=.false., incomplete=.true.)
+  ! Tries to read a list of galaxy numbers from argument 2 onwards
   galaxies_list = jobs_reads_galaxy_list(2)
+  ! Runs the Magnetizer
   call jobs_distribute(dynamo_run, p_no_magnetic_fields_test_run, galaxies_list)
 
 end program magnetizer

@@ -104,13 +104,14 @@ contains
       call MPI_Abort(MPI_COMM_WORLD, rc, ierr)
     endif
 
+
     if (nproc==1) then
-      call message('Magnetizer', rank=-1)
+      call welcome_message()
       call message(' ', rank=-1)
       call message('Runnning on a single processor')
     else
-      call message('Magnetizer', rank=rank, master_only=.true.)
-      call message(' ', master_only=.true.)
+      if (rank==master_rank) call welcome_message()
+      call message(' ', rank=rank, master_only=.true.)
       call message('Runnning on', val_int=nproc, msg_end='processors', &
                    master_only=.true.)
     endif
@@ -435,5 +436,14 @@ contains
     decide_run = ((start_galaxy .and. select_incomplete) .or. &
                  ((.not.start_galaxy) .and. select_completed))
   end function decide_run
+
+  subroutine welcome_message()
+    print *,"   __  __                        _   _               "
+    print *,"  |  \/  | __ _  __ _ _ __   ___| |_(_)_______ _ __  "
+    print *,"  | |\/| |/ _` |/ _` | '_ \ / _ \ __| |_  / _ \ '__| "
+    print *,"  | |  | | (_| | (_| | | | |  __/ |_| |/ /  __/ |    "
+    print *,"  |_|  |_|\__,_|\__, |_| |_|\___|\__|_/___\___|_|    "
+    print *,"               |___/                                 "
+  end subroutine
 
 end module jobs

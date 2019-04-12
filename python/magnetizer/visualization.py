@@ -18,7 +18,6 @@
 #
 """ Contains several functions to produce visualizations of Magnetizer data. """
 import matplotlib
-matplotlib.use('Agg')
 from matplotlib.backends.backend_pdf import PdfPages
 from astropy.units import Quantity
 import astropy.units as u
@@ -102,6 +101,7 @@ quantities_dict = {'Bp'   : r'\overline{{B}}_\phi',
                    'B2_B2b2_avg': r'\langle \overline{B}^2/(b^2+\overline{B}^2)\rangle',
                    'n': r'n',
                    'h': r'h',
+                   'PI_P': r'{\rm PI/I}',
                    }
 
 log_quantities = ('Beq','n','h','Mstars_disk','Mstars_bulge','Mgas_disk')

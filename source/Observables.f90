@@ -18,13 +18,33 @@
 module Observables_aux
   use LoSintegrate_aux
   use messages
+  implicit none
   private
-  public Compute_I_and_PI
+  public Compute_I_PI_RM, set_runtype
   type(LoS_data),public :: gbl_data
-
+  logical :: lRM=.false., lI=.false., lPI=.false.
 contains
+  subroutine set_runtype(run_type)
+    character(len=50) :: run_type
+    select case (trim(run_type))
+      case ('all')
+        lRM = .true.
+        lPI = .true.
+        lI = .true.
+      case ('RM')
+        lRM = .true.
+      case ('I/PI', 'I+PI','PI/I','PI+I')
+        lPI = .true.
+        lI = .true.
+      case ('I')
+        lPI = .true.
+      case ('PI')
+        lPI = .true.
+    end select
 
-  subroutine Compute_I_and_PI(gal_id, random_theta, error)
+  end subroutine
+
+  subroutine Compute_I_PI_RM(gal_id, random_theta, error)
     use messages
     use math_constants
     use global_input_parameters
@@ -37,6 +57,7 @@ contains
     double precision, allocatable, dimension(:,:) :: buffer
     integer :: iz
     double precision, dimension(number_of_redshifts) :: ts_I, ts_PI
+    double precision :: impact_y, impact_z
 
     ! Unless a fixed angle is signaled, selects a random inclination
     ! from a uniform distribution between 0 and 90 degrees
@@ -64,23 +85,46 @@ contains
     props%n = buffer
 
     ts_I = -99999d0; ts_PI = -99999d0
-    call message('Computing observables', gal_id=gal_id, info=2)
+    call message('Computing observables', gal_id=gal_id, info=1)
     do iz=1, number_of_redshifts
       if (props%Rcyl(iz,1)>0d0) then
-        call message('calculating I', gal_id=gal_id, val_int=iz, info=4)
-        ts_I(iz) = IntegrateImage('I', props, gbl_data,iz)
-        call message('calculating PI', gal_id=gal_id, val_int=iz, info=4)
-        ts_PI(iz) = IntegrateImage('PI', props, gbl_data,iz)
+        if (lI) then
+          call message('calculating I', gal_id=gal_id, val_int=iz, info=2)
+          ts_I(iz) = IntegrateImage('I', props, gbl_data,iz)
+        endif
+        if (lPI) then
+          call message('calculating PI', gal_id=gal_id, val_int=iz, info=2)
+          ts_PI(iz) = IntegrateImage('PI', props, gbl_data,iz)
+        endif
+        if (lRM) then
+          ! Picks up a random line of sight betwen 0 and half maximum radius
+          call random_number(impact_y)
+          call random_number(impact_z)
+          impact_z = impact_z/sin(gbl_data%theta)
+          call message('calculating RM', gal_id=gal_id, val_int=iz, info=2)
+          call LoSintegrate(props, impact_y/2d0, impact_z/2d0, gbl_data, iz, &
+                            RM_out=.true., I_out=.false., Q_out=.false., U_out=.false.)
+
+        endif
       endif
     enddo
 
-    call IO_write_dataset('I', gal_id, ts_I, units='arbitrary', &
+    if (lI) &
+      call IO_write_dataset('I_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                          gal_id, ts_I, units='arbitrary', &
                           description='Integrated synchrotron emission')
-    call IO_write_dataset('PI', gal_id, ts_PI, units='arbitrary', &
-                        description='Integrated polarised synchrotron emission')
+    if (lPI) &
+      call IO_write_dataset('PI', &
+                            gal_id, ts_PI, units='arbitrary', &
+                            description='Integrated polarised synchrotron emission')
+
+    if (lRM) &
+      call IO_write_dataset('RM', gal_id, gbl_data%RM, units='arbitrary', &
+                            description='Rotation measure along a random LoS')
+
     call IO_write_dataset('theta', gal_id, [gbl_data%theta], units='radians', &
-                        description='Inclination')
-  end subroutine Compute_I_and_PI
+                          description='Inclination')
+  end subroutine Compute_I_PI_RM
 end module Observables_aux
 
 program Observables
@@ -94,6 +138,7 @@ program Observables
 
   implicit none
   character(len=300) :: command_argument
+  character(len=50) :: run_type
   integer, allocatable, dimension(:) :: galaxies_list
 
   ! Prints welcome message and prepares to distribute jobs
@@ -107,11 +152,14 @@ program Observables
   ! Sets spectral index of the CR energy distribution
   call get_command_argument(3, command_argument)
   gbl_data%alpha = str2dbl(command_argument)
+  ! Sets the type of run (all, RM, PI, I or PI/I)
+  call get_command_argument(4, command_argument)
+  call set_runtype(command_argument)
   ! Hard-coded parameters (varied for testing only)
   gbl_data%B_scale_with_z = .false.
   gbl_data%ignore_small_scale_field = .false.
   ! Tries to read a list of galaxy numbers from argument 4 onwards
-  galaxies_list = jobs_reads_galaxy_list(4)
+  galaxies_list = jobs_reads_galaxy_list(5)
   ! Computes I and PI for the galaxies in the sample
-  call jobs_distribute(Compute_I_and_PI, .true., galaxies_list)
+  call jobs_distribute(Compute_I_PI_RM, .true., galaxies_list)
 end program Observables

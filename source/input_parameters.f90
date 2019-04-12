@@ -98,9 +98,7 @@ module input_params
           nsteps_f = tsnap/dt
           ! Avoids overflow in casting
           nsteps = int(min(1e9, nsteps_f))
-          print *, 'non-negligible', abs(maxval(v)), abs(maxval(etat))
         else
-        print *, 'negligible', abs(maxval(v)), abs(maxval(etat))
           call message('set_timestep: max(v) or max(etat) is negligible', &
                        info=1, gal_id=current_gal_id)
           nsteps = p_nsteps_max
@@ -121,9 +119,9 @@ module input_params
       dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
     endif
 
-    call message('set_timestep: dt = ',dt*t0_Gyr, msg_end='Gyr', info=1, &
+    call message('set_timestep: dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
                   gal_id=current_gal_id)
-    call message('set_timestep: nsteps = ',val_int=nsteps, info=2, &
+    call message('set_timestep: nsteps = ',val_int=nsteps, info=3, &
                   gal_id=current_gal_id)
 
     if (nsteps > p_nsteps_max) then
@@ -158,7 +156,6 @@ module input_params
 
     ! Reads time dependent parameters for this galaxy
     call IO_read_dataset_scalar('r_disk', gal_id, galaxy_data(:,1))
-    print *, 'galaxy_data',galaxy_data(:,1)
     call IO_read_dataset_scalar('v_disk', gal_id, galaxy_data(:,2))
     call IO_read_dataset_scalar('r_bulge', gal_id, galaxy_data(:,3))
     call IO_read_dataset_scalar('v_bulge', gal_id, galaxy_data(:,4))

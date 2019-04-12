@@ -410,7 +410,6 @@ contains
     double precision, dimension(nx,nvar) :: dfdt
     double precision, dimension(nx,nvar) :: pdef, ftmp
     double precision :: ttmp
-
     !  Runge Kutta 3rd order time advance
     !  f = f(exact) - 0.0046*dt**3*d3f/dt3
     gam1=8.d0/15 !gam1, gam2 AND gam3 ARE THE COEFFICIENTS OF THE TIMESTEPS AT WHICH dfdt IS CALCULATED
@@ -446,8 +445,6 @@ contains
 
     call check_f_error(f, ok)
     if (.not.ok) return
-
-    first=first+1. !COUNTS THE NUMBER OF TIMES RUNGA-KUTTA ROUTINE IS EXCUTED
   end subroutine rk
 
   subroutine check_f_error(f, ok)

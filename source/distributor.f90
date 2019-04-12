@@ -179,7 +179,6 @@ contains
     character(len=100) :: command_argument
     integer :: i, j, iproc
     logical :: lstop, error
-    logical :: lresuming_run = .false.
     logical :: start_galaxy = .false.
     integer :: ierr, ncycles, flush_signal, ngals
     integer, parameter :: finished_tag = 0
@@ -196,52 +195,47 @@ contains
     flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
     ! NB ngals is the maximum gal_id possible number (in global_input_parameters)
 
-    if ((ngals==1) .and. (rank == master_rank)) then
-      ncycles = 0
-      call message('Starting',gal_id=galaxies_list(1), rank=rank)
-      ! Check whether the galaxy was processed previously
-      start_galaxy = IO_start_galaxy(galaxies_list(1))
+
+    ! Before distributing work between workers, ALL processes will try to run
+    ! the same galaxy.
+    ! The main reason is setting the scene for the HDF5 library: creation of datasets,
+    ! etc, are collective operations and need (?) to be performed by all processors at
+    ! some point.
+    ! Also, this helps catching any obvious problem, before continuing.
+    do igal=1, ngals
+      start_galaxy = IO_start_galaxy(galaxies_list(igal))
       if (decide_run(start_galaxy)) then
-        call work_routine(galaxies_list(1), func_flag, error)
-        nmygals = nmygals + 1
-        mygals(nmygals) = galaxies_list(1)
-      else
-        call message('Skipping.', gal_id=galaxies_list(1), info=2)
-      endif
-    else
-      ! Before distributing work between workers, ALL processes will try to run
-      ! the same galaxy. This helps catching any obvious problem and allows one to
-      ! find out where a possible previous run has stopped.
-      ! Also, it sets the scene for the HDF5 library.
-      do igal=1, ngals
-        start_galaxy = IO_start_galaxy(galaxies_list(igal))
-        if (decide_run(start_galaxy)) then
-          call work_routine(galaxies_list(igal), func_flag, error)
-          if (error) cycle
-          if (rank == master_rank) then
-            nmygals = nmygals + 1
-            mygals(nmygals) = galaxies_list(igal)
-          endif
-          exit
+        call work_routine(galaxies_list(igal), func_flag, error)
+        if (error) cycle
+        if (rank == master_rank) then
+          nmygals = nmygals + 1
+          mygals(nmygals) = galaxies_list(igal)
         endif
-      enddo
-      ! Calculates the number of cycles
-      ncycles = max(ngals/p_ncheckpoint, 1)
-      call message('Total number of cycles',val_int=ncycles, master_only=.true.)
+        exit
+      endif
+    enddo
+    ! Ensures the structure of the HDF5 file is saved (if it is new)
+    call IO_flush()
+
+    ! Calculates the number of cycles
+    ncycles = max(ngals/p_ncheckpoint,1)
+    call message('Total number of cycles',val_int=ncycles, master_only=.true.)
+
+    if (nproc<=1) then
+      p_master_works_too=.true.
+      p_master_skip=1
+      nproc = 1
     endif
 
     ! ----------
     !   Master
     ! ----------
-    if (rank==master_rank .or. ncycles==0) then
+    if (rank==master_rank .and. ngals/=1) then
       do j=0, ncycles
         ! Finds boundaries of present cycle
         igal_first = 1+j*p_ncheckpoint
-        igal_last = (j+1)*p_ncheckpoint
+        igal_last = min((j+1)*p_ncheckpoint, ngals)
         call message('Cycle',val_int=j+1, master_only=.true.)
-        ! If previous work had been done, accounts for it.
-        if (igal>igal_last) cycle
-        igal_first = max(igal_first, igal)
 
         ! Submit initial jobs
         do iproc=1, nproc-1
@@ -253,10 +247,12 @@ contains
         do igal=nproc+igal_first-1, igal_last
           ! Sends finished work from worker
           if (igal>ngals) exit
+
           if ( p_master_works_too .and. &
-              modulo(igal, (nproc + int(nproc/p_master_skip))) == 0) then
-            ! Call dynamo code for each galaxy in mygals
+              modulo(igal, (nproc + int(nproc/p_master_skip))-1) == 0) then
+            ! Call dynamo code for each galaxy in the list
             call message('Starting',gal_id=galaxies_list(igal), rank=rank)
+
             ! Check whether the galaxy was processed previously
             start_galaxy = IO_start_galaxy(galaxies_list(igal))
             if (decide_run(start_galaxy)) then
@@ -289,12 +285,11 @@ contains
 
         ! Goes through all workers, requesting them to either stop or flush
         ! the data to the disk
-        i = 0
         do iproc=1, nproc-1
             ! Receives whatever message it is sending
             call MPI_Recv(igal_finished, 1, MPI_INTEGER, iproc, finished_tag, &
                           MPI_COMM_WORLD, status, ierr)
-            if (lstop .or. (igal_last>ngals)) then
+            if (lstop .or. (igal_last>=ngals)) then
               ! If it is time to stop, tells to workers to finish
               call MPI_Send(-1, 1, MPI_INTEGER, iproc, newjob_tag, &
                             MPI_COMM_WORLD, ierr)
@@ -306,20 +301,19 @@ contains
         enddo
 
         ! Tells the master to stop
-        if (lstop) exit
-        ! Tells the master to flush
-        call IO_flush()
+        if (lstop .or. igal_last>=ngals) exit
+        call IO_flush() ! Tells the master to checkpoint
       enddo
     ! ----------
     !   Worker
     ! ----------
-    else
+    else if (ngals/=1) then
         do
           ! Receives new task or a flag
           call MPI_Recv(igal, 1, MPI_INTEGER, 0, newjob_tag, MPI_COMM_WORLD, status, ierr)
+
           ! If received an exit flag, exits
           if (igal<0) then
-            call IO_flush()
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
             call message('Exiting', rank=rank)
             exit
@@ -340,23 +334,18 @@ contains
             ! Sends the result (to mark it done)
             call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
           else if (igal==flush_signal) then
-            call IO_flush()
+            call IO_flush() ! Tells the worker to checkpoint
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
-
           else
-            ! call IO_flush() ! No need in this case!
             ! Invalid galaxy. Probably, more processors than galaxies!) Nothing is done.
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
           endif
       enddo
     endif
 
-
-
     call IO_flush()
     call message('All computing done', info=0)
 
-    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
     if (nmygals>0) then
       if (nmygals<10) then
         print *, trim(str(rank)),':  Finished working on galaxies:', mygals(:nmygals),'.'

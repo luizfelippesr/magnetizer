@@ -98,7 +98,9 @@ module input_params
           nsteps_f = tsnap/dt
           ! Avoids overflow in casting
           nsteps = int(min(1e9, nsteps_f))
+          print *, 'non-negligible', abs(maxval(v)), abs(maxval(etat))
         else
+        print *, 'negligible', abs(maxval(v)), abs(maxval(etat))
           call message('set_timestep: max(v) or max(etat) is negligible', &
                        info=1, gal_id=current_gal_id)
           nsteps = p_nsteps_max
@@ -119,7 +121,7 @@ module input_params
       dt = tsnap/nsteps  !Timestep in units of t0=h0^2/etat0
     endif
 
-    call message('set_timestep: dt = ',dt*t0_Gyr, msg_end='Gyr', info=3, &
+    call message('set_timestep: dt = ',dt*t0_Gyr, msg_end='Gyr', info=1, &
                   gal_id=current_gal_id)
     call message('set_timestep: nsteps = ',val_int=nsteps, info=2, &
                   gal_id=current_gal_id)
@@ -133,7 +135,7 @@ module input_params
     endif
   end function set_timestep
 
-  subroutine read_input_parameters(gal_id)
+  subroutine load_input_parameters(gal_id)
     ! Reads the input parameters file to RAM
     use iso_fortran_env
     use IO
@@ -156,6 +158,7 @@ module input_params
 
     ! Reads time dependent parameters for this galaxy
     call IO_read_dataset_scalar('r_disk', gal_id, galaxy_data(:,1))
+    print *, 'galaxy_data',galaxy_data(:,1)
     call IO_read_dataset_scalar('v_disk', gal_id, galaxy_data(:,2))
     call IO_read_dataset_scalar('r_bulge', gal_id, galaxy_data(:,3))
     call IO_read_dataset_scalar('v_bulge', gal_id, galaxy_data(:,4))
@@ -189,7 +192,7 @@ module input_params
     enddo
     iread = init_it-1
 
-  endsubroutine read_input_parameters
+  endsubroutine load_input_parameters
 
 
   subroutine reset_input_params()
@@ -209,11 +212,6 @@ module input_params
     double precision :: current_time_input
 
     error = .false.
-
-    ! Reads the whole file on first access
-    if (gal_id /= current_gal_id ) then
-      call read_input_parameters(gal_id)
-    endif
 
     iread=iread+1
 

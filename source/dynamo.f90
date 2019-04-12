@@ -63,6 +63,7 @@ module dynamo
       call reset_status_code(test_run)
 
       ! Reads in the model parameters (for the first snapshot)
+      call load_input_parameters(gal_id)
       call set_input_params(gal_id, error)
       if (error) then
         return

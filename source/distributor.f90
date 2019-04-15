@@ -176,7 +176,6 @@ contains
     integer, dimension(:), intent(in) :: galaxies_list
     integer :: igal, nmygals, igal_first, igal_last, igal_finished
     integer, allocatable, dimension(:) :: mygals, allgals
-    character(len=100) :: command_argument
     integer :: i, j, iproc
     logical :: lstop, error
     logical :: start_galaxy = .false.

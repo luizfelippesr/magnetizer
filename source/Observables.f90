@@ -85,6 +85,24 @@ contains
     props%n = buffer
 
     ts_I = -99999d0; ts_PI = -99999d0
+
+
+    if (lRM) then
+      ! Picks up a random line of sight betwen 0 and maximum radius
+      ! NB this is done on the plane of the sky!
+      call random_number(impact_y)
+      call random_number(impact_z)
+
+      call IO_write_dataset('RM_LoS_y', gal_id, [impact_y], units='arbitrary', &
+                            description='Impact parameter used in the RM calculation')
+      call IO_write_dataset('RM_LoS_z', gal_id, [impact_z], units='arbitrary', &
+                            description='Impact parameter used in the RM calculation')
+
+    endif
+
+    call IO_write_dataset('theta', gal_id, [gbl_data%theta], units='radians', &
+                              description='Inclination (for observables calculation)')
+
     call message('Computing observables', gal_id=gal_id, info=1)
     do iz=1, number_of_redshifts
       if (props%Rcyl(iz,1)>0d0) then
@@ -97,12 +115,10 @@ contains
           ts_PI(iz) = IntegrateImage('PI', props, gbl_data,iz)
         endif
         if (lRM) then
-          ! Picks up a random line of sight betwen 0 and half maximum radius
-          call random_number(impact_y)
-          call random_number(impact_z)
+          ! Converts from the plane of the sky into actual z
           impact_z = impact_z/sin(gbl_data%theta)
           call message('calculating RM', gal_id=gal_id, val_int=iz, info=2)
-          call LoSintegrate(props, impact_y/2d0, impact_z/2d0, gbl_data, iz, &
+          call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
                             RM_out=.true., I_out=.false., Q_out=.false., U_out=.false.)
 
         endif
@@ -114,7 +130,7 @@ contains
                           gal_id, ts_I, units='arbitrary', &
                           description='Integrated synchrotron emission')
     if (lPI) &
-      call IO_write_dataset('PI', &
+      call IO_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
                             gal_id, ts_PI, units='arbitrary', &
                             description='Integrated polarised synchrotron emission')
 
@@ -122,8 +138,6 @@ contains
       call IO_write_dataset('RM', gal_id, gbl_data%RM, units='arbitrary', &
                             description='Rotation measure along a random LoS')
 
-    call IO_write_dataset('theta', gal_id, [gbl_data%theta], units='radians', &
-                          description='Inclination')
   end subroutine Compute_I_PI_RM
 end module Observables_aux
 
@@ -138,7 +152,6 @@ program Observables
 
   implicit none
   character(len=300) :: command_argument
-  character(len=50) :: run_type
   integer, allocatable, dimension(:) :: galaxies_list
 
   ! Prints welcome message and prepares to distribute jobs

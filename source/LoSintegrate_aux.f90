@@ -215,6 +215,9 @@ module LoSintegrate_aux
       psi0 = psi0-2d0*pi
     endwhere
 
+    ! Traps zero scaleheights
+    where (h<1e-6) h=1e-6
+
     ! Adds the z dependence to the density
     ne = ne  * exp(-abs(z_path)/h)
     ! Adds the z dependence the magnetic field

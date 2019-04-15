@@ -16,7 +16,7 @@ program Observables_single
   integer :: rank, nproc, ierr, rc
   integer :: info_mpi
   integer,dimension(8) :: time_vals
-  double precision :: zmax, ymax, error
+  double precision :: error
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer

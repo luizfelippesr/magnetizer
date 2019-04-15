@@ -468,4 +468,6 @@ units_dict = {
               'pc' : u.pc,
               's' : u.s,
               'arbitrary' : 1.0,
+              'radians' : u.radian,
+              'rad/m^2' : u.radian/u.m/u.m,
              }

@@ -95,7 +95,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
 
     if qname == 'V':
         quantity = get('Omega')*get('r')
-    
+
     elif qname == 'Dgen':
 
         S = get('Shear')
@@ -428,9 +428,11 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
     elif qname == 'OmegaS_at_Bmax':
         quantity = get('Omega_at_Bmax')*get('Shear_at_Bmax')
 
-    elif qname == 'PI_I':
-        quantity = get('PI')/get('I')
-        
+    elif 'PI_I' in qname:
+        match = re.match(r'PI_I(_.+cm)', qname)
+        q = match.group(1)
+        quantity = get('PI{}'.format(q))/get('I{}'.format(q))
+
     elif '_at_Bmax' in qname:
         # Extracts the name of the quantity
         match = re.match(r'(.+)_at_Bmax', qname)

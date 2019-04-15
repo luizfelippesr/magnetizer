@@ -192,8 +192,6 @@ contains
     mygals = -17 ! Initializes to bad value
     allocate(allgals((ngals+1)*nproc))
     flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
-    ! NB ngals is the maximum gal_id possible number (in global_input_parameters)
-
 
     ! Before distributing work between workers, ALL processes will try to run
     ! the same galaxy.
@@ -242,11 +240,9 @@ contains
             if (igal > igal_last) igal=ngals+1
             call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, ierr)
         enddo
+
         ! Loops sending and receiving
         do igal=nproc+igal_first-1, igal_last
-          ! Sends finished work from worker
-          if (igal>ngals) exit
-
           if ( p_master_works_too .and. &
               modulo(igal, (nproc + int(nproc/p_master_skip))-1) == 0) then
             ! Call dynamo code for each galaxy in the list

@@ -318,9 +318,9 @@ module LoSintegrate_aux
     integer(fgsl_int) :: status
     character(len=10) :: mthd
 
-    calls = 2000
+    calls = 1600
     if (present(number_of_calls)) calls = number_of_calls
-    mthd = 'MISER'
+    mthd = 'VEGAS'
     if (present(method)) mthd = method
 
     data_glb = data

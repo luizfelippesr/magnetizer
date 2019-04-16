@@ -23,6 +23,7 @@ module Observables_aux
   public Compute_I_PI_RM, set_runtype
   type(LoS_data),public :: gbl_data
   logical :: lRM=.false., lI=.false., lPI=.false.
+  double precision, parameter :: INVALID = -99999
 contains
   subroutine set_runtype(run_type)
     character(len=50) :: run_type
@@ -56,10 +57,10 @@ contains
     type(Galaxy_Properties) :: props
     double precision, allocatable, dimension(:,:) :: buffer
     integer :: iz
-    double precision, dimension(number_of_redshifts) :: ts_I, ts_PI, ts_z, ts_y, ts_theta
+    double precision, dimension(number_of_redshifts) :: ts_I, ts_PI, ts_z, ts_y, ts_theta, ts_RM
     double precision :: impact_y, impact_z
-    error = .false.
 
+    error = .false.
     ! Reads galaxy properties from hdf5 file
     call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
     allocate(buffer(number_of_redshifts,p_nx_ref))
@@ -79,6 +80,18 @@ contains
 
     call message('Computing observables', gal_id=gal_id, info=1)
     do iz=1, number_of_redshifts
+      ! Catches invalid redshifts
+      if (props%h(iz,2)<=0d0) then ! a good marker for invalid runs
+        ! Marks them as invalid (will be converted into NaN by the python API)
+        ts_I(iz) = INVALID
+        ts_PI(iz) = INVALID
+        ts_theta(iz) = INVALID
+        ts_y(iz) = INVALID
+        ts_z(iz) = INVALID
+        ts_RM(iz) = INVALID
+        cycle
+      endif
+
       ! First, randomizes inclination and impact parameter
       ! Unless a fixed angle is signaled, selects a random inclination
       ! from a uniform distribution between 0 and 90 degrees
@@ -113,7 +126,7 @@ contains
           call message('calculating RM', gal_id=gal_id,  val_int=iz, info=2)
           call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
                             RM_out=.true., I_out=.false., Q_out=.false., U_out=.false.)
-
+          ts_RM(iz) = gbl_data%RM(iz)
         endif
       endif
     enddo
@@ -128,7 +141,7 @@ contains
                             description='Integrated polarised synchrotron emission')
 
     if (lRM) &
-      call IO_write_dataset('RM', gal_id, gbl_data%RM, units='rad/m^2', &
+      call IO_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
                             description='Rotation measure along a random LoS')
       call IO_write_dataset('RM_LoS_y', gal_id, ts_y, &
           description='Impact parameter used in the RM calculation in units of rmax')

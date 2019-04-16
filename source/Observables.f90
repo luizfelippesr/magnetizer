@@ -130,7 +130,7 @@ contains
     if (lRM) &
       call IO_write_dataset('RM', gal_id, gbl_data%RM, units='rad/m^2', &
                             description='Rotation measure along a random LoS')
-      call IO_write_dataset('RM_LoS_y', gal_id, ts_I, &
+      call IO_write_dataset('RM_LoS_y', gal_id, ts_y, &
           description='Impact parameter used in the RM calculation in units of rmax')
       call IO_write_dataset('RM_LoS_z', gal_id, ts_z, &
           description='Impact parameter used in the RM calculation in units of rmax')

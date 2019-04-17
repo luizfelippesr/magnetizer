@@ -56,6 +56,7 @@ contains
     logical, intent(out) :: error
     type(Galaxy_Properties) :: props
     double precision, allocatable, dimension(:,:) :: buffer
+    double precision, allocatable, dimension(:) :: bufferz
     integer :: iz
     double precision, dimension(number_of_redshifts) :: ts_I, ts_PI, ts_z, ts_y, ts_theta, ts_RM
     double precision :: impact_y, impact_z
@@ -64,6 +65,7 @@ contains
     ! Reads galaxy properties from hdf5 file
     call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
     allocate(buffer(number_of_redshifts,p_nx_ref))
+    allocate(bufferz(number_of_redshifts))
     props%igal = gal_id
     call IO_read_dataset_vector('r', gal_id, buffer, group='Output')
     props%Rcyl = buffer
@@ -77,6 +79,8 @@ contains
     props%h = buffer/1d3 ! Converts from pc to kpc
     call IO_read_dataset_vector('n', gal_id, buffer, group='Output')
     props%n = buffer
+    call IO_read_dataset_scalar('z', gal_id, bufferz, group='Input')
+    props%z = bufferz
 
     call message('Computing observables', gal_id=gal_id, info=1)
     do iz=1, number_of_redshifts

@@ -29,6 +29,7 @@ module LoSintegrate_aux
   type Galaxy_Properties
     double precision, allocatable, dimension(:,:) :: Br, Bp, Bz
     double precision, allocatable, dimension(:,:) :: Rcyl, h, n
+    double precision, allocatable, dimension(:) :: z
     integer :: n_redshifts, n_grid, igal
   end type
 
@@ -71,7 +72,7 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
     double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
-    double precision :: rmax
+    double precision :: rmax, wavelength_gal
     double precision :: tmp, impact_y, impact_z
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
@@ -100,9 +101,13 @@ module LoSintegrate_aux
     if (present(U_out)) lU = U_out
     if (present(psi0_out)) lpsi0 = psi0_out
 
+    ! Computes maximum radius and impact parameters
     rmax = props%Rcyl(iz,props%n_grid)
     impact_y = impacty_rmax * rmax
     impact_z = impactz_rmax * rmax
+
+    ! Computes wavelength at the frame of the galaxy
+    wavelength_gal = data%wavelength/(1d0 + props%z(iz))
 
     ! Loops over the radial grid-points
     ! i -> index for quantities in a cartesian box
@@ -254,7 +259,7 @@ module LoSintegrate_aux
       ! NB Using the total density as a proxy for cosmic ray electron density
       ! NB2 Increments previous calculation
       data%Stokes_I(iz) = Compute_Stokes('I', Bperp, ne, x_path, z_path,&
-                                         data%wavelength, data%alpha, Brnd)
+                                         wavelength_gal, data%alpha, Brnd)
     endif
 
     if (lQ .or. lU) then
@@ -262,7 +267,7 @@ module LoSintegrate_aux
       do i=1, size(z_path)
         ! Integrates (i.e. computes RM) until the i-th layer
         psi(i) = psi0(i) &
-                + (data%wavelength)**2 * Compute_RM(Bpara(1:i),ne(1:i), &
+                + (wavelength_gal)**2 * Compute_RM(Bpara(1:i),ne(1:i), &
                                                    x_path(1:i),z_path(1:i))
       enddo
 
@@ -272,7 +277,7 @@ module LoSintegrate_aux
         endif
 
         data%Stokes_Q(iz) = Compute_Stokes('Q', Bperp, ne, x_path, z_path,&
-                                           data%wavelength, data%alpha, psi)
+                                           wavelength_gal, data%alpha, psi)
       endif
       if (lU) then
         if (.not.allocated(data%Stokes_U)) then
@@ -280,7 +285,7 @@ module LoSintegrate_aux
         endif
 
         data%Stokes_U(iz) = Compute_Stokes('U', Bperp, ne, x_path, z_path,&
-                                           data%wavelength, data%alpha, psi)
+                                           wavelength_gal, data%alpha, psi)
       endif
     endif
 
@@ -469,7 +474,7 @@ module LoSintegrate_aux
     !
     ! Input: Bperp -> 1d-array, magnitude of B perpendicular to LoS, in microgauss
     !        ncr -> 1d-array, number of CR electrons, in cm^-3
-    !        wavelength -> real, wavelength, in meters
+    !        wavelength -> real, rest frame wavelength, in meters
     !        alpha -> real, spectral index of the CR electrons, default: 3
     ! Output: emissivity -> 1d-array, in arbitrary units
     !
@@ -583,15 +588,6 @@ module LoSintegrate_aux
         do i=1,7
           close(unit(i))
         enddo
-!       else
-!
-!       call IO_write_dataset('Q', gal_id,                        &
-!                             ,                                &
-!                           units='s',                                &
-!                           description='Running time of the galaxy', &
-!                           group='Log')
-
-
       endif
 
       deallocate(I_im); deallocate(Q_im); deallocate(U_im); deallocate(RM_im);
@@ -619,7 +615,8 @@ module LoSintegrate_aux
               galprops%Bp(nz,nr),   &
               galprops%Bz(nz,nr),   &
               galprops%Rcyl(nz,nr), &
-              galprops%h(nz,nr)     )
+              galprops%h(nz,nr),    &
+              galprops%z(nz))
     galprops%n_redshifts = nz
     galprops%n_grid = nr
   end subroutine alloc_Galaxy_Properties

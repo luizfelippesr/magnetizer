@@ -93,6 +93,12 @@ class MagnetizerRun(object):
         # (merges all groups...)
         self._data = []
         for hout, hin in zip(houts, hins):
+            if 'Output' not in hout:
+                print 'Problems with file', hout.filename
+                continue
+            if 'Input' not in hin:
+                print 'Problems with file', hin.filename
+                continue                
             data_dict = {x: hout['Output'][x] for x in hout['Output']}
             data_dict.update({x: hin['Input'][x] for x in hin['Input']})
             data_dict.update({x: hout['Log'][x] for x in hout['Log']})

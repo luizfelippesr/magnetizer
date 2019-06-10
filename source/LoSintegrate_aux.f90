@@ -23,7 +23,7 @@ module LoSintegrate_aux
   public :: Galaxy_Properties, LoS_data
   public :: alloc_Galaxy_Properties
   public :: print_image, IntegrateImage
-
+  public :: compute_random_field
 
 
   type Galaxy_Properties
@@ -45,7 +45,7 @@ module LoSintegrate_aux
     double precision :: theta = 0d0
     logical :: B_scale_with_z = .true.
     logical :: ignore_small_scale_field = .false.
-    integer :: nz_points = 300
+    integer :: nz_points = 700
   end type
 
   ! Global variables for the integration
@@ -69,7 +69,8 @@ module LoSintegrate_aux
     logical :: lRM, lI, lQ, lU, lpsi0
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: psi, psi0
-    double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
+    double precision, allocatable, dimension(:) :: Bpara, Bperp, ne, h
+    double precision, allocatable, dimension(:) :: Brnd_para, Brnd_perp
     double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
     double precision :: rmax, wavelength_gal
@@ -171,9 +172,9 @@ module LoSintegrate_aux
     ! This step is irrelevant for edge-on, but is important for face-on
     if (ldense_z) then
       ! Sets a tentative z-maximum to 3.5 times the scale-height
-      zmin = -3.5d0*h(1); zmax = 3.5d0*h(size(h))
+      zmin = -4d0*h(1); zmax = 4d0*h(size(h))
 
-      ! Computes corresponding values for x
+      ! Computes corresponding values for x ! Check this -impact_z!
       xmin = (zmin - impact_z)*tan(data%theta)
       xmax = (zmax - impact_z)*tan(data%theta)
       ! Forces x coordinate to live within the original grid
@@ -187,7 +188,7 @@ module LoSintegrate_aux
       endif
 
       z_path_new = linspace(zmin,zmax, data%nz_points)
-      x_path_new = (z_path_new - impact_z)*tan(data%theta)
+      x_path_new = (z_path_new - impact_z)*tan(data%theta) !Check this -impact_z!
 
       call densify(Bx, x_path, x_path_new)
       call densify(By, x_path, x_path_new)
@@ -212,9 +213,8 @@ module LoSintegrate_aux
     ! Magnitude of the total perpendicular field
     allocate(Bperp(size(By)))
     Bperp = sqrt(B2_perp_not_y + By**2)
+
     ! Intrinsic polarization angle
-!     where(By==0)
-!       By
     psi0 = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
     where (psi0>pi)
       psi0 = psi0-2d0*pi
@@ -239,16 +239,21 @@ module LoSintegrate_aux
       endwhere
     endif
 
-    allocate(Brnd(size(Bpara)))
+    allocate(Brnd_para(size(Bpara)))
+    allocate(Brnd_perp(size(Bpara)))
     if (data%ignore_small_scale_field) then
-      Brnd = ne*0d0
+      Brnd_para = ne*0d0
+      Brnd_perp = ne*0d0
     else
-      ! Computes the random field in microgauss, assuming hydrogen mass and:
-      !                      v0=1e5cm/s f=0.5  1d6\muG
-      Brnd = sqrt(4*pi*ne*Hmass)*10d5 * 0.5d0 *1d6
-
       ! TODO change this to the values used in the simulation
+      call compute_random_field(Brnd_para, Brnd_perp, ne,      &
+                                v0=10d5, l0=0.1d0, mass=Hmass, &
+                                x_path=x_path, z_path=z_path)
     endif
+
+    Bpara = Bpara + Brnd_para
+
+    Bperp = sqrt(Bperp**2 + Brnd_perp**2)
 
     data%number_of_cells(iz) = data%number_of_cells(iz) + size(x_path)
     if (lI) then
@@ -259,7 +264,7 @@ module LoSintegrate_aux
       ! NB Using the total density as a proxy for cosmic ray electron density
       ! NB2 Increments previous calculation
       data%Stokes_I(iz) = Compute_Stokes('I', Bperp, ne, x_path, z_path,&
-                                         wavelength_gal, data%alpha, Brnd)
+                                         wavelength_gal, data%alpha)
     endif
 
     if (lQ .or. lU) then
@@ -421,8 +426,8 @@ module LoSintegrate_aux
     Compute_RM = Integrator(integrand, x_path, z_path)
   end function Compute_RM
 
-  pure function Compute_Stokes(S, Bperp, ncr, x_path, z_path, &
-                                 wavelength, alpha, Brnd_or_psi)
+  function Compute_Stokes(S, Bperp, ncr, x_path, z_path, &
+                                 wavelength, alpha, Psi)
     ! Computes Stokes parameter I, Q or U along a line of sight
     !
     ! Input: Bperp -> 1d-array, B parallel to the LoS, in microgauss
@@ -432,10 +437,11 @@ module LoSintegrate_aux
     !        x_path,z_path -> 1d-array, positions along path, in kpc
     ! Output: total synchrotron emissivity in arbitrary units
     character(len=*), intent(in) :: S
-    double precision, dimension(:), intent(in) :: Bperp, Brnd_or_psi, ncr, x_path, z_path
+    double precision, dimension(:), intent(in) :: Bperp, ncr, x_path, z_path
     double precision, intent(in) :: wavelength
     double precision, optional, intent(in) :: alpha
-    double precision, dimension(size(ncr)) :: integrand, emissivity, psi, Brnd
+    double precision, dimension(size(ncr)) :: integrand, emissivity
+    double precision, dimension(size(ncr)), optional :: psi
     double precision :: p0
     double precision :: aa
     double precision :: Compute_Stokes
@@ -449,14 +455,14 @@ module LoSintegrate_aux
     endif
 
     if (S=='I') then
-      Brnd = Brnd_or_psi
-      integrand = compute_emissivity(Bperp, ncr, wavelength, aa, Brnd)
+      integrand = compute_emissivity(Bperp, ncr, wavelength, aa)
     else
-      psi = Brnd_or_psi
       ! Intrinsic polarization
       p0 = (aa+1d0)/(aa+7d0/3d0)
       ! The random field should not influence the polarized emission
       emissivity = compute_emissivity(Bperp, ncr, wavelength, aa)
+
+      if (.not.(present(psi)))  error stop 'Compute_Stokes: psi argument absent'
 
       if (S=='Q') then
         integrand = p0*emissivity*cos(2d0*psi)
@@ -492,6 +498,55 @@ module LoSintegrate_aux
     compute_emissivity = ncr * Bperp_tot2**((alpha+1.0)/4d0) * wavelength**((alpha-1.0)/2d0)
 
   end function compute_emissivity
+
+  subroutine compute_random_field(Brnd_para, Brnd_perp, ne, v0, l0, mass, x_path, z_path)
+    ! Computes the random field in microgauss, assuming hydrogen mass and:
+    !                      v0=1e5cm/s f=0.5  1d6\muG
+    use input_constants
+    use global_input_parameters
+    use random
+    double precision, dimension(:), intent(inout) :: Brnd_para, Brnd_perp
+    double precision, dimension(:), intent(in) :: ne, x_path, z_path
+    double precision, dimension(size(x_path)) :: r
+    double precision, dimension(:,:), allocatable :: Brnd, B
+    double precision, intent(in) :: v0, mass, l0
+    double precision :: Brms, next_cell
+    integer :: i, j, k, Ncells
+
+
+    r = sqrt((x_path - x_path(1))**2 + (z_path - z_path(1))**2)
+
+    Ncells = int(r(size(r))/l0)+1
+    allocate(B(Ncells, 3))
+    allocate(Brnd(size(r), 3))
+    do i=1,Ncells
+      do j=1,3
+        B(i,j) = random_normal()
+      enddo
+    enddo
+
+    next_cell = l0; k=1
+    do i=1,size(r)
+      if (r(i) > next_cell) then
+        k = k+1
+        next_cell = next_cell + l0
+      endif
+      Brnd(i,:) = B(k,:)
+    enddo
+
+    ! Removes the mean
+!     do i=1,3
+!       Brnd(:,i) = Brnd(:,i) - sum(Brnd(:,i)/size(Brnd(:,i)))
+!     enddo
+    ! Adjusts the rms value                                 (G to muG)
+    Brms = sqrt( sum(Brnd(:,1)**2+Brnd(:,2)**2+Brnd(:,3)**2)/size(Brnd(:,1)) )
+    do i=1,3
+      Brnd(:,i) = Brnd(:,i)/Brms * sqrt(4*pi*ne*mass)*v0 * 1d6
+    enddo
+
+    Brnd_para = Brnd(:,1)
+    Brnd_perp = sqrt(Brnd(:,2)**2 + Brnd(:,3)**2)
+  end subroutine compute_random_field
 
   subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap)
       use messages

@@ -17,6 +17,7 @@
 !#
 module LoSintegrate_aux
   ! Auxiliary functions used by the program LoSintegrate
+  use math_constants
   implicit none
   private
   public :: LoSintegrate
@@ -31,14 +32,16 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:,:) :: Rcyl, h, n
     double precision, allocatable, dimension(:) :: z
     integer :: n_redshifts, n_grid, igal
+    integer :: n_RMs = 1
   end type
 
   type LoS_data
-    double precision, allocatable, dimension(:) :: Stokes_I
-    double precision, allocatable, dimension(:) :: Stokes_Q
-    double precision, allocatable, dimension(:) :: Stokes_U
+    double precision :: Stokes_I
+    double precision :: Stokes_Q
+    double precision :: Stokes_U
     double precision, allocatable, dimension(:) :: RM
-    double precision, allocatable, dimension(:) :: number_of_cells
+    double precision, allocatable, dimension(:) :: column_density
+    double precision :: number_of_cells
     double precision, allocatable, dimension(:) :: psi0
     double precision :: wavelength = 20d-2 ! 20 cm or 1.49 GHz
     double precision :: alpha = 3d0
@@ -56,17 +59,18 @@ module LoSintegrate_aux
   contains
 
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, &
-                                       iz, RM_out, I_out, Q_out, U_out, psi0_out)
+                          iz, RM_out, I_out, Q_out, U_out, iRM)
     use input_constants
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
-    logical, intent(in), optional :: RM_out, I_out, Q_out, U_out, psi0_out
+    logical, intent(in), optional :: RM_out, I_out, Q_out, U_out
+    integer, optional, intent(in) :: iRM
     double precision,dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
     double precision,dimension(2*props%n_grid) :: Bx_all, By_all, Bz_all
     logical, dimension(2*props%n_grid) :: valid
-    logical :: lRM, lI, lQ, lU, lpsi0
+    logical :: lRM, lI, lQ, lU
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: psi, psi0
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
@@ -76,17 +80,14 @@ module LoSintegrate_aux
     double precision :: tmp, impact_y, impact_z
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
-    integer :: i, j, iz
+    integer :: i, j, iz, this_RM
     logical, parameter :: ldense_z = .true.
 
     ! Allocates/initialises everything
     valid = .false.
     if (.not.allocated(data%RM)) then
-      allocate(data%RM(props%n_redshifts))
-      allocate(data%Stokes_I(props%n_redshifts))
-      allocate(data%Stokes_Q(props%n_redshifts))
-      allocate(data%Stokes_U(props%n_redshifts))
-      allocate(data%number_of_cells(props%n_redshifts))
+      allocate(data%RM(props%n_RMs))
+      allocate(data%column_density(props%n_RMs))
       data%RM = 0; data%number_of_cells = 0;
       data%Stokes_I = 0; data%Stokes_U = 0; data%Stokes_Q = 0
     endif
@@ -94,12 +95,11 @@ module LoSintegrate_aux
     if (abs(impacty_rmax)>1) return
 
     ! Sets optional arguments and their default values
-    lRM=.false.; lI=.true.; lQ=.true.; lU=.true.; lpsi0=.false.
+    lRM=.false.; lI=.true.; lQ=.true.; lU=.true.
     if (present(RM_out)) lRM = RM_out
     if (present(I_out)) lI = I_out
     if (present(Q_out)) lQ = Q_out
     if (present(U_out)) lU = U_out
-    if (present(psi0_out)) lpsi0 = psi0_out
 
     ! Computes maximum radius and impact parameters
     rmax = props%Rcyl(iz,props%n_grid)
@@ -250,15 +250,12 @@ module LoSintegrate_aux
       ! TODO change this to the values used in the simulation
     endif
 
-    data%number_of_cells(iz) = data%number_of_cells(iz) + size(x_path)
+    data%number_of_cells = data%number_of_cells + size(x_path)
     if (lI) then
-      if (.not.allocated(data%Stokes_I)) then
-          allocate(data%Stokes_I(props%n_redshifts))
-      endif
       ! Synchrotron emission
       ! NB Using the total density as a proxy for cosmic ray electron density
       ! NB2 Increments previous calculation
-      data%Stokes_I(iz) = Compute_Stokes('I', Bperp, ne, x_path, z_path,&
+      data%Stokes_I = Compute_Stokes('I', Bperp, ne, x_path, z_path,&
                                          wavelength_gal, data%alpha, Brnd)
     endif
 
@@ -272,30 +269,31 @@ module LoSintegrate_aux
       enddo
 
       if (lQ) then
-        if (.not.allocated(data%Stokes_Q)) then
-          allocate(data%Stokes_Q(props%n_redshifts))
-        endif
-
-        data%Stokes_Q(iz) = Compute_Stokes('Q', Bperp, ne, x_path, z_path,&
-                                           wavelength_gal, data%alpha, psi)
+        data%Stokes_Q = Compute_Stokes('Q', Bperp, ne, x_path, z_path,&
+                                       wavelength_gal, data%alpha, psi)
       endif
       if (lU) then
-        if (.not.allocated(data%Stokes_U)) then
-          allocate(data%Stokes_U(props%n_redshifts))
-        endif
-
-        data%Stokes_U(iz) = Compute_Stokes('U', Bperp, ne, x_path, z_path,&
-                                           wavelength_gal, data%alpha, psi)
+        data%Stokes_U = Compute_Stokes('U', Bperp, ne, x_path, z_path,&
+                                       wavelength_gal, data%alpha, psi)
       endif
     endif
 
     if (lRM) then
       if (.not.allocated(data%RM)) then
-        allocate(data%RM(props%n_redshifts))
+        allocate(data%RM(props%n_RMs))
+        allocate(data%column_density(props%n_RMs))
+      endif
+
+      if (present(iRM)) then
+        this_RM = iRM
+      else
+        this_RM = 1
       endif
       ! Faraday rotation (backlit)
       ! NB Using the total density as a proxy for thermal electron density
-      data%RM(iz) = Compute_RM(Bpara, ne, x_path, z_path)
+      data%RM(this_RM) = Compute_RM(Bpara, ne, x_path, z_path)
+
+      data%column_density(this_RM) = Compute_Column_Density(ne, x_path, z_path)
     endif
 
   end subroutine LoSintegrate
@@ -378,11 +376,10 @@ module LoSintegrate_aux
     real(c_double), dimension(:), pointer :: v
     ! Reads the memory address
     call c_f_pointer(v_c, v, [n])
-!     data_glb%Stokes_I(iz_glb) = 0d0
     call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
                                    RM_out=.false., I_out=.true., &
                                    Q_out=.false., U_out=.false.)
-    IntegrandImage_I = data_glb%Stokes_I(iz_glb)
+    IntegrandImage_I = data_glb%Stokes_I
   end function IntegrandImage_I
 
   function IntegrandImage_PI(v_c, n, params) bind(c)
@@ -396,13 +393,25 @@ module LoSintegrate_aux
     real(c_double), dimension(:), pointer :: v
     ! Reads the memory address
     call c_f_pointer(v_c, v, [n])
-!     data_glb%Stokes_Q(iz_glb) = 0d0
-!     data_glb%Stokes_U(iz_glb) = 0d0
     call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
                                    RM_out=.false., I_out=.false., &
                                    Q_out=.true., U_out=.true.)
-    IntegrandImage_PI = sqrt(data_glb%Stokes_Q(iz_glb)**2 + data_glb%Stokes_U(iz_glb)**2)
+    IntegrandImage_PI = sqrt(data_glb%Stokes_Q**2 + data_glb%Stokes_U**2)
   end function IntegrandImage_PI
+
+  pure function Compute_Column_Density(ne, x_path, z_path)
+    ! Computes column density measure for one specific line of sight
+    !
+    ! Input: ne -> 1d-array, number of thermal electrons, in cm^-3
+    !        x_path,z_path -> 1d-array, positions along path, in kpc
+    ! Output: column density, cm^-2
+    !
+    double precision, dimension(:), intent(in) :: ne, x_path, z_path
+    double precision :: Compute_Column_Density
+
+    Compute_Column_Density = Integrator(ne, x_path*cm_kpc, z_path*cm_kpc)
+
+  end function Compute_Column_Density
 
   pure function Compute_RM(Bpara, ne, x_path, z_path)
     ! Computes the Faraday rotation measure for one specific line of sight
@@ -420,6 +429,7 @@ module LoSintegrate_aux
 
     Compute_RM = Integrator(integrand, x_path, z_path)
   end function Compute_RM
+
 
   pure function Compute_Stokes(S, Bperp, ncr, x_path, z_path, &
                                  wavelength, alpha, Brnd_or_psi)
@@ -556,20 +566,20 @@ module LoSintegrate_aux
             call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
                               I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
 
-            I_im(i,j) = data%Stokes_I(it)
-            data%Stokes_I(it) = 0
+            I_im(i,j) = data%Stokes_I
+            data%Stokes_I = 0
 
-            Q_im(i,j) = data%Stokes_Q(it)
-            data%Stokes_Q(it) = 0
+            Q_im(i,j) = data%Stokes_Q
+            data%Stokes_Q = 0
 
-            U_im(i,j) = data%Stokes_U(it)
-            data%Stokes_U(it) = 0
+            U_im(i,j) = data%Stokes_U
+            data%Stokes_U = 0
 
-            N_im(i,j) = data%number_of_cells(it)
-            data%number_of_cells(it) = 0
+            N_im(i,j) = data%number_of_cells
+            data%number_of_cells = 0
 
-            RM_im(i,j) = data%RM(it)
-            data%RM(it) = 0
+            RM_im(i,j) = data%RM(1)
+            data%RM = 0
           enddo
 
           if (to_file) then

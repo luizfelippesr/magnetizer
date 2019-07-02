@@ -3,12 +3,14 @@ import subprocess
 import os.path
 
 def run_LoS(runtype, parameters_file, gal_id, iz, theta, wavelength=20e-2,
-            ignore_small_scale=False, zmax=None, ymax=None, imgdir='img', verbose=False):
+            ignore_small_scale=False, zmax=None, ymax=None, imgdir='img',
+            verbose=False, path=''):
     theta_rad = np.deg2rad(theta)
         
-    cmd = "./Observables_single.exe {type} {param} {ig} {iz} {theta} {lamb} {ignore_small} ".format(
-        param=parameters_file, ig=gal_id, iz=iz, theta=theta_rad, lamb=wavelength,
-        ignore_small=int(ignore_small_scale), type=runtype)
+    cmd = "{path} {type} {param} {ig} {iz} {theta} {lamb} {ignore_small} ".format(
+      param=parameters_file, ig=gal_id, iz=iz, theta=theta_rad, lamb=wavelength,
+      ignore_small=int(ignore_small_scale), type=runtype,
+      path=os.path.join(path,'Observables_single.exe'))
     
     if zmax is not None:
         zmax_actual = zmax/np.sin(theta_rad)
@@ -32,11 +34,11 @@ def run_LoS(runtype, parameters_file, gal_id, iz, theta, wavelength=20e-2,
 
 class Stokes_data(object):
     def __init__(self, parameters_file, gal_id, iz, theta, wavelength=20e-2, 
-                 ignore_small_scale=False, zmax=None,
+                 ignore_small_scale=False, zmax=None, runpath='./',
                  ymax=None, imgdir='/tmp/img', verbose=False):
         run_LoS('Image', parameters_file, gal_id, iz, theta, wavelength,
                 ignore_small_scale=ignore_small_scale, 
-                zmax=zmax, ymax=ymax, 
+                zmax=zmax, ymax=ymax, path=runpath,
                 imgdir=imgdir, verbose=verbose)
         
         for d in ['z','y','I','Q','U','RM','cells']:

@@ -58,7 +58,7 @@ contains
     double precision, allocatable, dimension(:,:) :: buffer
     double precision, allocatable, dimension(:) :: bufferz
     integer :: iz
-    double precision, dimension(number_of_redshifts) :: ts_I, ts_PI, ts_z, ts_y, ts_theta, ts_RM
+    double precision, dimension(number_of_redshifts) :: ts_I, ts_PI, ts_z, ts_y, ts_theta, ts_RM, ts_column
     double precision :: impact_y, impact_z
 
     error = .false.
@@ -93,6 +93,7 @@ contains
         ts_y(iz) = INVALID
         ts_z(iz) = INVALID
         ts_RM(iz) = INVALID
+        ts_column(iz) = INVALID
         cycle
       endif
 
@@ -131,6 +132,7 @@ contains
           call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
                             RM_out=.true., I_out=.false., Q_out=.false., U_out=.false.)
           ts_RM(iz) = gbl_data%RM(iz)
+          ts_column(iz) = gbl_data%column_density(iz)
         endif
       endif
     enddo

@@ -25,7 +25,8 @@ module LoSintegrate_aux
   public :: alloc_Galaxy_Properties
   public :: print_image, IntegrateImage
 
-
+  ! 30% fixed ionisation fraction!
+  double precision, parameter :: ionisation_fraction = 0.3
 
   type Galaxy_Properties
     double precision, allocatable, dimension(:,:) :: Br, Bp, Bz
@@ -149,8 +150,8 @@ module LoSintegrate_aux
       Bz_all(i) = sign(props%Bz(iz,j), zc(i))
 
       ! Stores density and scale height
-      ! NB the scaling with of n with z will be done later!
-      ne_all(i) = props%n(iz,j)
+      ! NB the scaling with of n with z is done further ahead!
+      ne_all(i) = props%n(iz,j) * ionisation_fraction
       h_all(i) = props%h(iz,j)
     enddo
 
@@ -292,8 +293,9 @@ module LoSintegrate_aux
       ! Faraday rotation (backlit)
       ! NB Using the total density as a proxy for thermal electron density
       data%RM(this_RM) = Compute_RM(Bpara, ne, x_path, z_path)
-
-      data%column_density(this_RM) = Compute_Column_Density(ne, x_path, z_path)
+      ! Computes column density using neutral gas
+      data%column_density(this_RM) = Compute_Column_Density(                   &
+         ne*(1d0-ionisation_fraction)/ionisation_fraction, x_path, z_path)
     endif
 
   end subroutine LoSintegrate
@@ -399,17 +401,17 @@ module LoSintegrate_aux
     IntegrandImage_PI = sqrt(data_glb%Stokes_Q**2 + data_glb%Stokes_U**2)
   end function IntegrandImage_PI
 
-  pure function Compute_Column_Density(ne, x_path, z_path)
+  function Compute_Column_Density(nn, x_path, z_path)
     ! Computes column density measure for one specific line of sight
     !
-    ! Input: ne -> 1d-array, number of thermal electrons, in cm^-3
+    ! Input: nn -> 1d-array, number of neutral atoms, in cm^-3
     !        x_path,z_path -> 1d-array, positions along path, in kpc
     ! Output: column density, cm^-2
     !
-    double precision, dimension(:), intent(in) :: ne, x_path, z_path
+    double precision, dimension(:), intent(in) :: nn, x_path, z_path
     double precision :: Compute_Column_Density
 
-    Compute_Column_Density = Integrator(ne, x_path*cm_kpc, z_path*cm_kpc)
+    Compute_Column_Density = Integrator(nn, x_path*cm_kpc, z_path*cm_kpc)
 
   end function Compute_Column_Density
 

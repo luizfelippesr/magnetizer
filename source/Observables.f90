@@ -23,6 +23,7 @@ module Observables_aux
   public Compute_I_PI_RM, set_runtype
   type(LoS_data),public :: gbl_data
   logical :: lRM=.false., lI=.false., lPI=.false.
+  integer, parameter :: nRMs = 1
   double precision, parameter :: INVALID = -99999
 contains
   subroutine set_runtype(run_type)
@@ -57,8 +58,10 @@ contains
     type(Galaxy_Properties) :: props
     double precision, allocatable, dimension(:,:) :: buffer
     double precision, allocatable, dimension(:) :: bufferz
-    integer :: iz
-    double precision, dimension(number_of_redshifts) :: ts_I, ts_PI, ts_z, ts_y, ts_theta, ts_RM, ts_column
+    integer :: iz, iRM
+    double precision, dimension(number_of_redshifts) :: ts_I, ts_PI
+    double precision, allocatable, dimension(:,:) :: ts_RM, ts_column
+    double precision, allocatable, dimension(:,:) :: ts_theta, ts_z, ts_y
     double precision :: impact_y, impact_z
 
     error = .false.
@@ -82,6 +85,13 @@ contains
     call IO_read_dataset_scalar('z', gal_id, bufferz, group='Input')
     props%z = bufferz
 
+    props%n_RMs = nRMs
+    allocate(ts_RM(number_of_redshifts, props%n_RMs))
+    allocate(ts_column(number_of_redshifts, props%n_RMs))
+    allocate(ts_theta(number_of_redshifts, props%n_RMs))
+    allocate(ts_y(number_of_redshifts, props%n_RMs))
+    allocate(ts_z(number_of_redshifts, props%n_RMs))
+
     call message('Computing observables', gal_id=gal_id, info=1)
     do iz=1, number_of_redshifts
       ! Catches invalid redshifts
@@ -89,31 +99,32 @@ contains
         ! Marks them as invalid (will be converted into NaN by the python API)
         ts_I(iz) = INVALID
         ts_PI(iz) = INVALID
-        ts_theta(iz) = INVALID
-        ts_y(iz) = INVALID
-        ts_z(iz) = INVALID
-        ts_RM(iz) = INVALID
-        ts_column(iz) = INVALID
+        ts_theta(iz,:) = INVALID
+        ts_y(iz,:) = INVALID
+        ts_z(iz,:) = INVALID
+        ts_RM(iz,:) = INVALID
+        ts_column(iz,:) = INVALID
         cycle
       endif
 
       ! First, randomizes inclination and impact parameter
       ! Unless a fixed angle is signaled, selects a random inclination
       ! from a uniform distribution between 0 and 90 degrees
+      call set_random_seed(gal_id, p_random_seed)
       if (random_theta) then
-        call set_random_seed(gal_id, p_random_seed)
         call random_number(gbl_data%theta)
         gbl_data%theta = gbl_data%theta * pi * 0.5d0
       endif
-      ts_theta(iz) = gbl_data%theta
+      ! The first value of theta is the one used for integrated I and PI.
+      ts_theta(iz,1) = gbl_data%theta
 
       if (lRM) then
         ! Picks up a random line of sight betwen 0 and maximum radius
         ! NB this is done on the plane of the sky!
         call random_number(impact_y)
         call random_number(impact_z)
-        ts_y(iz) = impact_y
-        ts_z(iz) = impact_z
+        ts_y(iz,1) = impact_y
+        ts_z(iz,1) = impact_z
         ! Converts from the plane of the sky into actual z
         impact_z = impact_z/sin(gbl_data%theta)
       endif
@@ -129,10 +140,28 @@ contains
         endif
         if (lRM) then
           call message('calculating RM', gal_id=gal_id,  val_int=iz, info=2)
-          call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
-                            RM_out=.true., I_out=.false., Q_out=.false., U_out=.false.)
-          ts_RM(iz) = gbl_data%RM(iz)
-          ts_column(iz) = gbl_data%column_density(iz)
+          do iRM=1, props%n_RMs
+            if (iRM/=1) then
+              call random_number(gbl_data%theta)
+              gbl_data%theta = gbl_data%theta * pi * 0.5d0
+              ts_theta(iz,iRM) = gbl_data%theta
+            endif
+            ! Picks up a random line of sight betwen 0 and maximum radius
+            ! NB this is done on the plane of the sky!
+            call random_number(impact_y)
+            call random_number(impact_z)
+            ts_y(iz,iRM) = impact_y
+            ts_z(iz,iRM) = impact_z
+            ! Converts from the plane of the sky into actual z
+            impact_z = impact_z/sin(gbl_data%theta)
+            ! Integrates
+            call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
+                              I_out=.false., Q_out=.false., U_out=.false., &
+                              RM_out=.true., iRM=iRM)
+            print *, iz, iRM, gbl_data%column_density(iRM)
+          enddo
+          ts_RM(iz,:) = gbl_data%RM
+          ts_column(iz,:) = gbl_data%column_density
         endif
       endif
     enddo
@@ -145,9 +174,10 @@ contains
       call IO_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
                             gal_id, ts_PI, units='arbitrary', &
                             description='Integrated polarised synchrotron emission')
-
     if (lRM) &
-      call IO_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
+      call IO_write_dataset('RM', gal_id, ts_RM, units='1/cm^3', &
+                            description='Rotation measure along a random LoS')
+      call IO_write_dataset('column_density', gal_id, ts_column, units='rad/m^2', &
                             description='Rotation measure along a random LoS')
       call IO_write_dataset('RM_LoS_y', gal_id, ts_y, &
           description='Impact parameter used in the RM calculation in units of rmax')

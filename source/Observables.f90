@@ -123,6 +123,8 @@ contains
         ! NB this is done on the plane of the sky!
         call random_number(impact_y)
         call random_number(impact_z)
+        impact_y = impact_y*3/2d0
+        impact_z = impact_z*3/2d0
         ts_y(iz,1) = impact_y
         ts_z(iz,1) = impact_z
         ! Converts from the plane of the sky into actual z
@@ -146,10 +148,12 @@ contains
               gbl_data%theta = gbl_data%theta * pi * 0.5d0
               ts_theta(iz,iRM) = gbl_data%theta
             endif
-            ! Picks up a random line of sight betwen 0 and maximum radius
+            ! Picks up a random line of sight betwen 0 and 3/2 maximum radius
             ! NB this is done on the plane of the sky!
             call random_number(impact_y)
             call random_number(impact_z)
+            impact_y = impact_y*3/2d0
+            impact_z = impact_z*3/2d0
             ts_y(iz,iRM) = impact_y
             ts_z(iz,iRM) = impact_z
             ! Converts from the plane of the sky into actual z
@@ -158,7 +162,6 @@ contains
             call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
                               I_out=.false., Q_out=.false., U_out=.false., &
                               RM_out=.true., iRM=iRM)
-            print *, iz, iRM, gbl_data%column_density(iRM)
           enddo
           ts_RM(iz,:) = gbl_data%RM
           ts_column(iz,:) = gbl_data%column_density

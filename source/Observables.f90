@@ -178,9 +178,9 @@ contains
                             gal_id, ts_PI, units='arbitrary', &
                             description='Integrated polarised synchrotron emission')
     if (lRM) &
-      call IO_write_dataset('RM', gal_id, ts_RM, units='1/cm^3', &
+      call IO_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
                             description='Rotation measure along a random LoS')
-      call IO_write_dataset('column_density', gal_id, ts_column, units='rad/m^2', &
+      call IO_write_dataset('column_density', gal_id, ts_column, units='1/cm^3', &
                             description='Rotation measure along a random LoS')
       call IO_write_dataset('RM_LoS_y', gal_id, ts_y, &
           description='Impact parameter used in the RM calculation in units of rmax')

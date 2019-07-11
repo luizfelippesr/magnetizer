@@ -406,7 +406,11 @@ class MagnetizerRun(object):
             else:
                 output = [ np.where(valid[:,0,iz], dataset[completed,iq,iz], np.NaN)
                           for iq in range(dataset.shape[-2])]
-            return np.concatenate(output)
+            if len(output)==1:
+                output = output[0]
+            else:
+                output = np.array(output)
+            return output
 
         else:
             # If doesn't correspond to a profile

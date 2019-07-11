@@ -98,7 +98,7 @@ class MagnetizerRun(object):
                 continue
             if 'Input' not in hin:
                 print 'Problems with file', hin.filename
-                continue                
+                continue
             data_dict = {x: hout['Output'][x] for x in hout['Output']}
             data_dict.update({x: hin['Input'][x] for x in hin['Input']})
             data_dict.update({x: hout['Log'][x] for x in hout['Log']})
@@ -209,7 +209,13 @@ class MagnetizerRun(object):
                 result = status[self._completed, iz]
                 raise NotImplementedError
             elif quantity in self._data[0]:
-                profile = len(self._data[0][quantity].shape)==3
+                if quantity in multiple_entry_datasets:
+                    quantity_type = 'multiple'
+                else:
+                    if len(self._data[0][quantity].shape)==3:
+                      quantity_type = 'profile'
+                    else:
+                      quantity_type = 'scalar'
 
                 if 'Units' in self._data[0][quantity].attrs:
                     unit = self._data[0][quantity].attrs['Units']
@@ -224,7 +230,7 @@ class MagnetizerRun(object):
                                                         self.redshifts[iz])
                 data = []
                 for i, data_dict in enumerate(self._data):
-                      data.append(self._clean(data_dict[quantity],iz,i,profile))
+                      data.append(self._clean(data_dict[quantity],iz,i,quantity_type))
 
                 result = np.concatenate(data)
 
@@ -358,7 +364,7 @@ class MagnetizerRun(object):
                     if iz is None or key == (quantity,iz):
                         del self._cache[key]
 
-    def _clean(self, dataset, iz = slice(None), ivol=0, profile=True,
+    def _clean(self, dataset, iz = slice(None), ivol=0, quantity_type=True,
                pre_selected_z=False):
         """
         Removes incomplete and invalid data from a dataset.
@@ -386,13 +392,22 @@ class MagnetizerRun(object):
         valid = self._valid[ivol]
         completed = self._completed[ivol]
 
-        if profile:
+        if quantity_type =='profile':
             if pre_selected_z:
                 # If the redshift was previously selected
                 # and if corresponds to a profile
                 return np.where(valid[:,:,iz], dataset[completed,:], np.NaN)
 
             return np.where(valid[:,:,iz], dataset[completed,:,iz], np.NaN)
+        elif quantity_type == 'multiple':
+            if pre_selected_z:
+                output = [ np.where(valid[:,0,iz], dataset[completed,iq], np.NaN)
+                          for iq in range(dataset.shape[-1])]
+            else:
+                output = [ np.where(valid[:,0,iz], dataset[completed,iq,iz], np.NaN)
+                          for iq in range(dataset.shape[-2])]
+            return np.concatenate(output)
+
         else:
             # If doesn't correspond to a profile
             if pre_selected_z:
@@ -465,6 +480,7 @@ units_dict = {
               'Msun' : u.Msun,
               'Msun/yr' : u.Msun/u.yr,
               'cm^-3' : u.cm**-3,
+              '1/cm^3' : u.cm**-3,
               'erg cm^-3' : u.erg*u.cm**-3,
               'km/s' : u.km/u.s,
               'km/s/kpc': u.km/u.s/u.kpc,
@@ -477,3 +493,6 @@ units_dict = {
               'radians' : u.radian,
               'rad/m^2' : u.radian/u.m/u.m,
              }
+
+# Quantities with multiple entries per redshift
+multiple_entry_datasets = {'RM','RM_LoS_y','RM_LoS_z','column_density','theta'}

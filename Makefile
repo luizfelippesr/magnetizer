@@ -6,7 +6,7 @@ builddir=build
 _OBJ= tsDataObj.o bessel_functions.o root_finder.o constants.o grid.o floor_field.o global_input_parameters.o pressureEquilibrium.o outflow.o random.o  input_parameters.o IO_hdf5.o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o seed_field.o distributor.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
-FCFLAGS+= -lfgsl -I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check
+FCFLAGS+= -lfgsl -I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -lgsl -lgslcblas -lm
 
 FCFLAGS_TEST=-g -Wall
 FCFLAGS_PROD=-O2

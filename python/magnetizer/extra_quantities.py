@@ -367,7 +367,10 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
     elif qname == r'hmax_rmax':
         quantity = get('h_at_Bmax')/get('rmax')
         quantity = quantity.cgs
-
+    
+    elif qname in ('BoT', 'B/T'):
+        Mbulge = get('Mstars_bulge')
+        quantity = Mbulge/(Mbulge + get('Mstars_disk'))
     elif qname == r'b':
         quantity = get('Beq').copy()
         quantity *= mag_run.parameters.dynamo['FMAG']

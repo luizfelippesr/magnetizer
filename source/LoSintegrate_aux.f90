@@ -246,7 +246,7 @@ module LoSintegrate_aux
     else
       ! Computes the random field in microgauss, assuming hydrogen mass and:
       !                      v0=1e5cm/s f=0.5  1d6\muG
-      Brnd = sqrt(4*pi*ne*Hmass)*10d5 * 0.5d0 *1d6
+      Brnd = sqrt(4*pi*ne/ionisation_fraction*Hmass)*10d5 * 0.5d0 *1d6
 
       ! TODO change this to the values used in the simulation
     endif

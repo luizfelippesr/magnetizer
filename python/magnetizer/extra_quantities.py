@@ -217,7 +217,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         quantity = np.abs(get('Bp'))
 
     elif qname == '|Br|':
-        quantity = np.abs(get('Bp'))
+        quantity = np.abs(get('Br'))
 
     elif qname == '|Bz|':
         quantity = get('Bzmod')
@@ -367,7 +367,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
     elif qname == r'hmax_rmax':
         quantity = get('h_at_Bmax')/get('rmax')
         quantity = quantity.cgs
-    
+
     elif qname in ('BoT', 'B/T'):
         Mbulge = get('Mstars_bulge')
         quantity = Mbulge/(Mbulge + get('Mstars_disk'))

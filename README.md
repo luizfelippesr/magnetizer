@@ -9,7 +9,7 @@ This code takes the output of the [Galform][GLF] [semi-analytic model of galaxy 
 simulated galaxy. The magnetic field is obtained by numerically solving the
 galactic dynamo equation throughout history of each galaxy.
 
-For more details about the physical model, we refer the reader to to the original [code paper][CodePaper].
+For more details about the physical model, we refer the reader to the original [code paper][CodePaper].
 
 [CodePaper]: https://ui.adsabs.harvard.edu/#abs/2019MNRAS.483.2424R/
 [SAM]: https://ui.adsabs.harvard.edu/#abs/2006RPPh...69.3101B/
@@ -34,7 +34,7 @@ The code can be run using mpi:
 ```
 mpirun ./Magnetizer.exe <parameters_file>
 ```
-The parameter file must include the path to the HDF5 input file, containing the 
+The parameter file must include the path to the HDF5 input file, containing the
 time-evolving galaxy properties.
 The input file can be generated using the scripts/prepare_input.py script.
 Parameters not specified in the parameters file are set to their default values,
@@ -86,12 +86,12 @@ An example Galform output can be found at `scripts/test_SAM_output/galaxies.hdf5
 To facilitate any analysis tasks, one can use the `MagnetizerRun` python object to interact with the input and output. These objects will only load information of galaxies which were completed (i.e. galaxies which did not run either because of error or because Magnetizer was prematurely interrupted are automatically ignored).
 
 ```python
-run = magnetizer.MagnetizerRun(input_path='example/example_input.hdf5', 
+run = magnetizer.MagnetizerRun(input_path='example/example_input.hdf5',
                                output_path='example/example_output.hdf5')
 ```
 It is also possible to supply lists of filenames to input_path and output_path (for example in the case where one is working with various subvolumes of a large simulation, each of them stored in a separate file). The MagnetizerRun object will concatenate the data of the different files in the lists whenever this is needed.
 
- MagnetizerRun objects contain several useful attributes, as 
+ MagnetizerRun objects contain several useful attributes, as
 ```python
 zs = run.redshifts
 times = run.times

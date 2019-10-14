@@ -60,8 +60,10 @@ module LoSintegrate_aux
   contains
 
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, &
-                          iz, RM_out, I_out, Q_out, U_out, iRM)
+                          iz, RM_out, I_out, Q_out, U_out, iRM,    &
+                          x_FRB, z_FRB)
     use input_constants
+    use messages
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
     ! Impact parameter in y- and z-directions in units of rmax
@@ -78,6 +80,7 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
     double precision :: rmax, wavelength_gal
+    double precision, optional, intent(in) :: x_FRB, z_FRB
     double precision :: tmp, impact_y, impact_z
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
@@ -173,7 +176,8 @@ module LoSintegrate_aux
     if (ldense_z) then
       ! Sets a tentative z-maximum to 3.5 times the scale-height
       zmin = -3.5d0*h(1); zmax = 3.5d0*h(size(h))
-
+      ! If a starting point for the integration is supplied, use it
+      if (present(z_FRB)) zmin = z_FRB
       ! Computes corresponding values for x
       xmin = (zmin - impact_z)*tan(data%theta)
       xmax = (zmax - impact_z)*tan(data%theta)
@@ -186,7 +190,13 @@ module LoSintegrate_aux
         xmax = x_path(size(x_path))
         zmax = z_path(size(x_path))
       endif
+      ! If a starting x for the integration is supplied, asserts things
+      ! are still correct
+      if (present(x_FRB)) then
+        if (xmin /= x_FRB) stop 'Assertion error at LoSintegrate! xmin /= x_FRB'
+      endif
 
+      ! Produces the dense grid
       z_path_new = linspace(zmin,zmax, data%nz_points)
       x_path_new = (z_path_new - impact_z)*tan(data%theta)
 

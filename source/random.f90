@@ -20,7 +20,7 @@ module random
   implicit none
   private
 
-  public :: set_random_seed, random_normal
+  public :: set_random_seed, random_normal, draw_from_pdf
 
 contains
 
@@ -108,5 +108,34 @@ contains
     random_normal = v/u
     return
   end function random_normal
+
+
+  double precision function draw_from_pdf(x,pdf) result(y)
+    ! Draws a random number from an arbitrary distribution using the
+    ! rejection method
+    !
+    ! Input: x -> 1d-array containing the x values over which P(x) is defined
+    !        pdf -> 1d-array containing the P(x)
+    ! Output: random number drawn from pdf
+    use interpolation, only: interpolate
+    double precision, dimension(:), intent(in) :: x, pdf
+    double precision :: Py, r1, r2
+    double precision, dimension(1) :: PDF_y
+    do
+      ! Two uniform random numbers
+      call random_number(r1)
+      call random_number(r2)
+
+      ! Rescale and interpret them as point in the y-PDF(y) plane
+      y = minval(x) + (maxval(x) - minval(x))*r1
+      Py = minval(pdf) + (maxval(pdf) - minval(pdf))*r2
+
+      ! Computes the value of PDF(y) through interpolation
+      call interpolate(x, pdf, [y], PDF_y)
+      ! Checks whether point is within allowed area
+      if (Py < PDF_y(1)) exit
+    end do
+    return
+  end function draw_from_pdf
 
 end module random

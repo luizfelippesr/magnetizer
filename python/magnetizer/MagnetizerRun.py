@@ -387,26 +387,29 @@ class MagnetizerRun(object):
             self._valid = {}
 
         if ivol not in self._valid:
+            self._valid[ivol]= {}
+
+        if iz not in self._valid[ivol]:
             # Pre-loads heights, which will be used to distinguish between valid
             # and invalid outputs.
-            self._valid[ivol]=self._data[ivol]['h'][self._completed[ivol],:,:]>0
+            self._valid[ivol][iz]=self._data[ivol]['h'][self._completed[ivol],:,iz]>0
 
-        valid = self._valid[ivol]
+        valid = self._valid[ivol][iz]
         completed = self._completed[ivol]
 
         if quantity_type =='profile':
             if pre_selected_z:
                 # If the redshift was previously selected
                 # and if corresponds to a profile
-                return np.where(valid[:,:,iz], dataset[completed,:], np.NaN)
+                return np.where(valid[:,:], dataset[completed,:], np.NaN)
 
             return np.where(valid[:,:,iz], dataset[completed,:,iz], np.NaN)
         elif quantity_type == 'multiple':
             if pre_selected_z:
-                output = [ np.where(valid[:,0,iz], dataset[completed,iq], np.NaN)
+                output = [ np.where(valid[:,0], dataset[completed,iq], np.NaN)
                           for iq in range(dataset.shape[-1])]
             else:
-                output = [ np.where(valid[:,0,iz], dataset[completed,iq,iz], np.NaN)
+                output = [ np.where(valid[:,0], dataset[completed,iq,iz], np.NaN)
                           for iq in range(dataset.shape[-2])]
             if len(output)==1:
                 output = output[0]
@@ -419,9 +422,9 @@ class MagnetizerRun(object):
             if pre_selected_z:
                 # If the redshift was previously selected
                 # and if doesn't correspond to a profile
-                return np.where(valid[:,0,iz], dataset[completed], np.NaN)
+                return np.where(valid[:,0], dataset[completed], np.NaN)
 
-            return np.where(valid[:,0,iz], dataset[completed,iz], np.NaN)
+            return np.where(valid[:,0], dataset[completed,iz], np.NaN)
 
 
     def _clean_gal(self, dataset, gal_id, ivol, quantity, profile=True,

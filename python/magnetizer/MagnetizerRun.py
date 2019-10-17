@@ -231,8 +231,10 @@ class MagnetizerRun(object):
                 data = []
                 for i, data_dict in enumerate(self._data):
                       data.append(self._clean(data_dict[quantity],iz,i,quantity_type))
-
-                result = np.concatenate(data)
+                if quantity_type == 'multiple':
+                    result = np.concatenate(data, axis=1)
+                else:
+                    result = np.concatenate(data)
 
                 if unit is not None:
                     result = result*unit

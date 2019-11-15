@@ -45,19 +45,19 @@ class Parameters(object):
     name : str
         Name of the model
     file : h5py.File
-        The same as h5file parameter
+        The same as the h5file argument
     ISM_and_disk : dict
-
+        Interstellar medium parameters
     dynamo : dict
-        Global dynamo parameters
+        Dynamo equations parameters and switches
     grid : dict
-        Global grid parameters
+        Grid settings
     io : dict
         Global io parameters
     outflow : dict
         Global outflow parameters
     run : dict
-        Global run parameters
+        Run settings and timestepping parameters
     txt : str
         Input data converted into a nicely formated text file
     """

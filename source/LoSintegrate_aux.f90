@@ -33,7 +33,7 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:,:) :: Rcyl, h, n
     double precision, allocatable, dimension(:) :: z
     integer :: n_redshifts, n_grid, igal
-    integer :: n_RMs = 1
+    integer :: n_RMs = 10
   end type
 
   type LoS_data
@@ -49,7 +49,7 @@ module LoSintegrate_aux
     double precision :: theta = 0d0
     logical :: B_scale_with_z = .true.
     logical :: ignore_small_scale_field = .false.
-    integer :: nz_points = 300
+    integer :: nz_points = 200
   end type
 
   ! Global variables for the integration
@@ -170,7 +170,6 @@ module LoSintegrate_aux
     h = pack(h_all(:),valid(:))
     x_path = pack(xc(:),valid(:))
     z_path = pack(zc(:),valid(:))
-
     ! The following makes the grid denser, to allow meaningful z-integration
     ! This step is irrelevant for edge-on, but is important for face-on
     if (ldense_z) then

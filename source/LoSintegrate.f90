@@ -119,25 +119,31 @@ program Observables_single
   ! Initializes IO (this also reads ngals from the hdf5 input file)
   call IO_start(MPI_COMM_WORLD, info_mpi, .true., date)
 
+  print *, '   Mode = ', run_type
   ! Reads the other command arguments
   ! <gal_id>
   call get_command_argument(3, command_argument)
   props%igal = str2int(command_argument)
+  print *, '   igal = ', props%igal
   ! <iz> - Index of the selected redshift
   call get_command_argument(4, command_argument)
   it = str2int(command_argument)
+  print *, '   iz = ', it
   ! <theta> - Relative orientation of the galaxy/LoS
   ! The line-of-sight (LOS) is assumed to be parallel to y-z plane
   ! Angle relative to the normal to the midplane
   call get_command_argument(5, command_argument)
   data%theta = str2dbl(command_argument)
+  print *, '   theta = ', data%theta
 
   call get_command_argument(6, command_argument)
   data%wavelength = str2dbl(command_argument)
+  print *, '   wavelenth = ', data%wavelength
 
   ! Sets other parameters (currently, hard-coded)
   data%alpha = 3d0 ! Spectral index of the cr energy distribution
-
+  ! Only one RM to be computed in this mode (Observables_single)
+  props%n_RMs = 1
   data%B_scale_with_z = .false.
   call get_command_argument(7, command_argument)
   if (str2int(command_argument)==1) then
@@ -145,6 +151,8 @@ program Observables_single
   else
     data%ignore_small_scale_field = .false.
   endif
+  print *, '   ignore_small_scale_field = ', data%ignore_small_scale_field
+
   ! Initializes Magnetizer IO and reads relevant galaxy properties
   incomplete = IO_start_galaxy(props%igal)
   if (incomplete) then
@@ -220,7 +228,7 @@ program Observables_single
       call LoSintegrate(props, impact_y, impact_z, data, it, RM_out=.true., &
                         I_out=.false., Q_out=.false., U_out=.false.)
       print *, 'RM:'
-      print *, data%RM(it)
+      print *, data%RM
 
     case ('RM_study')
       call message('Computing RM for this of theta', gal_id=props%igal)

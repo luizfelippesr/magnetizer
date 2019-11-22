@@ -213,9 +213,9 @@ class MagnetizerRun(object):
                     quantity_type = 'multiple'
                 else:
                     if len(self._data[0][quantity].shape)==3:
-                      quantity_type = 'profile'
+                        quantity_type = 'profile'
                     else:
-                      quantity_type = 'scalar'
+                        quantity_type = 'scalar'
 
                 if 'Units' in self._data[0][quantity].attrs:
                     unit = self._data[0][quantity].attrs['Units']
@@ -230,7 +230,7 @@ class MagnetizerRun(object):
                                                         self.redshifts[iz])
                 data = []
                 for i, data_dict in enumerate(self._data):
-                      data.append(self._clean(data_dict[quantity],iz,i,quantity_type))
+                    data.append(self._clean(data_dict[quantity],iz,i,quantity_type))
                 if quantity_type == 'multiple':
                     result = np.concatenate(data, axis=1)
                 else:
@@ -402,8 +402,7 @@ class MagnetizerRun(object):
                 # If the redshift was previously selected
                 # and if corresponds to a profile
                 return np.where(valid[:,:], dataset[completed,:], np.NaN)
-
-            return np.where(valid[:,:,iz], dataset[completed,:,iz], np.NaN)
+            return np.where(valid[:,:], dataset[completed,:,iz], np.NaN)
         elif quantity_type == 'multiple':
             if pre_selected_z:
                 output = [ np.where(valid[:,0], dataset[completed,iq], np.NaN)

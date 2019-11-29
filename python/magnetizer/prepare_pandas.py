@@ -1,8 +1,11 @@
 """
-Utilities interfacing between magnetizer and pandas.
+Utilities for interfacing between magnetizer and pandas.
 """
-import pandas as pd
 import numpy as np
+try:
+    import modin.pandas as pd
+except ModuleNotFoundError:
+    import pandas as pd
 
 
 def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False,

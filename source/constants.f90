@@ -18,7 +18,7 @@
 ! Contains math constants and unit conversions
 
 module math_constants
-
+  use fgsl
   implicit none
 
   double precision, parameter :: pi=     3.14156295358d0
@@ -29,6 +29,11 @@ module math_constants
   double precision, parameter :: s_Gyr=  1.d9*365.25d0*24*3600  !number of s in 1 Gyr
   double precision, parameter :: mkG_G=  1.d6  !number of mkG in 1 G
 
+  double precision, parameter :: G_SI=FGSL_CONST_MKSA_GRAVITATIONAL_CONSTANT
+  double precision, parameter :: Msun_SI = FGSL_CONST_MKSA_SOLAR_MASS
+  double precision, parameter :: kpc_SI = FGSL_CONST_MKSA_PARSEC*1d3
+  double precision, parameter :: density_SI_to_cgs = 1d-3
+  double precision, parameter :: convertPressureSItoGaussian=10
 end module math_constants
 
 

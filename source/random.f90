@@ -20,7 +20,7 @@ module random
   implicit none
   private
 
-  public :: set_random_seed, random_normal, draw_from_pdf
+  public :: set_random_seed, random_normal, draw_from_pdf, random_sign
 
 contains
 

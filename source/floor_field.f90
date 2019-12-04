@@ -19,7 +19,7 @@ module floor_field
   ! Contains subroutines and functions related to the calculation of the
   ! floor of the large scale galactic magnetic field
   use global_input_parameters
-
+  use random, only: random_sign
   implicit none
   private
 

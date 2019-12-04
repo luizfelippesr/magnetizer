@@ -19,7 +19,6 @@ module surface_density
   ! Functions related to computing surface densities and molecular fractions
   use math_constants
   use global_input_parameters
-
   implicit none
 
 contains
@@ -37,6 +36,34 @@ contains
     Sigma = M/2./pi/rs**2 * exp(-r/rs)
     return
   end function exp_surface_density
+
+
+  function molecular_gas_surface_density(r, r_disk, Mgas_disk, Mstars_disk) result(Sigma_m)
+    ! Construncts surface density profile of the molecular gas
+    ! Input:  r -> radii array
+    !         rs -> scale radius of the disk (same units as r)
+    !         M -> Mass
+    ! Output: Array containing Sigma_m (units: [M]/[r^2])
+    use input_constants
+    double precision, dimension(:), intent(in) :: r
+    double precision :: r_disk, Mgas_disk, Mstars_disk, rs, rs_g
+    double precision, dimension(size(r)) :: Rm, Sigma_m, Sigma_star, Sigma_g
+
+    ! Prepares constants
+    rs = constDiskScaleToHalfMassRatio * r_disk ! kpc
+    rs_g = p_gasScaleRadiusToStellarScaleRadius_ratio * rs ! kpc
+
+    ! Computes (total) gas and stars surface densities
+    Sigma_g = exp_surface_density(rs_g, abs(r), Mgas_disk) ! Msun/kpc^2
+    Sigma_star = exp_surface_density(rs, abs(r), Mstars_disk) ! Msun/kpc^2
+
+    ! Computes R_mol
+    Rm = molecular_to_diffuse_ratio(r_disk, Sigma_g, Sigma_star)
+
+    ! Computes diffuse gas surface density
+    Sigma_m = Sigma_g * Rm/(Rm+1d0)
+    return
+  end function molecular_gas_surface_density
 
 
   function molecular_to_diffuse_ratio(rdisk, Sigma_g, Sigma_star) result(Rmol)
@@ -99,4 +126,5 @@ contains
        * convertPressureSItoGaussian
     return
   end function midplane_pressure_Elmegreen
+
 end module surface_density

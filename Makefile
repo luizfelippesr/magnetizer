@@ -100,7 +100,7 @@ $(srcdir)/IO_hdf5.f90: ${builddir}/grid.o ${builddir}/messages.o
 $(srcdir)/profiles.f90: ${builddir}/surface_density.o ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o ${builddir}/grid.o
 $(srcdir)/Magnetizer.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o ${builddir}/distributor.o
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o
-$(srcdir)/floor_field.f90: ${builddir}/grid.o ${builddir}/global_input_parameters.o
+$(srcdir)/floor_field.f90: ${builddir}/random.o ${builddir}/grid.o ${builddir}/global_input_parameters.o
 $(srcdir)/seed_field.f90: ${builddir}/grid.o ${builddir}/profiles.o ${builddir}/global_input_parameters.o
 $(srcdir)/distributor.f90: ${builddir}/global_input_parameters.o ${builddir}/input_parameters.o ${builddir}/IO_hdf5.o ${builddir}/messages.o
 $(srcdir)/tests.distributor.f90:  ${builddir}/grid.o ${builddir}/distributor.o ${builddir}/messages.o

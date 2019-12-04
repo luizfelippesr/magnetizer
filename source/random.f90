@@ -109,6 +109,16 @@ contains
     return
   end function random_normal
 
+  function random_sign()
+    ! Returns a random choice -1.0 or 1.0
+    double precision :: random_sign
+
+    ! Generates a random number
+    call random_number(random_sign)
+    ! Converts into a random sign
+    random_sign = sign(1d0, random_sign-0.5d0)
+  end function random_sign
+
 
   double precision function draw_from_pdf(x,pdf) result(y)
     ! Draws a random number from an arbitrary distribution using the

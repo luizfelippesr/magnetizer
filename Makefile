@@ -44,11 +44,11 @@ main: $(OBJ) ${builddir}/Magnetizer.o
 
 
 # Other programs
-Observables_single: TST ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
-	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o  -o Observables_single.exe
+Observables_single: TST ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
+	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o  -o Observables_single.exe
 
-Observables: TST ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/Observables.o ${builddir}/distributor.o ${builddir}/random.o
-	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/distributor.o ${builddir}/random.o ${builddir}/Observables.o  -o Observables.exe
+Observables: TST ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/Observables.o ${builddir}/distributor.o ${builddir}/random.o
+	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/distributor.o ${builddir}/random.o ${builddir}/Observables.o  -o Observables.exe
 
 testProfiles: ${builddir}/surface_density.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
 	$(FC) $(FCFLAGS) ${builddir}/surface_density.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe

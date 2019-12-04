@@ -69,9 +69,7 @@ contains
         do i=1, size(r)
           if (r(i) > next_layer) then
             next_layer = next_layer + Delta_r ! increments layer
-            call random_number(sign_value) ! flips a coin
-            sign_value = sign(1d0,sign_value-0.5d0) ! gets sign
-            sign_array(1:i-1) = sign_array(1:i-1) * sign_value ! saves
+            sign_array(1:i-1) = sign_array(1:i-1) * random_sign() ! saves
           endif
         enddo
         ! No need to refresh in the next call
@@ -108,8 +106,7 @@ contains
     double precision, dimension(:), intent(in) :: tau
 
     if (time-t_last_sign_choice > p_floor_kappa*minval(tau)) then
-      call random_number(Bfloor_sign)
-      Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
+      Bfloor_sign = random_sign()
       t_last_sign_choice = time
       ! Sets the sign array (for spatially varying floor) to refresh mode
       refresh_sign_array = .true.
@@ -120,8 +117,7 @@ contains
     ! Initializes the magnetic field floor sign
     t_last_sign_choice = 0d0
     ! Initializes the floor sign randomly
-    call random_number(Bfloor_sign)
-    Bfloor_sign = sign(1d0,Bfloor_sign-0.5d0)
+    Bfloor_sign = random_sign()
     ! Sets the sign array (for spatially varying floor) to refresh mode
     refresh_sign_array = .true.
   end subroutine initialize_floor_sign

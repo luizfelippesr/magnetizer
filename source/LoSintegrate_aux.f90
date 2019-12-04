@@ -18,6 +18,7 @@
 module LoSintegrate_aux
   ! Auxiliary functions used by the program LoSintegrate
   use math_constants
+  use tools, only: linspace
   implicit none
   private
   public :: LoSintegrate
@@ -641,16 +642,6 @@ module LoSintegrate_aux
     galprops%n_redshifts = nz
     galprops%n_grid = nr
   end subroutine alloc_Galaxy_Properties
-
-  function linspace(z_min, z_max, n) result(array)
-    double precision, intent(in) :: z_min,z_max
-    double precision, allocatable, dimension(:) :: array
-    double precision :: step
-    integer :: n,i
-    step = (z_max-z_min)/dble(n-1)
-    allocate(array(n))
-    array = (/( (i-1)*step+z_min, i=1 , n)/)
-  end function linspace
 
   subroutine densify(array, x0, x_dense)
     use interpolation

@@ -53,6 +53,9 @@ Observables: TST ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSinte
 testProfiles: ${builddir}/surface_density.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o
 	$(FC) $(FCFLAGS) ${builddir}/surface_density.o ${builddir}/pressureEquilibrium.o ${builddir}/tests.printProfiles.o ${builddir}/global_input_parameters.o ${builddir}/root_finder.o  -o printProfiles.exe
 
+testFRB: TST ${builddir}/surface_density.o ${builddir}/FRB.o ${builddir}/random.o ${builddir}/tests.FRB.o
+	$(FC) $(FCFLAGS) ${builddir}/surface_density.o ${builddir}/interpolation.o ${builddir}/tools.o ${builddir}/global_input_parameters.o ${builddir}/FRB.o ${builddir}/random.o ${builddir}/tests.FRB.o -o testFRB.exe
+
 testInterpolation: ${builddir}/interpolation.o ${builddir}/tests.interpolation.o
 	$(FC) $(FCFLAGS) ${builddir}/interpolation.o ${builddir}/tests.interpolation.o -o testInterpolation.exe
 testRoots: ${builddir}/root_finder.o ${builddir}/tests.testRoots.o
@@ -104,3 +107,6 @@ $(srcdir)/floor_field.f90: ${builddir}/random.o ${builddir}/grid.o ${builddir}/g
 $(srcdir)/seed_field.f90: ${builddir}/grid.o ${builddir}/profiles.o ${builddir}/global_input_parameters.o
 $(srcdir)/distributor.f90: ${builddir}/global_input_parameters.o ${builddir}/input_parameters.o ${builddir}/IO_hdf5.o ${builddir}/messages.o
 $(srcdir)/tests.distributor.f90:  ${builddir}/grid.o ${builddir}/distributor.o ${builddir}/messages.o
+$(srcdir)/FRB.f90: ${builddir}/random.o ${builddir}/surface_density.o ${builddir}/tools.o
+$(srcdir)/surface_density.f90: ${builddir}/constants.o ${builddir}/global_input_parameters.o
+$(srcdir)/random.f90: ${builddir}/interpolation.o

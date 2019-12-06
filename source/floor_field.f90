@@ -38,7 +38,7 @@ contains
     double precision, intent(in) :: Delta_r
     double precision, dimension(size(r)) :: B_floor
     double precision, dimension(size(r)) :: Ncells, brms
-    double precision :: next_layer, sign_value
+    double precision :: next_layer
     integer :: i
 
     !Number of turbulent cells in the annular volume

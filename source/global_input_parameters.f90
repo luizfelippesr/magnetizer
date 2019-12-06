@@ -225,8 +225,7 @@ module global_input_parameters
   double precision :: p_molecularHeightToRadiusScale = 0.032
 
   ! Ratio between total gas scale length and stellar scale length
-  double precision :: p_gasScaleRadiusToStellarScaleRadius_ratio = 2d0
-  !lfsr: hum... why did we choose 2 as default?
+  double precision :: p_gasScaleRadiusToStellarScaleRadius_ratio = 1d0
 
   ! Molecular fraction calculation
   ! Blitz&Rosolowsky alpha

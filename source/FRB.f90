@@ -22,9 +22,12 @@ module FRB
   implicit none
   private
 
-  public get_FRB_position
+  public get_FRB_position, get_FRB_LoS_position
 contains
   function get_FRB_position(h_FRB, r_disk, Mgas_disk, Mstars_disk, rmax) result(FRB_pos)
+    ! Computes a FRB position, under the assumption that it occurs randomly
+    ! with a probability proportional to the molecular density
+    !
     integer, parameter :: n = 161
     double precision, dimension(n) :: R, Sigma_m, vertical_density
     double precision, intent(in) :: h_FRB, r_disk, Mgas_disk, Mstars_disk, rmax
@@ -58,4 +61,32 @@ contains
 
     FRB_pos(1) = x_FRB; FRB_pos(2) = y_FRB; FRB_pos(3) = z_FRB
   end function get_FRB_position
+
+  function get_FRB_LoS_position(x, y, z, h_FRB, r_disk, Mgas_disk, Mstars_disk, &
+                               rmax) result(FRB_pos)
+    ! Given a line of sight, computes a FRB position, under the assumption that
+    ! it occurs randomly with a probability proportional to the molecular density
+    !
+    double precision, intent(in) :: y
+    double precision, dimension(:), intent(in) :: x, z
+    double precision, intent(in) :: h_FRB, r_disk, Mgas_disk, Mstars_disk, rmax
+    double precision, dimension(size(x)) :: R, Sigma_m, vertical_density
+    double precision, dimension(size(x)) :: molecular_density
+    double precision :: R_FRB, x_FRB, z_FRB, tmp
+    double precision, dimension(3) :: FRB_pos
+
+    ! Computes the values of R for the line of sight
+    R = sqrt(x**2 + y**2)
+    ! The probability is proportional to the density
+    Sigma_m = molecular_gas_surface_density(R, r_disk, Mgas_disk, Mstars_disk)
+    vertical_density =  exp(-abs(z)/h_FRB)
+    molecular_density = Sigma_m*vertical_density ! indictive molecular density
+
+    ! Finds the z position of the FRB, assuming the prob. is prop. to density
+    z_FRB = draw_from_pdf(z, molecular_density) ! NB draw_from_pdf renormalizes
+    ! Gets x_FRB --  as it has to be on the same LoS
+    x_FRB = z_FRB/z(1) * x(1)
+
+    FRB_pos(1) = x_FRB; FRB_pos(2) = y; FRB_pos(3) = z_FRB
+  end function get_FRB_LoS_position
 end module FRB

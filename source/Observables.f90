@@ -22,7 +22,7 @@ module Observables_aux
   private
   public Compute_I_PI_RM, set_runtype
   type(LoS_data),public :: gbl_data
-  logical :: lRM=.false., lI=.false., lPI=.false.
+  logical :: lRM=.false., lI=.false., lPI=.false., lFRB=.false., lDM=.false.
   integer, parameter :: nRMs = 1
   double precision, parameter :: INVALID = -99999
 contains
@@ -35,6 +35,12 @@ contains
         lI = .true.
       case ('RM')
         lRM = .true.
+      case ('DM')
+        lDM = .true.
+      case ('FRB')
+        lFRB = .true.
+        lRM = .true.
+        lDM = .true.
       case ('I/PI', 'I+PI','PI/I','PI+I')
         lPI = .true.
         lI = .true.
@@ -69,6 +75,7 @@ contains
     call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
     allocate(buffer(number_of_redshifts,p_nx_ref))
     allocate(bufferz(number_of_redshifts))
+
     props%igal = gal_id
     call IO_read_dataset_vector('r', gal_id, buffer, group='Output')
     props%Rcyl = buffer
@@ -84,8 +91,15 @@ contains
     props%n = buffer
     call IO_read_dataset_scalar('z', gal_id, bufferz, group='Input')
     props%z = bufferz
+    call IO_read_dataset_scalar('Mgas_disk', gal_id, bufferz, group='Input')
+    props%Mgas_disk = bufferz
+    call IO_read_dataset_scalar('Mstars_disk', gal_id, bufferz, group='Input')
+    props%Mstars_disk = bufferz
+    call IO_read_dataset_scalar('r_disk', gal_id, bufferz, group='Input')
+    props%r_disk = bufferz
 
     props%n_RMs = nRMs
+
     allocate(ts_RM(number_of_redshifts, props%n_RMs))
     allocate(ts_column(number_of_redshifts, props%n_RMs))
     allocate(ts_theta(number_of_redshifts, props%n_RMs))
@@ -95,7 +109,7 @@ contains
     call message('Computing observables', gal_id=gal_id, info=1)
     do iz=1, number_of_redshifts
       ! Catches invalid redshifts
-      if (props%h(iz,2)<=0d0) then ! a good marker for invalid runs
+      if (props%h(iz,2)<=0d0 .or. props%r_disk(iz)<0.3) then ! a good marker for invalid runs
         ! Marks them as invalid (will be converted into NaN by the python API)
         ts_I(iz) = INVALID
         ts_PI(iz) = INVALID
@@ -161,7 +175,7 @@ contains
             ! Integrates
             call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
                               I_out=.false., Q_out=.false., U_out=.false., &
-                              RM_out=.true., iRM=iRM)
+                              RM_out=.true., iRM=iRM, FRB_mode=lFRB)
           enddo
           ts_RM(iz,:) = gbl_data%RM
           ts_column(iz,:) = gbl_data%column_density
@@ -169,26 +183,38 @@ contains
       endif
     enddo
 
-    if (lI) &
-      call IO_write_dataset('I_'//str(gbl_data%wavelength*100, 2)//'cm', &
-                          gal_id, ts_I, units='arbitrary', &
-                          description='Integrated synchrotron emission')
-    if (lPI) &
-      call IO_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
-                            gal_id, ts_PI, units='arbitrary', &
-                            description='Integrated polarised synchrotron emission')
-    if (lRM) &
-      call IO_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
+    if (.not.lFRB) then
+      if (lI) &
+        call IO_write_dataset('I_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                            gal_id, ts_I, units='arbitrary', &
+                            description='Integrated synchrotron emission')
+      if (lPI) &
+        call IO_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                              gal_id, ts_PI, units='arbitrary', &
+                              description='Integrated polarised synchrotron emission')
+      if (lRM) then
+        call IO_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
+                              description='Rotation measure along a random LoS')
+        call IO_write_dataset('column_density', gal_id, ts_column, units='1/cm^3', &
+                              description='Rotation measure along a random LoS')
+        call IO_write_dataset('RM_LoS_y', gal_id, ts_y, &
+            description='Impact parameter used in the RM calculation in units of rmax')
+        call IO_write_dataset('RM_LoS_z', gal_id, ts_z, &
+            description='Impact parameter used in the RM calculation in units of rmax')
+      endif
+      call IO_write_dataset('theta', gal_id, ts_theta, units='radians', &
+                            description='Inclination (for observables calculation)')
+    else
+      ! In FRB mode, write things to a different path
+      call IO_write_dataset('FRB_RM', gal_id, ts_RM, units='rad/m^2', &
                             description='Rotation measure along a random LoS')
-      call IO_write_dataset('column_density', gal_id, ts_column, units='1/cm^3', &
-                            description='Rotation measure along a random LoS')
-      call IO_write_dataset('RM_LoS_y', gal_id, ts_y, &
+      call IO_write_dataset('FRB_RM_LoS_y', gal_id, ts_y, &
           description='Impact parameter used in the RM calculation in units of rmax')
-      call IO_write_dataset('RM_LoS_z', gal_id, ts_z, &
+      call IO_write_dataset('FRB_RM_LoS_z', gal_id, ts_z, &
           description='Impact parameter used in the RM calculation in units of rmax')
-
-    call IO_write_dataset('theta', gal_id, ts_theta, units='radians', &
-                          description='Inclination (for observables calculation)')
+      call IO_write_dataset('FRB_theta', gal_id, ts_theta, units='radians', &
+                            description='Inclination (for FRB calculation)')
+    endif
   end subroutine Compute_I_PI_RM
 end module Observables_aux
 
@@ -225,5 +251,7 @@ program Observables
   ! Tries to read a list of galaxy numbers from argument 4 onwards
   galaxies_list = jobs_reads_galaxy_list(5)
   ! Computes I and PI for the galaxies in the sample
+!   gbl_data%theta = 30.d0 * 3.14156295358d0/180d0 TEST
+!   call jobs_distribute(Compute_I_PI_RM, .false., galaxies_list) TEST
   call jobs_distribute(Compute_I_PI_RM, .true., galaxies_list)
 end program Observables

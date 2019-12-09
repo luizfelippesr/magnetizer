@@ -32,7 +32,8 @@ module LoSintegrate_aux
   type Galaxy_Properties
     double precision, allocatable, dimension(:,:) :: Br, Bp, Bz
     double precision, allocatable, dimension(:,:) :: Rcyl, h, n
-    double precision, allocatable, dimension(:) :: z
+    double precision, allocatable, dimension(:) :: z, Mgas_disk, Mstars_disk, r_disk
+    double precision :: h_FRB = 0.1
     integer :: n_redshifts, n_grid, igal
     integer :: n_RMs = 10
   end type
@@ -61,15 +62,15 @@ module LoSintegrate_aux
   contains
 
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, &
-                          iz, RM_out, I_out, Q_out, U_out, iRM,    &
-                          x_FRB, z_FRB)
+                          iz, FRB_mode, RM_out, I_out, Q_out, U_out, iRM)
     use input_constants
     use messages
+    use FRB
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
-    logical, intent(in), optional :: RM_out, I_out, Q_out, U_out
+    logical, intent(in), optional :: RM_out, I_out, Q_out, U_out, FRB_mode
     integer, optional, intent(in) :: iRM
     double precision,dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
     double precision,dimension(2*props%n_grid) :: Bx_all, By_all, Bz_all
@@ -81,12 +82,15 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
     double precision :: rmax, wavelength_gal
-    double precision, optional, intent(in) :: x_FRB, z_FRB
     double precision :: tmp, impact_y, impact_z
     double precision :: zmin, zmax, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
     integer :: i, j, iz, this_RM
     logical, parameter :: ldense_z = .true.
+    logical :: lFRB
+
+    lFRB = .false.
+    if (present(FRB_mode)) lFRB = FRB_mode
 
     ! Allocates/initialises everything
     valid = .false.
@@ -176,8 +180,6 @@ module LoSintegrate_aux
     if (ldense_z) then
       ! Sets a tentative z-maximum to 3.5 times the scale-height
       zmin = -3.5d0*h(1); zmax = 3.5d0*h(size(h))
-      ! If a starting point for the integration is supplied, use it
-      if (present(z_FRB)) zmin = z_FRB
       ! Computes corresponding values for x
       xmin = (zmin - impact_z)*tan(data%theta)
       xmax = (zmax - impact_z)*tan(data%theta)
@@ -190,15 +192,23 @@ module LoSintegrate_aux
         xmax = x_path(size(x_path))
         zmax = z_path(size(x_path))
       endif
-      ! If a starting x for the integration is supplied, asserts things
-      ! are still correct
-      if (present(x_FRB)) then
-        if (xmin /= x_FRB) stop 'Assertion error at LoSintegrate! xmin /= x_FRB'
-      endif
-
       ! Produces the dense grid
-      z_path_new = linspace(zmin,zmax, data%nz_points)
+      z_path_new = linspace(zmin, zmax, data%nz_points)
       x_path_new = (z_path_new - impact_z)*tan(data%theta)
+
+      ! If this is in FRB mode, uses the LoS path to find the FRB position
+      if (lFRB) then
+        ! Gets random position with probability proportional to molecular density
+        zmin = get_FRB_LoS_z_position(x_path_new, impact_y, z_path_new, &
+                                      props%h_FRB,                      &
+                                      props%r_disk(iz),                 &
+                                      props%Mgas_disk(iz),              &
+                                      props%Mstars_disk(iz),            &
+                                      rmax=props%Rcyl(iz,props%n_grid) )
+        ! Produces a new dense grid starting at the *FRB position*
+        z_path_new = linspace(zmin, zmax, data%nz_points)
+        x_path_new = (z_path_new - impact_z)*tan(data%theta)
+      endif
 
       call densify(Bx, x_path, x_path_new)
       call densify(By, x_path, x_path_new)
@@ -570,27 +580,27 @@ module LoSintegrate_aux
       do it=it_min, it_max
         do j=1,n
           impact_z = -zmax + 2*zmax/dble(n)*j
-          z = impact_z
+          z = real(impact_z)
           do i=1,n
             impact_y =  -ymax + 2*ymax/dble(n)*i
-            y(i) = impact_y
+            y(i) = real(impact_y)
 
             call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
                               I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
 
-            I_im(i,j) = data%Stokes_I
+            I_im(i,j) = real(data%Stokes_I)
             data%Stokes_I = 0
 
-            Q_im(i,j) = data%Stokes_Q
+            Q_im(i,j) = real(data%Stokes_Q)
             data%Stokes_Q = 0
 
-            U_im(i,j) = data%Stokes_U
+            U_im(i,j) = real(data%Stokes_U)
             data%Stokes_U = 0
 
-            N_im(i,j) = data%number_of_cells
+            N_im(i,j) = real(data%number_of_cells)
             data%number_of_cells = 0
 
-            RM_im(i,j) = data%RM(1)
+            RM_im(i,j) = real(data%RM(1))
             data%RM = 0
           enddo
 
@@ -633,12 +643,15 @@ module LoSintegrate_aux
   subroutine alloc_Galaxy_Properties(nz, nr, galprops)
     integer, intent(in) :: nz, nr
     type(Galaxy_Properties), intent(inout) :: galprops
-    allocate( galprops%Br(nz,nr),   &
-              galprops%Bp(nz,nr),   &
-              galprops%Bz(nz,nr),   &
-              galprops%Rcyl(nz,nr), &
-              galprops%h(nz,nr),    &
-              galprops%z(nz))
+    allocate( galprops%Br(nz,nr),      &
+              galprops%Bp(nz,nr),      &
+              galprops%Bz(nz,nr),      &
+              galprops%Rcyl(nz,nr),    &
+              galprops%h(nz,nr),       &
+              galprops%z(nz),          &
+              galprops%Mstars_disk(nz),&
+              galprops%Mgas_disk(nz),  &
+              galprops%r_disk(nz))
     galprops%n_redshifts = nz
     galprops%n_grid = nr
   end subroutine alloc_Galaxy_Properties

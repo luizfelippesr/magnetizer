@@ -3,9 +3,10 @@ program testFRB
     use tools, only: linspace
     implicit none
     double precision, parameter :: pi=     3.14156295358d0
-    integer, parameter :: nsamples=10000
+    integer, parameter :: nsamples=5000
     integer, parameter :: npoints=1001
     double precision, dimension(3,nsamples) :: FRB_pos
+    double precision, dimension(2*nsamples) :: FRB_z
     double precision, dimension(npoints) :: x, y, z
     double precision :: theta
     integer :: u, i
@@ -31,14 +32,15 @@ program testFRB
     z = linspace(-2.5d0,2.5d0,npoints)
     y = 2.0
     theta = 30.d0  * pi/180d0
-    x = z / tan(theta)
+    x = z * tan(theta)
 
-    do i=1,nsamples
-        FRB_pos(:,i) = get_FRB_LoS_position(x,y(1),z,h_FRB=0.033d0, r_disk=3d0, Mgas_disk=1d13, &
-                                        Mstars_disk=0d0, rmax=10d0)
+    do i=1,2*nsamples
+        FRB_z(i) = get_FRB_LoS_z_position(x,y(1),z,h_FRB=0.033d0, r_disk=3d0, &
+                                          Mgas_disk=1d13, Mstars_disk=0d0,    &
+                                          rmax=10d0)
     enddo
     open (newunit=u, file='testFRB_LoS_position.dat', status='new',form='unformatted')
-    write (u) FRB_pos
+    write (u) FRB_z
     close (u)
 
 end program testFRB

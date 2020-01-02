@@ -347,6 +347,20 @@ class MagnetizerRun(object):
 
         return size/1e6 * u.Mbyte
 
+    def show_outputs(self):
+        print('{0:12s}{1:13s}{2}'.format('Quantity','Units','Description'))
+        print('{0:12s}{1:13s}{2}'.format('-'*9,'-'*10, '-'*35))
+        for k in self._hout[0]['Output']:
+            try: 
+                unit = self._hout[0]['Output'][k].attrs['Units'][0]
+            except:
+                unit = ''
+            try:
+                description = self._hout[0]['Output'][k].attrs['Description'][0]
+            except:
+                description = ''
+            print('{0:12s}{1:13s}{2}'.format(k, unit, description))
+            
     def reset_galaxy_cache(self, gal_id=None):
         if gal_id is None:
             self._galaxies_cache = {}

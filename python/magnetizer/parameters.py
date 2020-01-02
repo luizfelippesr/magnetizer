@@ -82,7 +82,6 @@ class Parameters(object):
         # Extracts a list of string associated with this name list
         match = re.match('(&\w+)\s+(.+)',txt)
         nml, vals = match.group(1), match.group(2)
-        print nml
         vals = vals.split(',')
         vals_str = ['']
 
@@ -119,7 +118,7 @@ class Parameters(object):
                 value = True
             elif value == 'F':
                 value = False
-                d[param] = value
+            d[param] = value
         # Ajudsts spacing in formated text file
         self.txt += '\n'+out.replace(', /',',\n/')
 

@@ -19,7 +19,7 @@ For more details about the physical model, we refer the reader to the original [
 
 Galaxy Magnetizer requires the following libraries to run:
 
- * [MPI](https://www.open-mpi.org/)
+ * MPI - [OpenMPI](https://www.open-mpi.org/)(>=3.1) or [MPICH](https://www.mpich.org/)(>=3.3)
  * [HDF5](https://www.hdfgroup.org/) - compiled with Fortran and parallel support
  * [GSL](https://www.gnu.org/software/gsl/)
  * [FGSL](http://www.lrz.de/services/software/mathematik/gsl/fortran/)

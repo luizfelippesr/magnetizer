@@ -157,7 +157,7 @@ contains
     ! It is probably a good idea to sync, to avoid different nodes having
     ! slightly different times, for any reason (the attribute creation is
     ! collective, anyway).
-    call MPI_Bcast(date, len_trim(date), MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
+    call MPI_Bcast(date, len(date), MPI_CHAR, 0, MPI_COMM_WORLD, ierr)
 
     ! Avoids MPI errors
     call MPI_Info_create(info_mpi, IERR)

@@ -97,7 +97,7 @@ contains
     call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
     call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
     ! Opens the file collectively.
-    call message('Opening file'//trim(input_file_name), info=3)
+    call message('Opening file '//trim(input_file_name), info=3)
     call h5fopen_f(trim(input_file_name), H5F_ACC_RDWR_F, &
                     file_id, error, access_prp=plist_id)
     call check(error)

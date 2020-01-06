@@ -107,8 +107,8 @@ class TimeEvolution(object):
                 bin_dict = {bin_obj.redshift: bin_obj for bin_obj in bin_objs}
 
         if (no_binning or single_binning) and (target_redshifts is None):
-            raise ValueError, 'Must specify either a list of binning objects ' \
-              '(bin_objs=[bin_obj1,...]) or a list of redshifts (target_redshifts=[z1,...])'
+            raise ValueError('Must specify either a list of binning objects '
+              '(bin_objs=[bin_obj1,...]) or a list of redshifts (target_redshifts=[z1,...])')
 
         if target_redshifts is not None:
             self.zs = mag_run.redshifts[closest_indices(mag_run.redshifts,

@@ -20,8 +20,8 @@ from os.path import basename
 import h5py, numpy as np
 import sys
 import astropy.units as u
-from parameters import Parameters
-import extra_quantities as eq
+from magnetizer.parameters import Parameters
+import magnetizer.extra_quantities as eq
 
 class MagnetizerRun(object):
     """
@@ -76,9 +76,9 @@ class MagnetizerRun(object):
     def __init__(self, output_path, input_path=None,
                  z_tolerance=0.01, verbose=False):
 
-        if isinstance(output_path, basestring):
+        if isinstance(output_path, str):
             output_path = [output_path]
-        if isinstance(input_path, basestring):
+        if isinstance(input_path, str):
             input_path = [input_path]
 
         # Open files for reading
@@ -94,10 +94,10 @@ class MagnetizerRun(object):
         self._data = []
         for hout, hin in zip(houts, hins):
             if 'Output' not in hout:
-                print 'Problems with file', hout.filename
+                print('Problems with file', hout.filename)
                 continue
             if 'Input' not in hin:
-                print 'Problems with file', hin.filename
+                print('Problems with file', hin.filename)
                 continue
             data_dict = {x: hout['Output'][x] for x in hout['Output']}
             data_dict.update({x: hin['Input'][x] for x in hin['Input']})
@@ -226,8 +226,8 @@ class MagnetizerRun(object):
                     unit = 1
 
                 if self.verbose:
-                    print 'Loading {0} at z={1}'.format(quantity,
-                                                        self.redshifts[iz])
+                    print('Loading {0} at z={1}'.format(quantity,
+                                                        self.redshifts[iz]))
                 data = []
                 for i, data_dict in enumerate(self._data):
                     data.append(self._clean(data_dict[quantity],iz,i,quantity_type))
@@ -240,8 +240,8 @@ class MagnetizerRun(object):
                     result = result*unit
             else:
                 if self.verbose:
-                    print 'Computing {0} at z={1}'.format(quantity,
-                                                          self.redshifts[iz])
+                    print('Computing {0} at z={1}'.format(quantity,
+                                                          self.redshifts[iz]))
 
                 result = eq.compute_extra_quantity(quantity,self,z=z,
                                                    cache=cache_intermediate)
@@ -318,7 +318,7 @@ class MagnetizerRun(object):
                     unit = 1
 
                 if self.verbose:
-                    print 'Loading {0} for galaxy {1}'.format(quantity, gal_id)
+                    print('Loading {0} for galaxy {1}'.format(quantity, gal_id))
 
                 self._galaxies_cache[key] = self._clean_gal(data[quantity],
                                                             gal_id, ivol,
@@ -328,7 +328,7 @@ class MagnetizerRun(object):
 
             else:
                 if self.verbose:
-                    print 'Computing {0} for galaxy {1}'.format(quantity, gal_id)
+                    print('Computing {0} for galaxy {1}'.format(quantity, gal_id))
 
 
                 self._galaxies_cache[key] = eq.compute_extra_quantity(quantity,
@@ -351,7 +351,7 @@ class MagnetizerRun(object):
         print('{0:12s}{1:13s}{2}'.format('Quantity','Units','Description'))
         print('{0:12s}{1:13s}{2}'.format('-'*9,'-'*10, '-'*35))
         for k in self._hout[0]['Output']:
-            try: 
+            try:
                 unit = self._hout[0]['Output'][k].attrs['Units'][0]
             except:
                 unit = ''
@@ -360,7 +360,7 @@ class MagnetizerRun(object):
             except:
                 description = ''
             print('{0:12s}{1:13s}{2}'.format(k, unit, description))
-            
+
     def reset_galaxy_cache(self, gal_id=None):
         if gal_id is None:
             self._galaxies_cache = {}
@@ -462,7 +462,6 @@ class MagnetizerRun(object):
         -------
 
         """
-
         if profile:
             # Uses the scaleheight as the proxy for a valid profile
             valid = self._data[ivol]['h'][gal_id, :, :] > 0
@@ -490,7 +489,7 @@ class MagnetizerRun(object):
         iz = np.abs(self.redshifts - z).argmin()
         z_actual = self.redshifts[iz]
         if abs(z_actual-z) > self._z_tolerance:
-            print z, z_actual, z_actual-z
+            print(z, z_actual, z_actual-z)
             raise ValueError("Requested redshift not available (check tolerance).")
 
         return iz

@@ -69,6 +69,8 @@ testDistributor:  ${builddir}/distributor.o  ${builddir}/tests.distributor.o ${b
 	$(FC) $(FCFLAGS) ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/distributor.o  ${builddir}/IO_hdf5.o ${builddir}/grid.o ${builddir}/interpolation.o ${builddir}/tests.distributor.o -o testDistributor.exe
 testRandom: ${builddir}/global_input_parameters.o ${builddir}/interpolation.o  ${builddir}/random.o ${builddir}/tests.random.o
 	$(FC) $(FCFLAGS) ${builddir}/global_input_parameters.o ${builddir}/interpolation.o  ${builddir}/random.o ${builddir}/tests.random.o -o testRandom.exe
+testIO:  ${builddir}/messages.o  ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o ${builddir}/IO_hdf5.o ${builddir}/test.IO.o
+	$(FC) $(FCFLAGS) ${builddir}/messages.o ${builddir}/interpolation.o ${builddir}/grid.o ${builddir}/IO_hdf5.o ${builddir}/test.IO.o  ${builddir}/global_input_parameters.o -o testIO.exe
 
 # All programs
 all: test testRoots testProfiles

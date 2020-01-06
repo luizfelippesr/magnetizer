@@ -91,7 +91,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         get = lambda quantity, redshift=z: mag_run.get(quantity, redshift,
                                                        cache=cache)
     else:
-        raise ValueError, 'Must choose either gal_id or z'
+        raise(ValueError, 'Must choose either gal_id or z')
 
     if qname == 'V':
         quantity = get('Omega')*get('r')
@@ -122,7 +122,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         try:
             v = get('v')
         except ValueError:
-            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            print('Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.')
             v = mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
             v *= u.km/u.s
 
@@ -137,7 +137,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         try:
             v = get('v')
         except ValueError:
-            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            print('Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.')
             v = mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
             v *= u.km/u.s
 
@@ -151,7 +151,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         try:
             v = get('v')
         except ValueError:
-            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            print('Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.')
             v = mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
             v *= u.km/u.s
 
@@ -162,7 +162,6 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         quantity = -get('Shear_at_Bmax')/get('Omega_at_Bmax')
 
     elif qname == 'Bmax_b_at_Bmax':
-        print mag_run.parameters.dynamo['FMAG']
         quantity = get('Bmax_Beq') / mag_run.parameters.dynamo['FMAG']
 
     elif qname == 'D1_D_at_Bmax':
@@ -199,7 +198,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         try:
             v = get('v')
         except ValueError:
-            print 'Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.'
+            print('Warning: v not in the output, using P_ISM_SOUND_SPEED_KM_S instead.')
             v = l/l
             v *= mag_run.parameters.ISM_and_disk['P_ISM_SOUND_SPEED_KM_S']
             v *= u.km/u.s
@@ -459,7 +458,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
             quantity = np.argmax(q,axis=1)
 
     else:
-        raise ValueError, qname + ' is unknown.'
+        raise(ValueError, qname + ' is unknown.')
 
     return quantity
 

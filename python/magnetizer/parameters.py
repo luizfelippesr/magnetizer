@@ -78,7 +78,9 @@ class Parameters(object):
         """
         d = {}; out = ''
         # Reads the attributes
-        txt = self.file.attrs[attribute][0]
+        # (the attributes are in bytes format, which needs to be decoded)
+        txt = self.file.attrs[attribute][0].decode("ascii")
+
         # Extracts a list of string associated with this name list
         match = re.match('(&\w+)\s+(.+)',txt)
         nml, vals = match.group(1), match.group(2)

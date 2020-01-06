@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Magnetizer.  If not, see <http://www.gnu.org/licenses/>.
 #
-from MagnetizerRun import MagnetizerRun
-from Binning import *
+from .MagnetizerRun import MagnetizerRun
+from .Binning import *
 
-from parameters import Parameters
-import visualization
+from .parameters import Parameters

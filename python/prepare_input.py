@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (C) 2018,2019 Luiz Felippe S. Rodrigues, Luke Chamandy
 #
 # This file is part of Magnetizer.
@@ -229,4 +229,4 @@ if __name__ == "__main__"  :
                                )
     end = time.time()
     prepares_hdf5_input(data_dict, args.MAGNETIZER_INPUT)
-    print 'preparation time', end-start,'s'
+    print('preparation time', end-start,'s')

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # Copyright (C) 2018,2019 Luiz Felippe S. Rodrigues, Luke Chamandy
 #
 # This file is part of Magnetizer.
@@ -19,7 +19,6 @@
 """
 Print to screen summary statistics about errors in a particular output
 """
-from __future__ import division
 import h5py
 import numpy as np
 
@@ -61,23 +60,23 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p'], quiet=False):
         if ok:
             nice+=1
     if not quiet:
-        print '\nModel name:',name[0]
-        print 'File: ',h5file.filename
-        print 'Total number of galaxies', completed.size
-        print 'Number of completed galaxies', ngal
-        print '\nSummary of errors'
-        print ' Code\tFrac \t N\tExamples'
+        print('\nModel name:',name[0])
+        print('File: ',h5file.filename)
+        print('Total number of galaxies', completed.size)
+        print('Number of completed galaxies', ngal)
+        print('\nSummary of errors')
+        print(' Code\tFrac \t N\tExamples')
     for c in err_number:
         max_idx = min(len(err_gals[c]),9)
         if not quiet:
-            print ' {0} \t{1:.1%}\t {2} \t{3}'.format(c, err_number[c]/ngal,
-                                  err_number[c],','.join(err_gals[c][:max_idx]))
+            print(' {0} \t{1:.1%}\t {2} \t{3}'.format(c, err_number[c]/ngal,
+                                  err_number[c],','.join(err_gals[c][:max_idx])))
 
     if not quiet:
-        print ' ok\t{1:.1%}\t {2}'.format(c, nice/ngal, nice)
+        print(' ok\t{1:.1%}\t {2}'.format(c, nice/ngal, nice))
 
-        print '\nAverage CPU time per galaxy:', runtime[completed_indices].sum()/ngal
-        print
+        print('\nAverage CPU time per galaxy:', runtime[completed_indices].sum()/ngal)
+        print()
 
     return nice, ngal, completed.size
 
@@ -110,7 +109,7 @@ if __name__ == "__main__"  :
                 nice, ngals, total = error_stats(f, quiet=args.only_summary)
         except:
             if args.skip_errors:
-                print 'Error\n'
+                print('Error\n')
             else:
                 raise
         total_nice_galaxies += nice
@@ -118,14 +117,14 @@ if __name__ == "__main__"  :
         report[path] = (ngals, total)
 
     if len(report)>4 or args.only_summary:
-        print '\n','-'*23,'Summary','-'*23,'\n'
+        print('\n','-'*23,'Summary','-'*23,'\n')
         maxsize = max([len(k) for k in report.keys()])
 
         for p in sorted(report.keys()):
             ngals, total = report[p]
             name = p + ' '*(maxsize-len(p))
-            print ' {0}\t{1}\t{2}\t{3:.2%}'.format(name,int(ngals),total,ngals/float(total))
+            print(' {0}\t{1}\t{2}\t{3:.2%}'.format(name,int(ngals),total,ngals/float(total)))
 
-    print '\nTotal number of completed galaxies: {0:d}'.format(int(total_number_of_galaxies))
-    print 'Galaxies with errors: {0:.2%}'.format(1.0
-                                - total_nice_galaxies/total_number_of_galaxies)
+    print('\nTotal number of completed galaxies: {0:d}'.format(int(total_number_of_galaxies)))
+    print('Galaxies with errors: {0:.2%}'.format(1.0
+                                - total_nice_galaxies/total_number_of_galaxies))

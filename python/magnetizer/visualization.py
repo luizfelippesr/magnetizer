@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2018,2019 Luiz Felippe S. Rodrigues, Luke Chamandy
 #
 # This file is part of Magnetizer.
@@ -25,7 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import h5py, random, math
 import magnetizer
-from extra_quantities import compute_extra_quantity
+from magnetizer.extra_quantities import compute_extra_quantity
 from scipy.interpolate import UnivariateSpline
 
 units_dict = {}
@@ -333,7 +332,7 @@ def galaxy_portfolio(igal, ivol, run_obj, nrows=5, ncols=3, mass_frame=True,
     # Plots each of the quantities
     for quantity in selected_quantities:
         if verbose:
-            print igal, 'Working on ', quantity
+            print(igal, 'Working on ', quantity)
         subplot_idx += 1
         if subplot_idx > nrows*ncols:
             break
@@ -417,7 +416,7 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
         if selected_ivols is None:
             selected_ivols = [0]*len(selected_galaxies)
 
-    print 'Producing all figures'
+    print('Producing all figures')
 
     if return_figures:
         figures = []
@@ -444,7 +443,7 @@ def generate_portfolio(run_obj, selected_quantities=None, binning_obj=None,
                 plt.close(fig)
 
     if pdf_filename is not None:
-        print 'Plots done. Saving file'
+        print('Plots done. Saving file')
         pdf.close()
 
     return figures
@@ -827,8 +826,8 @@ def plot_redshift_evolution(quantity, mag_run, position=None,
             bin_dict = {bin_obj.redshift: bin_obj for bin_obj in bin_objs}
 
     if (no_binning or single_binning) and (target_redshifts is None):
-        raise ValueError, 'Must specify either a list of binning objects ' \
-          '(bin_objs=[bin_obj1,...]) or a list of redshifts (target_redshifts=[z1,...])'
+        raise ValueError('Must specify either a list of binning objects '
+          '(bin_objs=[bin_obj1,...]) or a list of redshifts (target_redshifts=[z1,...])')
 
     if target_redshifts is not None:
         zs = mag_run.redshifts[closest_indices(mag_run.redshifts, target_redshifts)]

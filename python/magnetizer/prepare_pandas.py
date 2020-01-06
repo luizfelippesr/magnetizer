@@ -25,18 +25,18 @@ def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False,
         Dataframe containing all the selected quantities in selected redshifts.
     """
     if verbose:
-      print 'Preparing a pandas DataFrame object'
+      print('Preparing a pandas DataFrame object')
     df = pd.DataFrame()
 
     for quantity in quantities:
         if verbose:
-            print '  Loading ',quantity
+            print('  Loading ',quantity)
         if 'z' not in df:
             zs = []
         data = []
         for z in redshifts:
             if verbose:
-                print '   Reading redshift ', z
+                print('   Reading redshift ', z)
 
             datum = magnetizer_run.get(quantity, z,
                                        cache=cache,

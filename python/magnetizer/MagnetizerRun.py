@@ -22,6 +22,7 @@ import sys
 import astropy.units as u
 from magnetizer.parameters import Parameters
 import magnetizer.extra_quantities as eq
+from importlib import reload
 
 class MagnetizerRun(object):
     """
@@ -221,7 +222,7 @@ class MagnetizerRun(object):
                     unit = self._data[0][quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
-                    unit = units_dict[unit]
+                    unit = units_dict[unit.decode("ascii")]
                 else:
                     unit = 1
 
@@ -313,7 +314,7 @@ class MagnetizerRun(object):
                     unit = data[quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
-                    unit = units_dict[unit]
+                    unit = units_dict[unit.decode("ascii")]
                 else:
                     unit = 1
 

@@ -47,6 +47,7 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p'], quiet=False):
     for i in completed_indices[0]:
         # Reads the status
         gal_status = status[i,:]
+        gal_status = [s.decode("ascii") for s in gal_status]
 
         # Counts errors
         ok = True
@@ -60,7 +61,7 @@ def error_stats(h5file, error_codes=['e','g','h','H','s','i','p'], quiet=False):
         if ok:
             nice+=1
     if not quiet:
-        print('\nModel name:',name[0])
+        print('\nModel name:',name[0].decode("ascii"))
         print('File: ',h5file.filename)
         print('Total number of galaxies', completed.size)
         print('Number of completed galaxies', ngal)

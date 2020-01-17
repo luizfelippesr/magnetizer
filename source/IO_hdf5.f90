@@ -30,7 +30,7 @@ module IO
   private
 
   ! Number of galaxies
-  integer :: gals_number, grid_points
+  integer :: gals_number, grid_points, mpirank
 
   ! Is this a new run or are we continuing a previous one?
   logical :: lresuming_run
@@ -57,20 +57,21 @@ module IO
   logical :: Initialized = .false. ! Initialisation flag
   logical :: lchunking, lcompression, lseparate_output
   integer :: chunksize, compression_level
-  public IO_start, IO_start_galaxy, IO_finish_galaxy, IO_write_dataset, IO_end
-  public IO_read_dataset_single, IO_flush
+  public IO_start, IO_start_galaxy, IO_write_dataset, IO_end
+  public IO_read_dataset_single, IO_flush, IO_prepare
   public IO_read_dataset_scalar, IO_read_dataset_vector
+  public mpirank
 
 contains
 
-  subroutine IO_start(mpi_comm, mpi_info, resuming_run, time_str)
+  subroutine IO_prepare(mpi_comm, mpi_info, rank, resuming_run, time_str)
     use grid
     use global_input_parameters
     ! Initializes IO
-    integer, intent(in) :: mpi_comm, mpi_info
+    integer, intent(in) :: mpi_comm, mpi_info, rank
     logical, intent(in) :: resuming_run
-    integer(hid_t) :: plist_id      ! property list identifier
-    integer :: error
+    integer(hid_t) :: plist_id   ! property list identifier
+    integer :: error, access_mode
     integer, parameter :: MAX_NMLSTR=20000
     character(len=MAX_NMLSTR) :: namelist_str
     character(len=*), intent(in) :: time_str
@@ -82,7 +83,44 @@ contains
     compression_level = p_IO_compression_level
     chunksize = p_IO_number_of_galaxies_in_chunks
     lseparate_output = p_IO_separate_output
+    lresuming_run = resuming_run
+    mpirank = rank
 
+    ! Initializes predefined datatypes
+    call h5open_f(error)
+    ! Setup file access property list with parallel I/O access.
+    !     call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+    !     call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
+    ! Opens the file collectively.
+    call message('Opening file '//trim(input_file_name)//' in read only mode',info=3)
+    call h5fopen_f(trim(input_file_name), H5F_ACC_RDONLY_F, file_id, error)
+    call check(error)
+
+    ! Reads some properties from the global attributes
+    gals_number = read_int_attribute(file_id,'Number of galaxies')
+    ngals = gals_number
+    number_of_redshifts = read_int_attribute(file_id,'Number of snapshots')
+
+    call message("Closing input file", info=3)
+    call h5fclose_f(file_id, error)
+    call check(error)
+
+  end subroutine IO_prepare
+
+
+  subroutine IO_start(mpi_comm, mpi_info, rank, resuming_run, time_str)
+    use grid
+    use global_input_parameters
+    ! Initializes IO
+    integer, intent(in) :: mpi_comm, mpi_info, rank
+    logical, intent(in) :: resuming_run
+    integer(hid_t) :: plist_id   ! property list identifier
+    integer :: error, access_mode
+    integer, parameter :: MAX_NMLSTR=20000
+    character(len=MAX_NMLSTR) :: namelist_str
+    character(len=*), intent(in) :: time_str
+
+    ! Reads properties from the global parameters module
     lresuming_run = resuming_run
 
     if (Initialized) then
@@ -94,37 +132,53 @@ contains
     ! Initializes predefined datatypes
     call h5open_f(error)
     ! Setup file access property list with parallel I/O access.
-    call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-    call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
+    !     call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+    !     call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
     ! Opens the file collectively.
-    call message('Opening file '//trim(input_file_name), info=3)
-    call h5fopen_f(trim(input_file_name), H5F_ACC_RDWR_F, &
-                    file_id, error, access_prp=plist_id)
-    call check(error)
 
-    ! Reads some properties from the global attributes
-    gals_number = read_int_attribute(file_id,'Number of galaxies')
-    ngals = gals_number
-    number_of_redshifts = read_int_attribute(file_id,'Number of snapshots')
+    if (rank==0) then
+        access_mode = H5F_ACC_RDWR_F
+    else
+        access_mode = H5F_ACC_RDONLY_F
+    endif
 
-    if (lseparate_output) then
-      ! Opens if file exists, creates, otherwise
-      if (lresuming_run) then
-        call message('Opening file'//trim(output_file_name), info=3)
-        call h5fopen_f(trim(output_file_name), H5F_ACC_RDWR_F, &
-                        file_id_out, error, access_prp=plist_id)
+    if (rank /= 0) then
+      call message('Opening file '//trim(input_file_name), info=3)
+      call h5fopen_f(trim(input_file_name), access_mode, file_id, error)
+      call check(error)
+
+    endif
+
+    if (.not.lseparate_output) then
+      if (rank == 0) then
+        access_mode = H5F_ACC_RDWR_F
+      else
+        access_mode = H5F_ACC_RDONLY_F
+      endif
+      call message('Opening file '//trim(input_file_name), info=3)
+      call h5fopen_f(trim(input_file_name), access_mode, file_id, error)
+      call check(error)
+      file_id_out = file_id
+    else
+      call message('Opening file '//trim(input_file_name), info=3)
+      call h5fopen_f(trim(input_file_name), H5F_ACC_RDONLY_F, file_id, error)
+      call check(error)
+
+      if (rank /= 0) then
+        call message('Opening file '//trim(output_file_name)//' in read only mode', info=3)
+        call h5fopen_f(trim(output_file_name), H5F_ACC_RDONLY_F, file_id_out, error)
         call check(error)
       else
-        call message('Creating file'//trim(output_file_name), info=3)
-        call h5fcreate_f(trim(output_file_name), H5F_ACC_TRUNC_F, &
-                        file_id_out, error, access_prp=plist_id)
-        call check(error)
+        if (lresuming_run) then
+          call message('Opening file '//trim(output_file_name)// 'in RW mode', info=3)
+          call h5fopen_f(trim(output_file_name), H5F_ACC_RDWR_F, file_id_out, error)
+          call check(error)
+        else
+          call message('Creating file'//trim(output_file_name), info=3)
+          call h5fcreate_f(trim(output_file_name), H5F_ACC_TRUNC_F, file_id_out, error)
+        endif
+
       endif
-    else
-      lresuming_run = .false. ! NB at the moment, resuming a run with
-                              ! unified output/input files is NOT
-                              ! supported! This will be added later.
-      file_id_out = file_id
     endif
 
     ! Opens input group
@@ -157,6 +211,7 @@ contains
 
       ! Creates log group
       call message('Creating groups', info=3)
+
       call h5gcreate_f(file_id_out, 'Log', log_group_id, error)
       call check(error)
       ! Creates output group
@@ -171,7 +226,7 @@ contains
       call check(error)
     endif
     ! Closes property list
-    call h5pclose_f(plist_id, error)
+!     call h5pclose_f(plist_id, error)
     call check(error)
 
     Initialized = .true.
@@ -197,7 +252,6 @@ contains
       ! If continuing a previous Magnetizer run, checks whether the galaxy
       ! was finished earlier.
       call IO_read_dataset_scalar('completed', gal_id, flag, group='Log')
-
       if (flag(1)>0.5d0) then
         IO_start_galaxy = .false.
       endif
@@ -222,6 +276,7 @@ contains
     logical :: exists
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
+    integer(hid_t) :: plist_id      ! property list identifier
 
     if (present(group)) then
       group_id = choose_group_id(group)
@@ -261,6 +316,10 @@ contains
     offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
     call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
+
+
+!     call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+!     call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
     ! At last, writes the dataset
     call H5Dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_sca, error,&
                     file_space_id=dataspace_ids(idx), &
@@ -363,7 +422,7 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     if (present(group)) then
       group_id = choose_group_id(group)
       if (group_id == -1) &
-        call error_message('IO_read_dataset_scalar', &
+        call error_message('IO_read_dataset_vector', &
                            'Unrecognized group. Exiting..', &
                            gal_id=gal_id, info=0, abort=.true.)
     else
@@ -456,6 +515,8 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     integer(hsize_t), dimension(3) :: dimsf_vec
     integer(hsize_t), dimension(3) :: dimsf_vec_1gal
     logical :: exists
+    integer(hid_t) :: plist_id      ! property list identifier
+
     data_shape = shape(data)
 
     ! Sets dataset dimensions.
@@ -486,10 +547,13 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     offset = [0,0,gal_id-1] ! Means: in third dimension, start from gal_id-1
     call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_vec_1gal, error)
+
+!     CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+!     CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
     ! At last, writes the dataset
     call H5Dwrite_f(dset_ids(idx), H5T_NATIVE_DOUBLE, data, dimsf_vec, error, &
                     file_space_id=dataspace_ids(idx), &
-                    mem_space_id=memspace_ids(idx))
+                    mem_space_id=memspace_ids(idx))!, xfer_prp=plist_id)
 
     if (error/=0) then
       call error_message('IO_write_dataset_vector','Fatal error. Exiting..', &
@@ -517,6 +581,7 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     logical :: exists
     integer(hsize_t), dimension(2) :: dimsf_sca
     integer(hsize_t), dimension(2) :: dimsf_sca_1gal
+    integer(hid_t) :: plist_id      ! property list identifier
 
     if (present(group)) then
       group_id = choose_group_id(group)
@@ -556,10 +621,14 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     offset = [0,gal_id-1] ! Means: in second dimension, start from gal_id-1
     call H5Sselect_hyperslab_f(dataspace_ids(idx), H5S_SELECT_SET_F, &
                                offset, dimsf_sca_1gal, error)
+
+
+!     call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+!     call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
     ! At last, writes the dataset
     call H5Dwrite_f(dset_ids(idx), H5T_NATIVE_CHARACTER, data, dimsf_sca, error,&
                     file_space_id=dataspace_ids(idx), &
-                    mem_space_id=memspace_ids(idx))
+                    mem_space_id=memspace_ids(idx))!, xfer_prp=plist_id)
     if (error/=0) then
       call error_message('IO','Error in IO_write_dataset_code. Exiting..', &
                          gal_id=gal_id, info=0, abort=.true.)
@@ -570,20 +639,10 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
   end subroutine IO_write_dataset_code
 
 
-  subroutine IO_finish_galaxy(gal_id)
-    ! Finishes IO
-    ! At the moment, this is a dummy
-    integer, intent(in) :: gal_id
-
-    call message('Finished writing datasets',gal_id=gal_id, info=2)
-
-  end subroutine IO_finish_galaxy
-
-
   subroutine IO_end(date)
     ! Finishes IO (closing everything)
     integer :: i, error
-    character(len=*), intent(in) :: date
+    character(len=*), optional, intent(in) :: date
 
 !     character(len=10) :: date_formatted
 !     date_formatted = date(1:4)//'-'//date(5:6)//'-'//date(7:8)
@@ -872,17 +931,17 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     call check(error)
 
     if (lchunking) then
+      if (lcompression) then
+        ! Sets compression
+        call h5pset_deflate_f(plist_id, compression_level, error)
+        call check(error)
+      endif
       ! Sets the size of the chunks
       if (scalar_actual) then
         call h5pset_chunk_f(plist_id, rank, chunkdim_sca, error)
         call check(error)
       else
         call h5pset_chunk_f(plist_id, rank, chunkdim_vec, error)
-        call check(error)
-      endif
-      if (lcompression) then
-        ! Sets compression
-        call h5pset_deflate_f(plist_id, compression_level, error)
         call check(error)
       endif
     endif
@@ -906,7 +965,6 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     integer(hid_t), optional :: group_id
     integer :: idx, error
     integer(hid_t) :: group_id_actual
-
     if (present(group_id)) then
       group_id_actual = group_id
     else

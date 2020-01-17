@@ -3,7 +3,7 @@ FC=h5pfc
 srcdir=source
 builddir=build
 
-_OBJ= tsDataObj.o bessel_functions.o root_finder.o constants.o grid.o floor_field.o global_input_parameters.o surface_density.o pressureEquilibrium.o outflow.o random.o  input_parameters.o IO_hdf5.o profiles.o gutsdynamo.o ts_arrays.o  output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o seed_field.o distributor.o
+_OBJ= tsDataObj.o bessel_functions.o root_finder.o constants.o grid.o floor_field.o global_input_parameters.o surface_density.o pressureEquilibrium.o outflow.o random.o  input_parameters.o IO_hdf5.o profiles.o gutsdynamo.o ts_arrays.o  data_transfer.o output.o dynamo.o rotationCurves.o deriv.o messages.o interpolation.o integration.o seed_field.o distributor.o
 OBJ = $(patsubst %,$(builddir)/%,$(_OBJ))
 
 FCFLAGS+= -lfgsl -I. -I./${srcdir}/ -J./${builddir}/ -fintrinsic-modules-path ./${builddir} -I./${builddir}/ -I/usr/include/  -fbacktrace  -ffpe-trap=zero,invalid,overflow -fbounds-check -lgsl -lgslcblas -lm
@@ -45,7 +45,7 @@ main: $(OBJ) ${builddir}/Magnetizer.o
 
 # Other programs
 Observables_single: TST ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o
-	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/LoSintegrate.o  -o Observables_single.exe
+	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/random.o ${builddir}/surface_density.o ${builddir}/FRB.o ${builddir}/LoSintegrate.o  -o Observables_single.exe
 
 Observables: TST ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/Observables.o ${builddir}/distributor.o ${builddir}/random.o
 	$(FC) $(FCFLAGS) ${builddir}/constants.o ${builddir}/tools.o ${builddir}/LoSintegrate_aux.o ${builddir}/messages.o ${builddir}/global_input_parameters.o ${builddir}/interpolation.o ${builddir}/grid.o  ${builddir}/IO_hdf5.o ${builddir}/distributor.o ${builddir}/random.o ${builddir}/FRB.o ${builddir}/surface_density.o ${builddir}/Observables.o  -o Observables.exe
@@ -100,8 +100,9 @@ $(srcdir)/input_parameters.f90: ${builddir}/grid.o ${builddir}/IO_hdf5.o
 $(srcdir)/gutsdynamo.f90: ${builddir}/surface_density.o ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/profiles.o ${builddir}/deriv.o ${builddir}/floor_field.o ${builddir}/seed_field.o
 $(srcdir)/ts_arrays.f90: ${builddir}/gutsdynamo.o ${builddir}/interpolation.o ${builddir}/tsDataObj.o
 $(srcdir)/dynamo.f90: ${builddir}/output.o ${builddir}/messages.o ${builddir}/ts_arrays.o ${builddir}/interpolation.o ${builddir}/floor_field.o
-$(srcdir)/output.f90: ${builddir}/IO_hdf5.o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o ${builddir}/tsDataObj.o
+$(srcdir)/output.f90: ${builddir}/data_transfer.o ${builddir}/gutsdynamo.o ${builddir}/ts_arrays.o ${builddir}/tsDataObj.o
 $(srcdir)/IO_hdf5.f90: ${builddir}/grid.o ${builddir}/messages.o
+$(srcdir)/data_transfer.f90: ${builddir}/IO_hdf5.o
 $(srcdir)/profiles.f90: ${builddir}/surface_density.o ${builddir}/pressureEquilibrium.o ${builddir}/outflow.o ${builddir}/rotationCurves.o ${builddir}/input_parameters.o ${builddir}/grid.o
 $(srcdir)/Magnetizer.f90: ${builddir}/dynamo.o ${builddir}/grid.o ${builddir}/messages.o ${builddir}/distributor.o
 $(srcdir)/rotationCurves.f90: ${builddir}/bessel_functions.o ${builddir}/deriv.o

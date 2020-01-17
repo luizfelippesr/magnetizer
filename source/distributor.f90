@@ -20,6 +20,7 @@ module jobs
   use input_params
   use global_input_parameters
   use IO
+  use data_transfer
   use messages
   implicit none
   private
@@ -30,18 +31,26 @@ module jobs
   integer, parameter :: master_rank = 0
   logical :: select_completed = .false.
   logical :: select_incomplete = .true.
-  integer :: rank, nproc
+  integer :: rank, nproc, info_mpi
   logical :: lresuming_run = .false.
   double precision :: tstart,tfinish
   character(len=100) :: date
 
   ! Function to be passed as argument
   abstract interface
-    subroutine work_routine_template(gal_id, switch, error)
+    function work_routine_template(gal_id, switch, error)
       integer, intent(in) :: gal_id
       logical, intent(in) :: switch
       logical, intent(out) :: error
-    end subroutine work_routine_template
+      double precision :: work_routine_template
+    end function work_routine_template
+  end interface
+  ! Function to be passed as argument
+  abstract interface
+    subroutine write_routine_template(gal_id, runtime)
+      integer, intent(in) :: gal_id
+      double precision, intent(in) :: runtime
+    end subroutine write_routine_template
   end interface
 
 contains
@@ -84,7 +93,7 @@ contains
     logical, intent(in), optional :: incomplete, completed
     character(len=100) :: command_argument
 
-    integer :: ierr, rc, info_mpi
+    integer :: ierr, rc
     integer,dimension(8) :: time_vals
 
     if (present(incomplete)) select_incomplete = incomplete
@@ -164,14 +173,14 @@ contains
     call MPI_Info_set(info_mpi, "romio_ds_write", "disable", ierr)
     call MPI_Info_set(info_mpi, "romio_ds_read", "disable", ierr)
 
-
-    ! Initializes IO (this also reads ngals from the hdf5 input file)
-    call IO_start(MPI_COMM_WORLD, info_mpi, lresuming_run, date)
+    ! Prepares IO (reads ngals, nz's from the hdf5 input file)
+    call IO_prepare(MPI_COMM_WORLD, info_mpi, rank, lresuming_run, date)
 
   end subroutine jobs_prepare
 
-  subroutine jobs_distribute(work_routine, func_flag, galaxies_list)
+  subroutine jobs_distribute(work_routine, write_routine, func_flag, galaxies_list)
     procedure(work_routine_template) :: work_routine
+    procedure(write_routine_template) :: write_routine
     logical, intent(in) :: func_flag
     integer, dimension(:), intent(in) :: galaxies_list
     integer :: igal, nmygals, igal_first, igal_last, igal_finished
@@ -183,7 +192,7 @@ contains
     integer, parameter :: finished_tag = 0
     integer, parameter :: newjob_tag = 17
     integer, dimension(MPI_STATUS_SIZE) :: status
-
+    double precision :: runtime
     ngals = size(galaxies_list)
 
     ! Allocates arrays to for logging
@@ -193,26 +202,41 @@ contains
     allocate(allgals((ngals+1)*nproc))
     flush_signal = ngals+42 ! Arbitrary larger-than-ngals value
 
-    ! Before distributing work between workers, ALL processes will try to run
-    ! the same galaxy.
-    ! The main reason is setting the scene for the HDF5 library: creation of datasets,
-    ! etc, are collective operations and need (?) to be performed by all processors at
-    ! some point.
-    ! Also, this helps catching any obvious problem, before continuing.
-    do igal=1, ngals
-      start_galaxy = IO_start_galaxy(galaxies_list(igal))
-      if (decide_run(start_galaxy)) then
-        call work_routine(galaxies_list(igal), func_flag, error)
-        if (error) cycle
-        if (rank == master_rank) then
-          nmygals = nmygals + 1
-          mygals(nmygals) = galaxies_list(igal)
+
+    call message('Warm up run', master_only=.true.)
+    if (rank==master_rank) then
+      ! Initializes IO (this also reads ngals from the hdf5 input file)
+      call IO_start(MPI_COMM_WORLD, info_mpi, rank, lresuming_run, date)
+
+      ! Before distributing work between workers, ALL processes will try to run
+      ! the same galaxy.
+      ! The main reason is setting the scene for the HDF5 library: creation of datasets,
+      ! etc, are collective operations and need (?) to be performed by all processors at
+      ! some point.
+      ! Also, this helps catching any obvious problem, before continuing.
+      do igal=1, ngals
+        start_galaxy = IO_start_galaxy(galaxies_list(igal))
+        if (decide_run(start_galaxy)) then
+          runtime = work_routine(galaxies_list(igal), func_flag, error)
+          call write_routine(galaxies_list(igal), runtime)
+          if (error) cycle
+          if (rank == master_rank) then
+            nmygals = nmygals + 1
+            mygals(nmygals) = galaxies_list(igal)
+          endif
+          exit
         endif
-        exit
-      endif
-    enddo
-    ! Ensures the structure of the HDF5 file is saved (if it is new)
-    call IO_flush()
+      enddo
+      call IO_end()
+      lresuming_run = .true.
+      ! Now the run exists!
+    endif
+    call MPI_Bcast(lresuming_run, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
+
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    call message('Warm up done', master_only=.true.)
+
+    call IO_start(MPI_COMM_WORLD, info_mpi, rank, lresuming_run, date)
 
     ! Calculates the number of cycles
     ncycles = max(ngals/p_ncheckpoint,1)
@@ -252,7 +276,11 @@ contains
             start_galaxy = IO_start_galaxy(galaxies_list(igal))
             if (decide_run(start_galaxy)) then
               ! If it is a new galaxy, runs it!
-              call work_routine(galaxies_list(igal), func_flag, error)
+              runtime = work_routine(galaxies_list(igal), func_flag, error)
+              print *, galaxies_list
+              print *, 'Calling write to store masters work ', galaxies_list(igal)
+              call write_routine(galaxies_list(igal), runtime)
+              print *, 'Calling write to store masters work. Done'
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
             else
@@ -264,6 +292,11 @@ contains
                           MPI_COMM_WORLD, status, ierr)
             ! Finds out which worker has just finished this work
             iproc = STATUS(MPI_SOURCE)
+            ! Receives the data and saves to disk
+            if (igal_finished>0) print *, "Calling write to store worker's work ", galaxies_list(igal_finished)
+            if (igal_finished>0) call receive_and_save(galaxies_list(igal_finished), iproc)
+            if (igal_finished>0) print *, "Calling write to store worker's work ", galaxies_list(igal_finished), ' done'
+
             ! Sends new job to that worker
             call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, &
                           ierr)
@@ -284,6 +317,9 @@ contains
             ! Receives whatever message it is sending
             call MPI_Recv(igal_finished, 1, MPI_INTEGER, iproc, finished_tag, &
                           MPI_COMM_WORLD, status, ierr)
+            ! Receives the data and saves to disk
+            if (igal_finished>0) call receive_and_save(galaxies_list(igal_finished), iproc)
+
             if (lstop .or. (igal_last>=ngals)) then
               ! If it is time to stop, tells to workers to finish
               call MPI_Send(-1, 1, MPI_INTEGER, iproc, newjob_tag, &
@@ -319,15 +355,18 @@ contains
             start_galaxy = IO_start_galaxy(galaxies_list(igal))
             if (decide_run(start_galaxy)) then
               ! If it is a new galaxy, runs it!
-              call work_routine(galaxies_list(igal), func_flag, error)
+              runtime = work_routine(galaxies_list(igal), func_flag, error)
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
+              ! Sends the result (to mark it done)
+              call message('Done. Sending ',gal_id=galaxies_list(igal), rank=rank)
+              call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
+              call write_routine(galaxies_list(igal), runtime)
             else
               call message('Skipping',gal_id=galaxies_list(igal), rank=rank)
+              ! Sends the result (to mark it done)
+              call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
             endif
-
-            ! Sends the result (to mark it done)
-            call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
           else if (igal==flush_signal) then
             call IO_flush() ! Tells the worker to checkpoint
             call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)

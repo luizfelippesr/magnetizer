@@ -107,7 +107,7 @@ contains
 
       if (.not.output_everything) then
         ts_data = tsData(scalar_names, profile_names, max_outputs, p_nx_ref, &
-                       output_quantities_list)
+                         output_quantities_list)
       else
         ts_data = tsData(scalar_names, profile_names, max_outputs, p_nx_ref)
       endif
@@ -194,8 +194,6 @@ contains
     tmp_scalar = sum(Btot*rkpc)/sum(rkpc)
     call ts_data%set_scalar('Bavg', it, tmp_scalar)
 
-
-
     ! alp is computed in the gutsdynamo module (annoyingly differently from
     ! anything else). Therefore, one needs to be careful. This is a good
     ! candidate for some code refactoring.
@@ -205,8 +203,10 @@ contains
   end subroutine make_ts_arrays
 
   subroutine reset_ts_arrays()
-    call ts_data%reset()
-    ts_status_code = '-'
+    if (ts_data%initialized) then
+      call ts_data%reset()
+      ts_status_code = '-'
+    endif
   end subroutine reset_ts_arrays
 
 end module ts_arrays

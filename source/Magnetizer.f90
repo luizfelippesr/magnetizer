@@ -18,6 +18,7 @@
 program magnetizer
   use mpi
   use dynamo
+  use output
   use input_params
   use global_input_parameters
   use IO
@@ -32,6 +33,6 @@ program magnetizer
   ! Tries to read a list of galaxy numbers from argument 2 onwards
   galaxies_list = jobs_reads_galaxy_list(2)
   ! Runs the Magnetizer
-  call jobs_distribute(dynamo_run, p_no_magnetic_fields_test_run, galaxies_list)
+  call jobs_distribute(dynamo_run, write_output, p_no_magnetic_fields_test_run, galaxies_list)
 
 end program magnetizer

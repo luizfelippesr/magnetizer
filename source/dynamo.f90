@@ -36,10 +36,11 @@ module dynamo
   public dynamo_run
 
   contains
-    subroutine dynamo_run(gal_id, test_run, error)
+    function dynamo_run(gal_id, test_run, error) result(runtime)
       use interpolation
       use floor_field
       double precision :: cpu_time_start
+      double precision :: runtime
       integer, intent(in) :: gal_id
       logical, intent(in) :: test_run
       logical, intent(out) :: error
@@ -58,10 +59,11 @@ module dynamo
 
       ! Sets the number of variables
       call init_var
-
       ! Resets the status code
       call reset_status_code(test_run)
-
+      ! Resets the arrays which store the time series
+      ! (in case if they were previously used)
+      call reset_ts_arrays()
       ! Reads in the model parameters (for the first snapshot)
       call load_input_parameters(gal_id)
       call set_input_params(gal_id, error)
@@ -80,7 +82,7 @@ module dynamo
       if (.not.able_to_construct_profiles) then
         call message('Could not construct profiles for this galaxy.', &
                      gal_id=gal_id, info=1)
-        call write_and_finish(cpu_time_start, gal_id, this_t)
+        runtime = finish(cpu_time_start, gal_id, this_t)
         return
       endif
 
@@ -271,17 +273,16 @@ module dynamo
         if (error) exit
 
       end do  ! snapshots loop
-      !Writes final simulation output
-      call write_and_finish(cpu_time_start, gal_id, this_t)
+      ! Prepares to write final simulation output
+      runtime = finish(cpu_time_start, gal_id, this_t)
 
-    end subroutine dynamo_run
+    end function dynamo_run
 
-    subroutine write_and_finish(cpu_time_start, gal_id, this_t)
+    function finish(cpu_time_start, gal_id, this_t) result(runtime)
       double precision, intent(in) :: cpu_time_start, this_t
       integer, intent(in) :: gal_id
-      double precision :: cpu_time_finish
+      double precision :: cpu_time_finish, runtime
 
-      !Writes final simulation output
       call cpu_time(cpu_time_finish)
 
       call estimate_Bzmod(f)
@@ -290,13 +291,11 @@ module dynamo
                                 ! snapshots loop, initialize it properly.
       call make_ts_arrays(it,this_t,f,Bzmod,alp)
 
-      call write_output(gal_id, cpu_time_finish - cpu_time_start)
       call reset_input_params()  !Resets iread
-      ! Resets the arrays which store the time series
-      call reset_ts_arrays()
-      call message('Finished after ', (cpu_time_finish - cpu_time_start),  &
-                   gal_id= gal_id, msg_end='s  CPU time', info=1)
+      runtime = cpu_time_finish - cpu_time_start
+      call message('Finished after ', runtime,  gal_id=gal_id, &
+                   msg_end='s  CPU time', info=1)
 
-    end subroutine write_and_finish
+    end function finish
 end module dynamo
 !*****************************************************

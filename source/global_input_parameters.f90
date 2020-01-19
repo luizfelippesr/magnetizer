@@ -37,12 +37,12 @@ module global_input_parameters
   character (len=80) :: input_file_name  = 'magnetized_galaxies_input.hdf5'
   ! Chunking options
   logical :: p_IO_chunking = .true.
-  integer :: p_IO_number_of_galaxies_in_chunks = 200
+  integer :: p_IO_number_of_galaxies_in_chunks = 1000
   ! Compression options
   ! NB currently, March/2016, the HDF5 library does not support filters
   ! (including compression) when using parallel IO. Therefore this options
   ! have limited use.
-  logical :: p_IO_compression = .false. ! requires chunking!
+  logical :: p_IO_compression = .true. ! requires chunking!
   integer :: p_IO_compression_level = 6
   ! Number of galaxies after which output file is updated
   integer :: p_ncheckpoint = 5000

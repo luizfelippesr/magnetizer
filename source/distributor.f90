@@ -218,7 +218,7 @@ contains
         start_galaxy = IO_start_galaxy(galaxies_list(igal))
         if (decide_run(start_galaxy)) then
           runtime = work_routine(galaxies_list(igal), func_flag, error)
-          call write_routine(galaxies_list(igal), runtime)
+          if (runtime>0) call write_routine(galaxies_list(igal), runtime)
           if (error) cycle
           if (rank == master_rank) then
             nmygals = nmygals + 1

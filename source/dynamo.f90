@@ -68,6 +68,7 @@ module dynamo
       call load_input_parameters(gal_id)
       call set_input_params(gal_id, error)
       if (error) then
+        runtime = -1d0
         return
       endif
       call construct_grid(r_disk, r_max_kpc_history)

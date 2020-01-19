@@ -277,7 +277,7 @@ contains
             if (decide_run(start_galaxy)) then
               ! If it is a new galaxy, runs it!
               runtime = work_routine(galaxies_list(igal), func_flag, error)
-              call write_routine(galaxies_list(igal), runtime)
+              if (runtime>0d0) call write_routine(galaxies_list(igal), runtime)
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
             else
@@ -353,9 +353,13 @@ contains
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
               ! Sends the result (to mark it done)
-              call message('Done. Sending ',gal_id=galaxies_list(igal), rank=rank)
-              call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
-              call write_routine(galaxies_list(igal), runtime)
+              if (runtime>0d0) then
+                call message('Done. Sending ',gal_id=galaxies_list(igal), rank=rank)
+                call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
+                call write_routine(galaxies_list(igal), runtime)
+              else
+                call MPI_Send(-1, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
+              endif
             else
               call message('Skipping',gal_id=galaxies_list(igal), rank=rank)
               ! Sends the result (to mark it done)

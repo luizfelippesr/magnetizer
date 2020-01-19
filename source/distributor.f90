@@ -277,10 +277,7 @@ contains
             if (decide_run(start_galaxy)) then
               ! If it is a new galaxy, runs it!
               runtime = work_routine(galaxies_list(igal), func_flag, error)
-              print *, galaxies_list
-              print *, 'Calling write to store masters work ', galaxies_list(igal)
               call write_routine(galaxies_list(igal), runtime)
-              print *, 'Calling write to store masters work. Done'
               nmygals = nmygals + 1
               mygals(nmygals) = galaxies_list(igal)
             else
@@ -293,10 +290,7 @@ contains
             ! Finds out which worker has just finished this work
             iproc = STATUS(MPI_SOURCE)
             ! Receives the data and saves to disk
-            if (igal_finished>0) print *, "Calling write to store worker's work ", galaxies_list(igal_finished)
             if (igal_finished>0) call receive_and_save(galaxies_list(igal_finished), iproc)
-            if (igal_finished>0) print *, "Calling write to store worker's work ", galaxies_list(igal_finished), ' done'
-
             ! Sends new job to that worker
             call MPI_Send(igal, 1, MPI_INTEGER, iproc, newjob_tag, MPI_COMM_WORLD, &
                           ierr)

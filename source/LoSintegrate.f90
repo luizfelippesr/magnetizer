@@ -37,6 +37,7 @@ program Observables_single
   type(Galaxy_Properties) :: props
   type(LoS_data) :: data
   double precision, allocatable, dimension(:,:) :: buffer
+  double precision, allocatable, dimension(:) :: bufferz
   double precision :: res, impact_y, impact_z
   integer :: it, i
 
@@ -72,6 +73,8 @@ program Observables_single
     call message('      "Image": outputs images of Stokes I,U,Q and RM to image_dir',&
                     master_only=.true.)
     call message('      "RM_study": computes RM for various LoS with the same theta.',&
+                    master_only=.true.)
+    call message('      "FRB": computes RM, DM and SM along LoS for a FRB host.',&
                     master_only=.true.)
     call message('parameters_file - Magnetizer parameters file used for the run', &
                  master_only=.true.)
@@ -133,8 +136,9 @@ program Observables_single
   call MPI_Info_set(info_mpi, "romio_ds_write", "disable", ierr)
   call MPI_Info_set(info_mpi, "romio_ds_read", "disable", ierr)
 
+  call IO_prepare(MPI_COMM_WORLD, info_mpi, rank, .true., date)
   ! Initializes IO (this also reads ngals from the hdf5 input file)
-  call IO_start(MPI_COMM_WORLD, info_mpi, .true., date)
+  call IO_start(MPI_COMM_WORLD, info_mpi, rank, .true., date)
 
   print *, '   Mode = ', run_type
   ! Reads the other command arguments
@@ -180,17 +184,24 @@ program Observables_single
   ! The reading below requires the use of a buffer variable, possibly
   ! due to something in the HDF5 library
   allocate(buffer(number_of_redshifts,p_nx_ref))
+  allocate(bufferz(number_of_redshifts))
   call IO_read_dataset_vector('r', props%igal, buffer, group='Output')
   props%Rcyl = buffer
+  print *, 'r'
   call IO_read_dataset_vector('Br', props%igal, buffer, group='Output')
   props%Br = buffer
+  print *, 'Br'
   call IO_read_dataset_vector('Bp', props%igal, buffer, group='Output')
   props%Bp = buffer
+  print *, 'Bp'
   call IO_read_dataset_vector('Bzmod', props%igal, buffer, group='Output')
   props%Bz = buffer
+  print *, 'Bzmod'
   call IO_read_dataset_vector('h', props%igal, buffer, group='Output')
+  print *, 'h'
   props%h = buffer/1d3 ! Converts from pc to kpc
   call IO_read_dataset_vector('n', props%igal, buffer, group='Output')
+  print *, 'n'
   props%n = buffer
 
 
@@ -246,6 +257,30 @@ program Observables_single
                         I_out=.false., Q_out=.false., U_out=.false.)
       print *, 'RM:'
       print *, data%RM
+
+    case ('FRB')
+
+      call IO_read_dataset_scalar('Mgas_disk', props%igal, bufferz, group='Input')
+      props%Mgas_disk = bufferz
+      call IO_read_dataset_scalar('Mstars_disk', props%igal, bufferz, group='Input')
+      props%Mstars_disk = bufferz
+      call IO_read_dataset_scalar('r_disk', props%igal, bufferz, group='Input')
+      props%r_disk = bufferz
+
+      call message('Computing RM for this choice of y, z and theta', gal_id=props%igal)
+      print *, 'rdisk', props%r_disk(it)
+      print *, 'FRB mode'
+      if (props%r_disk(it)>minimum_disc_radius) then
+        call LoSintegrate(props, impact_y, impact_z, data, it, &
+                          I_out=.false., Q_out=.false., U_out=.false., &
+                          RM_out=.true., FRB_mode=.true.)
+        print *, 'RM:'
+        print *, data%RM
+      else
+        print *, 0.0
+      endif
+
+
 
     case ('RM_study')
       call message('Computing RM for this of theta', gal_id=props%igal)

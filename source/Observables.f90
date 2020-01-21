@@ -20,11 +20,20 @@ module Observables_aux
   use messages
   implicit none
   private
-  public Compute_I_PI_RM, set_runtype
+  public Compute_I_PI_RM, set_runtype, write_observables
   type(LoS_data),public :: gbl_data
   logical :: lRM=.false., lI=.false., lPI=.false., lFRB=.false., lDM=.false.
-  integer, parameter :: nRMs = 1
+  integer, parameter :: nRMs = 10
   double precision, parameter :: INVALID = -99999
+  ! Used to decide whether a galaxy should be neglected for being to small
+  double precision, public, parameter :: minimum_disc_radius=0.25 ! kpc
+
+
+  double precision, allocatable, dimension(:) :: ts_I, ts_PI
+  double precision, allocatable, dimension(:,:) :: ts_RM, ts_column
+  double precision, allocatable, dimension(:,:) :: ts_theta, ts_z, ts_y
+  double precision :: impact_y, impact_z
+
 contains
   subroutine set_runtype(run_type)
     character(len=50) :: run_type
@@ -49,27 +58,26 @@ contains
       case ('PI')
         lPI = .true.
     end select
-
   end subroutine
 
-  subroutine Compute_I_PI_RM(gal_id, random_theta, error)
+  function Compute_I_PI_RM(gal_id, random_theta, error) result(runtime)
     use messages
+    use IO
     use math_constants
     use global_input_parameters
-    use IO
     use random
     integer, intent(in) :: gal_id
     logical, intent(in) :: random_theta
     logical, intent(out) :: error
+    double precision :: runtime
+    double precision :: cpu_time_start,cpu_time_finish
     type(Galaxy_Properties) :: props
     double precision, allocatable, dimension(:,:) :: buffer
     double precision, allocatable, dimension(:) :: bufferz
-    integer :: iz, iRM
-    double precision, dimension(number_of_redshifts) :: ts_I, ts_PI
-    double precision, allocatable, dimension(:,:) :: ts_RM, ts_column
-    double precision, allocatable, dimension(:,:) :: ts_theta, ts_z, ts_y
-    double precision :: impact_y, impact_z
 
+    integer :: iz, iRM
+
+    call cpu_time(cpu_time_start)
     error = .false.
     ! Reads galaxy properties from hdf5 file
     call alloc_Galaxy_Properties(number_of_redshifts,p_nx_ref, props)
@@ -100,16 +108,20 @@ contains
 
     props%n_RMs = nRMs
 
-    allocate(ts_RM(number_of_redshifts, props%n_RMs))
-    allocate(ts_column(number_of_redshifts, props%n_RMs))
-    allocate(ts_theta(number_of_redshifts, props%n_RMs))
-    allocate(ts_y(number_of_redshifts, props%n_RMs))
-    allocate(ts_z(number_of_redshifts, props%n_RMs))
+    if (.not.allocated(ts_RM)) then
+      allocate(ts_I(number_of_redshifts))
+      allocate(ts_PI(number_of_redshifts))
+      allocate(ts_RM(number_of_redshifts, props%n_RMs))
+      allocate(ts_column(number_of_redshifts, props%n_RMs))
+      allocate(ts_theta(number_of_redshifts, props%n_RMs))
+      allocate(ts_y(number_of_redshifts, props%n_RMs))
+      allocate(ts_z(number_of_redshifts, props%n_RMs))
+    endif
 
     call message('Computing observables', gal_id=gal_id, info=1)
     do iz=1, number_of_redshifts
-      ! Catches invalid redshifts
-      if (props%h(iz,2)<=0d0 .or. props%r_disk(iz)<0.3) then ! a good marker for invalid runs
+      ! Catches invalid redshifts (markers for invalid runs)
+      if (props%h(iz,2)<=0d0 .or. props%r_disk(iz)<minimum_disc_radius) then
         ! Marks them as invalid (will be converted into NaN by the python API)
         ts_I(iz) = INVALID
         ts_PI(iz) = INVALID
@@ -182,40 +194,53 @@ contains
         endif
       endif
     enddo
+    call cpu_time(cpu_time_finish)
+    runtime = cpu_time_finish - cpu_time_start
+    call message('Finished observables after ', runtime,  gal_id=gal_id, &
+                   msg_end='s  CPU time', info=1)
+  end function Compute_I_PI_RM
 
-    if (.not.lFRB) then
+  subroutine write_observables(gal_id, runtime)
+      use data_transfer
+
+      integer, intent(in) :: gal_id
+      double precision, intent(in) :: runtime
+
+      if (.not.lFRB) then
       if (lI) &
-        call IO_write_dataset('I_'//str(gbl_data%wavelength*100, 2)//'cm', &
-                            gal_id, ts_I, units='arbitrary', &
-                            description='Integrated synchrotron emission')
+        call send_or_write_dataset('I_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                                   gal_id, ts_I, units='arbitrary', &
+                                   description='Integrated synchrotron emission')
       if (lPI) &
-        call IO_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
-                              gal_id, ts_PI, units='arbitrary', &
-                              description='Integrated polarised synchrotron emission')
+        call send_or_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                                   gal_id, ts_PI, units='arbitrary', &
+                                   description='Integrated polarised synchrotron emission')
       if (lRM) then
-        call IO_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
-                              description='Rotation measure along a random LoS')
-        call IO_write_dataset('column_density', gal_id, ts_column, units='1/cm^3', &
-                              description='Rotation measure along a random LoS')
-        call IO_write_dataset('RM_LoS_y', gal_id, ts_y, &
+        call send_or_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
+                                   description='Rotation measure along a random LoS')
+        call send_or_write_dataset('column_density', gal_id, ts_column, units='1/cm^3', &
+                                   description='Rotation measure along a random LoS')
+        call send_or_write_dataset('RM_LoS_y', gal_id, ts_y, &
             description='Impact parameter used in the RM calculation in units of rmax')
-        call IO_write_dataset('RM_LoS_z', gal_id, ts_z, &
+        call send_or_write_dataset('RM_LoS_z', gal_id, ts_z, &
             description='Impact parameter used in the RM calculation in units of rmax')
       endif
-      call IO_write_dataset('theta', gal_id, ts_theta, units='radians', &
-                            description='Inclination (for observables calculation)')
+      call send_or_write_dataset('theta', gal_id, ts_theta, units='radians', &
+                                 description='Inclination (for observables calculation)')
     else
       ! In FRB mode, write things to a different path
-      call IO_write_dataset('FRB_RM', gal_id, ts_RM, units='rad/m^2', &
-                            description='Rotation measure along a random LoS')
-      call IO_write_dataset('FRB_RM_LoS_y', gal_id, ts_y, &
+      call send_or_write_dataset('FRB_RM', gal_id, ts_RM, units='rad/m^2', &
+                                 description='Rotation measure along a random LoS')
+      call send_or_write_dataset('FRB_RM_LoS_y', gal_id, ts_y, &
           description='Impact parameter used in the RM calculation in units of rmax')
-      call IO_write_dataset('FRB_RM_LoS_z', gal_id, ts_z, &
+      call send_or_write_dataset('FRB_RM_LoS_z', gal_id, ts_z, &
           description='Impact parameter used in the RM calculation in units of rmax')
-      call IO_write_dataset('FRB_theta', gal_id, ts_theta, units='radians', &
-                            description='Inclination (for FRB calculation)')
+      call send_or_write_dataset('FRB_theta', gal_id, ts_theta, units='radians', &
+                                description='Inclination (for FRB calculation)')
     endif
-  end subroutine Compute_I_PI_RM
+
+    call send_end_message
+  end subroutine write_observables
 end module Observables_aux
 
 program Observables
@@ -230,7 +255,7 @@ program Observables
   implicit none
   character(len=300) :: command_argument
   integer, allocatable, dimension(:) :: galaxies_list
-
+  logical :: random_theta
   ! Prints welcome message and prepares to distribute jobs
   ! By default, only previously run galaxies will be selected
   call jobs_prepare(completed=.true., incomplete=.false.)
@@ -248,10 +273,12 @@ program Observables
   ! Hard-coded parameters (varied for testing only)
   gbl_data%B_scale_with_z = .false.
   gbl_data%ignore_small_scale_field = .false.
-  ! Tries to read a list of galaxy numbers from argument 4 onwards
+  ! Tries to read a list of galaxy numbers from argument 5 onwards
   galaxies_list = jobs_reads_galaxy_list(5)
   ! Computes I and PI for the galaxies in the sample
-!   gbl_data%theta = 30.d0 * 3.14156295358d0/180d0 TEST
-!   call jobs_distribute(Compute_I_PI_RM, .false., galaxies_list) TEST
-  call jobs_distribute(Compute_I_PI_RM, .true., galaxies_list)
+  ! gbl_data%theta = 30.d0 * 3.14156295358d0/180d0 TEST
+  ! call jobs_distribute(Compute_I_PI_RM, .false., galaxies_list) TEST
+  random_theta = .true.
+  call jobs_distribute(Compute_I_PI_RM, write_observables, random_theta, &
+                       galaxies_list)
 end program Observables

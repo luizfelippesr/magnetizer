@@ -33,7 +33,7 @@ module interpolation
     double precision, dimension(:), intent(inout) :: yi
     character(len=*), intent(in), optional :: method
     integer :: i, j
-
+    logical :: increasing
 !     ! If an specific interpolation method is selected
 !     if (present(method)) then
 !       if (trim(method) /= 'simple') then
@@ -43,16 +43,57 @@ module interpolation
 !     endif
 
     j = 1
-    do i=1,size(xi)
-      do while (xi(i) > x(j+1))
-        j = j + 1
-        if ( j>= size(x)) then
-          j = size(x)-1
-          exit
-        endif
+
+
+    ! Checks whether trying to extrapolate!
+    if (minval(xi)<minval(x)) then
+      print *, 'min', minval(xi), minval(x)
+      print *, xi(1)-x(1), xi(size(xi))-x(size(x))
+      print *,'xi',xi
+      print *, 'x', x
+      stop 'Error! Extrapolation not allowed!'
+    else if (maxval(xi)>maxval(x)) then
+      print *, 'max', maxval(xi), maxval(x),maxval(xi)-maxval(x)
+      stop 'Error! Extrapolation not allowed!'
+    endif
+
+    if (x(1)<x(2)) then
+      ! x is increasing
+
+      ! Checks for extrapolation
+      if (xi(1)<x(1) .or. xi(size(xi))>x(size(x))) &
+        stop 'Error! Extrapolation not allowed!'
+
+      ! Interpolates
+      do i=1,size(xi)
+        do while (xi(i) > x(j+1))
+          j = j + 1
+          if ( j>= size(x)) then
+            j = size(x)-1
+            exit
+          endif
+        end do
+        yi(i) = y(j) + (y(j+1)-y(j)) * (xi(i) - x(j))/(x(j+1) - x(j))
       end do
-      yi(i) = y(j) + (y(j+1)-y(j)) * (xi(i) - x(j))/(x(j+1) - x(j))
-    end do
+    else
+      ! x is decreasing
+
+      ! Checks for extrapolation
+      if (xi(1)>x(1) .or. xi(size(xi))<x(size(x))) &
+        stop 'Error! Extrapolation not allowed!'
+
+      ! Interpolates
+      do i=1,size(xi)
+        do while (xi(i) < x(j+1))
+          j = j + 1
+          if ( j>= size(x)) then
+            j = size(x)-1
+            exit
+          endif
+        end do
+        yi(i) = y(j) + (y(j+1)-y(j)) * (xi(i) - x(j))/(x(j+1) - x(j))
+      end do
+    endif
   end subroutine interpolate
 
 

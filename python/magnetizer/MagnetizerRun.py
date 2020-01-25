@@ -429,8 +429,10 @@ class MagnetizerRun(object):
                 output = output[0]
             else:
                 output = np.array(output)
-            return output
-
+            # These kind of datasets can also have some extra invalid entries,
+            # due to, e.g., the disk size being to small for a meaningful
+            # line-of-sight integration. The following takes care of this
+            return np.where( output>-1e10, output, np.NaN)
         else:
             # If doesn't correspond to a profile
             if pre_selected_z:
@@ -497,6 +499,7 @@ class MagnetizerRun(object):
 
 
 units_dict = {
+              '': 1, # For dimensionless quantities
               'Gyr' : u.Gyr,
               'Mpc^-3' : u.Mpc**-3,
               'Msun' : u.Msun,
@@ -517,4 +520,5 @@ units_dict = {
              }
 
 # Quantities with multiple entries per redshift
-multiple_entry_datasets = {'RM','RM_LoS_y','RM_LoS_z','column_density','theta'}
+multiple_entry_datasets = {'RM','RM_LoS_y','RM_LoS_z','column_density','theta',
+                           'FRB_RM','FRB_RM_LoS_y','FRB_RM_LoS_z','FRB_column_density','FRB_theta',}

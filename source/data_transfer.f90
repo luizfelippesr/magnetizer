@@ -61,7 +61,6 @@ module data_transfer
     subroutine check_allocate_code(a, length)
       character, dimension(:), allocatable, intent(inout) :: a
       integer, intent(in) :: length
-      integer, dimension(2) :: present_shape
       if (allocated(a)) then
         if (len(a) == length) then
           ! If the a was allocated and has the correct shape

@@ -33,8 +33,6 @@ module interpolation
     double precision, dimension(:), intent(inout) :: yi
     character(len=*), intent(in), optional :: method
     integer :: i, j
-    logical :: increasing
-    double precision, parameter :: TOL = 1d-7
 
     j = 1
 
@@ -43,7 +41,6 @@ module interpolation
 
       ! Checks for extrapolation
       if (xi(1)<x(1) .or. xi(size(xi))>x(size(x))) then
-        print *, xi(1), x(1), xi(size(xi)), x(size(x))
         stop 'Error! Extrapolation not allowed!'
       endif
       ! Interpolates
@@ -61,8 +58,7 @@ module interpolation
       ! x is decreasing
 
       ! Checks for extrapolation
-      if (xi(1)>x(1)*(1d0-TOL) .or. xi(size(xi))*(1d0-TOL)<x(size(x))) then
-        print *, xi(1), x(1), xi(size(xi)), x(size(x))
+      if (xi(1)>x(1) .or. xi(size(xi))<x(size(x))) then
         stop 'Error! Extrapolation not allowed!'
       endif
       ! Interpolates

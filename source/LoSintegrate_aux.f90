@@ -90,6 +90,7 @@ module LoSintegrate_aux
     logical, parameter :: ldense_z = .true.
     logical :: lFRB
     logical, optional, intent(inout) :: error
+    double precision, parameter :: EPS=1e-6
 
     lFRB = .false.
     if (present(FRB_mode)) lFRB = FRB_mode
@@ -200,6 +201,9 @@ module LoSintegrate_aux
         ! Keeps the extremities within the interval
         z_start = max(z_start, z_path(1))
         z_end = min(z_end, z_path(size(z_path)))
+        ! Adds an epsilon to avoid extrapolation
+        z_end = z_end - EPS
+        z_start = z_start + EPS
       else
         ! Sets a tentative z-minimum/maximum to -3.5/3.5 times the scale-height
         z_start = 3.5d0*h(1)
@@ -214,6 +218,9 @@ module LoSintegrate_aux
         ! Keeps the extremities within the interval
         z_end = max( z_end, z_path(size(z_path)))
         z_start = min( z_start, z_path(1))
+        ! Adds an epsilon to avoid extrapolation
+        z_end = z_end + EPS
+        z_start = z_start - EPS
       endif
 
       ! Produces the dense grid

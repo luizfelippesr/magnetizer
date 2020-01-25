@@ -34,36 +34,18 @@ module interpolation
     character(len=*), intent(in), optional :: method
     integer :: i, j
     logical :: increasing
-!     ! If an specific interpolation method is selected
-!     if (present(method)) then
-!       if (trim(method) /= 'simple') then
-!         call interpolate_fgsl(x, y, xi, yi, method)
-!         return
-!       endif
-!     endif
+    double precision, parameter :: TOL = 1d-7
 
     j = 1
-
-
-    ! Checks whether trying to extrapolate!
-    if (minval(xi)<minval(x)) then
-      print *, 'min', minval(xi), minval(x)
-      print *, xi(1)-x(1), xi(size(xi))-x(size(x))
-      print *,'xi',xi
-      print *, 'x', x
-      stop 'Error! Extrapolation not allowed!'
-    else if (maxval(xi)>maxval(x)) then
-      print *, 'max', maxval(xi), maxval(x),maxval(xi)-maxval(x)
-      stop 'Error! Extrapolation not allowed!'
-    endif
 
     if (x(1)<x(2)) then
       ! x is increasing
 
       ! Checks for extrapolation
-      if (xi(1)<x(1) .or. xi(size(xi))>x(size(x))) &
+      if (xi(1)<x(1) .or. xi(size(xi))>x(size(x))) then
+        print *, xi(1), x(1), xi(size(xi)), x(size(x))
         stop 'Error! Extrapolation not allowed!'
-
+      endif
       ! Interpolates
       do i=1,size(xi)
         do while (xi(i) > x(j+1))
@@ -79,9 +61,10 @@ module interpolation
       ! x is decreasing
 
       ! Checks for extrapolation
-      if (xi(1)>x(1) .or. xi(size(xi))<x(size(x))) &
+      if (xi(1)>x(1)*(1d0-TOL) .or. xi(size(xi))*(1d0-TOL)<x(size(x))) then
+        print *, xi(1), x(1), xi(size(xi)), x(size(x))
         stop 'Error! Extrapolation not allowed!'
-
+      endif
       ! Interpolates
       do i=1,size(xi)
         do while (xi(i) < x(j+1))

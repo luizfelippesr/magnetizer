@@ -63,7 +63,7 @@ program Observables_single
     call get_command_argument(0, command_argument)
 
     call message('Usage: '//trim(command_argument)//' <type> <parameters_file> <gal_id> <iz>'// &
-                  ' <theta> <ignore_small_scale_field> [y] [z] [image_dir]',&
+                  ' <theta> <wavelength> <ignore_small_scale_field> [y] [z] [image_dir]',&
                   master_only=.true.)
     call message('', master_only=.true.)
     call message('type ', master_only=.true.)

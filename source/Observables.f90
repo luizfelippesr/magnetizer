@@ -24,9 +24,9 @@ module Observables_aux
   type(LoS_data),public :: gbl_data
   logical :: lRM=.false., lI=.false., lPI=.false., lFRB=.false., lDM=.false.
   integer, parameter :: nRMs = 10
-  double precision, parameter :: INVALID = -99999
+  double precision, parameter :: INVALID = -1d50
   ! Used to decide whether a galaxy should be neglected for being to small
-  double precision, public, parameter :: minimum_disc_radius=0.25 ! kpc
+  double precision, public, parameter :: minimum_disc_radius=0.15 ! kpc
 
 
   double precision, allocatable, dimension(:) :: ts_I, ts_PI
@@ -135,10 +135,12 @@ contains
 
       ! First, randomizes inclination and impact parameter
       ! Unless a fixed angle is signaled, selects a random inclination
-      ! from a uniform distribution between 0 and 90 degrees
+      ! from a uniform distribution between -90 and 90 degrees
       call set_random_seed(gal_id, p_random_seed)
       if (random_theta) then
         call random_number(gbl_data%theta)
+        gbl_data%theta = gbl_data%theta*2-1d0
+        ! From -90 to 90
         gbl_data%theta = gbl_data%theta * pi * 0.5d0
       endif
       ! The first value of theta is the one used for integrated I and PI.
@@ -149,6 +151,10 @@ contains
         ! NB this is done on the plane of the sky!
         call random_number(impact_y)
         call random_number(impact_z)
+        ! from -1 to 1
+        impact_y = impact_y*2-1d0
+        impact_z = impact_z*2-1d0
+        ! from -3/2 to 3/2
         impact_y = impact_y*3/2d0
         impact_z = impact_z*3/2d0
         ts_y(iz,1) = impact_y
@@ -171,23 +177,36 @@ contains
           do iRM=1, props%n_RMs
             if (iRM/=1) then
               call random_number(gbl_data%theta)
+              gbl_data%theta = gbl_data%theta*2-1d0
               gbl_data%theta = gbl_data%theta * pi * 0.5d0
               ts_theta(iz,iRM) = gbl_data%theta
             endif
             ! Picks up a random line of sight betwen 0 and 3/2 maximum radius
             ! NB this is done on the plane of the sky!
-            call random_number(impact_y)
-            call random_number(impact_z)
-            impact_y = impact_y*3/2d0
-            impact_z = impact_z*3/2d0
-            ts_y(iz,iRM) = impact_y
-            ts_z(iz,iRM) = impact_z
-            ! Converts from the plane of the sky into actual z
-            impact_z = impact_z/sin(gbl_data%theta)
-            ! Integrates
-            call LoSintegrate(props, impact_y, impact_z, gbl_data, iz, &
-                              I_out=.false., Q_out=.false., U_out=.false., &
-                              RM_out=.true., iRM=iRM, FRB_mode=lFRB)
+            do
+              error=.false.
+              call random_number(impact_y)
+              call random_number(impact_z)
+              ! from -1 to 1
+              impact_y = impact_y*2-1d0
+              impact_z = impact_z*2-1d0
+              ! from -3/2 to 3/2
+              impact_y = impact_y*3/2d0
+              impact_z = impact_z*3/2d0
+              ts_y(iz,iRM) = impact_y
+              ts_z(iz,iRM) = impact_z
+              ! Converts from the plane of the sky into actual z
+              impact_z = impact_z/sin(gbl_data%theta)
+              call message('  Theta', gal_id=gal_id,  val=gbl_data%theta, info=4)
+              call message('  impact_y', gal_id=gal_id,  val=impact_y, info=4)
+              call message('  impact_z', gal_id=gal_id,  val=impact_z, info=4)
+              ! Integrates
+              call LoSintegrate(props, impact_y, impact_z, gbl_data, iz,     &
+                                I_out=.false., Q_out=.false., U_out=.false., &
+                                RM_out=.true., iRM=iRM, FRB_mode=lFRB,       &
+                                error=error)
+              if (.not.error) exit
+            enddo
           enddo
           ts_RM(iz,:) = gbl_data%RM
           ts_column(iz,:) = gbl_data%column_density

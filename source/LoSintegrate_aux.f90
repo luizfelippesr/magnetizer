@@ -19,6 +19,7 @@ module LoSintegrate_aux
   ! Auxiliary functions used by the program LoSintegrate
   use math_constants
   use tools, only: linspace
+  use FRB, only: get_FRB_LoS_z_position
   implicit none
   private
   public :: LoSintegrate
@@ -61,8 +62,8 @@ module LoSintegrate_aux
 
   contains
 
-  subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, &
-                          iz, FRB_mode, RM_out, I_out, Q_out, U_out, iRM)
+  subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, iz, &
+                          FRB_mode, RM_out, I_out, Q_out, U_out, iRM, error)
     use input_constants
     use messages
     use FRB
@@ -72,8 +73,8 @@ module LoSintegrate_aux
     double precision, intent(in) :: impactz_rmax, impacty_rmax
     logical, intent(in), optional :: RM_out, I_out, Q_out, U_out, FRB_mode
     integer, optional, intent(in) :: iRM
-    double precision,dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
-    double precision,dimension(2*props%n_grid) :: Bx_all, By_all, Bz_all
+    double precision, dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
+    double precision, dimension(2*props%n_grid) :: Bx_all, By_all, Bz_all
     logical, dimension(2*props%n_grid) :: valid
     logical :: lRM, lI, lQ, lU
     double precision, allocatable, dimension(:) :: x_path, z_path
@@ -83,11 +84,12 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
     double precision :: rmax, wavelength_gal
     double precision :: tmp, impact_y, impact_z
-    double precision :: zmin, zmax, xmin, xmax
+    double precision :: z_start, z_end, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
-    integer :: i, j, iz, this_RM
+    integer :: i, j, iz, this_RM, k
     logical, parameter :: ldense_z = .true.
     logical :: lFRB
+    logical, optional, intent(inout) :: error
 
     lFRB = .false.
     if (present(FRB_mode)) lFRB = FRB_mode
@@ -175,49 +177,78 @@ module LoSintegrate_aux
     h = pack(h_all(:),valid(:))
     x_path = pack(xc(:),valid(:))
     z_path = pack(zc(:),valid(:))
+
+    ! Requests at least 3 grid points
+    if (size(z_path)<3) then
+      error = .true.
+      return
+    endif
+
     ! The following makes the grid denser, to allow meaningful z-integration
     ! This step is irrelevant for edge-on, but is important for face-on
     if (ldense_z) then
-      ! Sets a tentative z-maximum to 3.5 times the scale-height
-      zmin = -3.5d0*h(1); zmax = 3.5d0*h(size(h))
-      ! Computes corresponding values for x
-      xmin = (zmin - impact_z)*tan(data%theta)
-      xmax = (zmax - impact_z)*tan(data%theta)
-      ! Forces x coordinate to live within the original grid
-      if (abs(xmin) > abs(x_path(1))) then
-        xmin = x_path(1)
-        zmin = z_path(1)
+      ! Sets a tentative z-minimum/maximum to -3.5/3.5 times the scale-height
+      z_start = -3.5d0*h(1)
+      z_end = 3.5d0*h(size(h))
+      if (z_path(1) < z_path(size(z_path))) then
+        ! Checks wheter the line of sight is not too far away to be relevant
+        if (z_end<z_path(1) .or. z_start>z_path(size(z_path))) then
+          error = .true.
+          return
+        endif
+
+        ! Keeps the extremities within the interval
+        z_start = max(z_start, z_path(1))
+        z_end = min(z_end, z_path(size(z_path)))
+      else
+        ! Sets a tentative z-minimum/maximum to -3.5/3.5 times the scale-height
+        z_start = 3.5d0*h(1)
+        z_end = -3.5d0*h(size(h))
+
+        ! Checks wheter the line of sight is not too far away to be relevant
+        if (z_start<z_path(size(z_path)) .or. z_end>z_path(1) ) then !
+          error = .true.
+          return
+        endif
+
+        ! Keeps the extremities within the interval
+        z_end = max( z_end, z_path(size(z_path)))
+        z_start = min( z_start, z_path(1))
       endif
-      if (abs(xmax) > abs(x_path(size(x_path)))) then
-        xmax = x_path(size(x_path))
-        zmax = z_path(size(x_path))
-      endif
+
       ! Produces the dense grid
-      z_path_new = linspace(zmin, zmax, data%nz_points)
+      z_path_new = linspace(z_start, z_end, data%nz_points)
       x_path_new = (z_path_new - impact_z)*tan(data%theta)
 
       ! If this is in FRB mode, uses the LoS path to find the FRB position
       if (lFRB) then
         ! Gets random position with probability proportional to molecular density
-        zmin = get_FRB_LoS_z_position(x_path_new, impact_y, z_path_new, &
-                                      props%h_FRB,                      &
-                                      props%r_disk(iz),                 &
-                                      props%Mgas_disk(iz),              &
-                                      props%Mstars_disk(iz),            &
-                                      rmax=props%Rcyl(iz,props%n_grid) )
+        z_start = get_FRB_LoS_z_position(x_path_new, impact_y, z_path_new, &
+                                         props%h_FRB,                      &
+                                         props%r_disk(iz),                 &
+                                         props%Mgas_disk(iz),              &
+                                         props%Mstars_disk(iz),            &
+                                         rmax=props%Rcyl(iz,props%n_grid) )
+        ! Traps cases where an FRB cannot be found in that LoS
+        ! NB the extremely negative z value is a tag for invalid LoS
+        if (z_start<-1d6) then
+          if (present(error)) error = .true.
+          return
+        endif
         ! Produces a new dense grid starting at the *FRB position*
-        z_path_new = linspace(zmin, zmax, data%nz_points)
-        x_path_new = (z_path_new - impact_z)*tan(data%theta)
+        z_path_new = linspace(z_start, z_end, data%nz_points)
+        x_path_new = (z_path_new - impact_z) * tan(data%theta)
       endif
 
-      call densify(Bx, x_path, x_path_new)
-      call densify(By, x_path, x_path_new)
-      call densify(Bz, x_path, x_path_new)
-      call densify(ne, x_path, x_path_new)
-      call densify(h, x_path, x_path_new)
+      call densify(Bx, z_path, z_path_new)
+      call densify(By, z_path, z_path_new)
+      call densify(Bz, z_path, z_path_new)
+      call densify(ne, z_path, z_path_new)
+      call densify(h, z_path, z_path_new)
 
       z_path = z_path_new
       x_path = x_path_new
+
     endif
 
     ! Simple vector calculations
@@ -233,9 +264,8 @@ module LoSintegrate_aux
     ! Magnitude of the total perpendicular field
     allocate(Bperp(size(By)))
     Bperp = sqrt(B2_perp_not_y + By**2)
+
     ! Intrinsic polarization angle
-!     where(By==0)
-!       By
     psi0 = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
     where (psi0>pi)
       psi0 = psi0-2d0*pi

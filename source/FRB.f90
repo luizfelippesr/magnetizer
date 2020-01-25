@@ -73,13 +73,21 @@ contains
     double precision, dimension(size(x)) :: R, Sigma_m, vertical_density
     double precision, dimension(size(x)) :: molecular_density
     double precision :: z_FRB
+    double precision, parameter :: MINIMAL_MOLECULAR_DENSITY = 1d-6
+    double precision, parameter :: z_FRB_INVALID_MARKER = -1d8
 
     ! Computes the values of the cylindrical radius, R, for the line of sight
     R = sqrt(x**2 + y**2)
     ! The probability is proportional to the molecular density
     Sigma_m = molecular_gas_surface_density(R, r_disk, Mgas_disk, Mstars_disk)
     vertical_density =  exp(-abs(z)/h_FRB)
-    molecular_density = Sigma_m*vertical_density ! indictive molecular density
+    molecular_density = Sigma_m*vertical_density ! indicative molecular density
+
+    ! Traps the case where there is negligible molecular gas on the sightline
+    if (maxval(molecular_density) < MINIMAL_MOLECULAR_DENSITY) then
+      z_FRB = z_FRB_INVALID_MARKER
+      return
+    endif
 
     ! Finds the z position of the FRB, assuming the prob. is prop. to density
     z_FRB = draw_from_pdf(z, molecular_density) ! NB draw_from_pdf renormalizes

@@ -131,7 +131,11 @@ contains
     double precision, dimension(:), intent(in) :: x, pdf
     double precision :: Py, r1, r2
     double precision, dimension(1) :: PDF_y
-    do
+    integer :: i
+    integer, parameter :: MAXIMUM_ITERATIONS=1000000
+    double precision, parameter :: y_INVALID_MARKER = -1d7
+
+    do i=1,MAXIMUM_ITERATIONS
       ! Two uniform random numbers
       call random_number(r1)
       call random_number(r2)
@@ -143,9 +147,12 @@ contains
       ! Computes the value of PDF(y) through interpolation
       call interpolate(x, pdf, [y], PDF_y)
       ! Checks whether point is within allowed area
-      if (Py < PDF_y(1)) exit
+      ! If this is the case, returns it
+      if (Py < PDF_y(1)) return
     end do
-    return
+
+    ! If the maximum number of iterations was reached, the call was unsuccessful
+    y = y_INVALID_MARKER
   end function draw_from_pdf
 
 end module random

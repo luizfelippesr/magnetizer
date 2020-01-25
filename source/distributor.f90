@@ -26,7 +26,6 @@ module jobs
   private
   public jobs_prepare, jobs_distribute, jobs_reads_galaxy_list
 
-
   ! Module variables
   integer, parameter :: master_rank = 0
   logical :: select_completed = .false.
@@ -208,12 +207,12 @@ contains
       ! Initializes IO (this also reads ngals from the hdf5 input file)
       call IO_start(MPI_COMM_WORLD, info_mpi, rank, lresuming_run, date)
 
-      ! Before distributing work between workers, ALL processes will try to run
-      ! the same galaxy.
-      ! The main reason is setting the scene for the HDF5 library: creation of datasets,
-      ! etc, are collective operations and need (?) to be performed by all processors at
-      ! some point.
-      ! Also, this helps catching any obvious problem, before continuing.
+      ! Before distributing work among workers, this warm-up runs a single galaxy
+      ! on the master process.
+      ! The main reason is setting the scene for the HDF5 library:
+      ! this creates or prepare the file, allowing worker processes to be able
+      ! to access it (in read only mode).
+      ! Also, this helps catching any obvious problem in the beginning
       do igal=1, ngals
         start_galaxy = IO_start_galaxy(galaxies_list(igal))
         if (decide_run(start_galaxy)) then

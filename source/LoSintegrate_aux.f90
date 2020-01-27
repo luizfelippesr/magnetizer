@@ -43,7 +43,7 @@ module LoSintegrate_aux
     double precision :: Stokes_I
     double precision :: Stokes_Q
     double precision :: Stokes_U
-    double precision, allocatable, dimension(:) :: RM
+    double precision, allocatable, dimension(:) :: RM, DM, SM
     double precision, allocatable, dimension(:) :: column_density
     double precision :: number_of_cells
     double precision, allocatable, dimension(:) :: psi0
@@ -63,7 +63,8 @@ module LoSintegrate_aux
   contains
 
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, iz, &
-                          FRB_mode, RM_out, I_out, Q_out, U_out, iRM, error)
+                          FRB_mode, RM_out, I_out, Q_out, U_out, iRM, error, &
+                          DM_out, SM_out)
     use input_constants
     use messages
     use FRB
@@ -71,12 +72,13 @@ module LoSintegrate_aux
     type(LoS_data), intent(inout) :: data
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
-    logical, intent(in), optional :: RM_out, I_out, Q_out, U_out, FRB_mode
+    logical, intent(in), optional :: I_out, Q_out, U_out, FRB_mode
+    logical, intent(in), optional :: RM_out, DM_out, SM_out
     integer, optional, intent(in) :: iRM
     double precision, dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
     double precision, dimension(2*props%n_grid) :: Bx_all, By_all, Bz_all
     logical, dimension(2*props%n_grid) :: valid
-    logical :: lRM, lI, lQ, lU
+    logical :: lI, lQ, lU, lRM, lDM, lSM
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: psi, psi0
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
@@ -112,6 +114,16 @@ module LoSintegrate_aux
     if (present(I_out)) lI = I_out
     if (present(Q_out)) lQ = Q_out
     if (present(U_out)) lU = U_out
+
+    lSM = .false.; lDM =.false.
+    if (present(SM_out)) then
+      lSM = SM_out
+      if (.not.allocated(data%SM)) allocate(data%SM(props%n_RMs))
+    endif
+    if (present(DM_out)) then
+      lDM = DM_out
+      if (.not.allocated(data%DM)) allocate(data%DM(props%n_RMs))
+    endif
 
     ! Computes maximum radius and impact parameters
     rmax = props%Rcyl(iz,props%n_grid)
@@ -336,24 +348,27 @@ module LoSintegrate_aux
       endif
     endif
 
-    if (lRM) then
-      if (.not.allocated(data%RM)) then
-        allocate(data%RM(props%n_RMs))
-        allocate(data%column_density(props%n_RMs))
-      endif
+    ! This will be used by RM, DM and SM calculations
+    if (present(iRM)) then
+      this_RM = iRM
+    else
+      this_RM = 1
+    endif
 
-      if (present(iRM)) then
-        this_RM = iRM
-      else
-        this_RM = 1
-      endif
-      ! Faraday rotation (backlit)
+    if (lRM) then
+      ! Faraday rotation (backlit) and (neutral warm gas) column density
       ! NB Using the total density as a proxy for thermal electron density
       data%RM(this_RM) = Compute_RM(Bpara, ne, x_path, z_path)
       ! Computes column density using neutral gas
       data%column_density(this_RM) = Compute_Column_Density(                   &
          ne*(1d0-ionisation_fraction)/ionisation_fraction, x_path, z_path)
     endif
+
+    ! Dispersion measure
+    if (lDM)  data%RM(this_RM) = Compute_DM(ne, x_path, z_path)
+    ! Scattering measure
+    if (lSM)  data%SM(this_RM) = Compute_SM(ne, x_path, z_path)
+
 
   end subroutine LoSintegrate
 
@@ -488,6 +503,40 @@ module LoSintegrate_aux
 
     Compute_RM = Integrator(integrand, x_path, z_path)
   end function Compute_RM
+
+  pure function Compute_DM(ne, x_path, z_path)
+    ! Computes the Faraday rotation measure for one specific line of sight
+    !
+    ! Input: Bpara -> 1d-array, B parallel to the LoS, in microgauss
+    !        ne -> 1d-array, number of thermal electrons, in cm^-3
+    !        x_path,z_path -> 1d-array, positions along path, in kpc
+    ! Output: RM, in rad m^-2
+    !
+    double precision, dimension(:), intent(in) :: ne, x_path, z_path
+    double precision, dimension(size(ne)) :: integrand
+    double precision :: Compute_DM
+
+    integrand = ne
+
+    Compute_DM = Integrator(integrand, x_path, z_path)
+  end function Compute_DM
+
+  pure function Compute_SM(ne, x_path, z_path)
+    ! Computes the Faraday rotation measure for one specific line of sight
+    !
+    ! Input: Bpara -> 1d-array, B parallel to the LoS, in microgauss
+    !        ne -> 1d-array, number of thermal electrons, in cm^-3
+    !        x_path,z_path -> 1d-array, positions along path, in kpc
+    ! Output: RM, in rad m^-2
+    !
+    double precision, dimension(:), intent(in) :: ne, x_path, z_path
+    double precision, dimension(size(ne)) :: integrand
+    double precision :: Compute_SM
+
+    integrand = ne**2
+
+    Compute_SM = Integrator(integrand, x_path, z_path)
+  end function Compute_SM
 
 
   pure function Compute_Stokes(S, Bperp, ncr, x_path, z_path, &

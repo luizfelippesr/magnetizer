@@ -139,9 +139,8 @@ contains
       call set_random_seed(gal_id, p_random_seed)
       if (random_theta) then
         call random_number(gbl_data%theta)
-        gbl_data%theta = gbl_data%theta*2-1d0
-        ! From -90 to 90
-        gbl_data%theta = gbl_data%theta * pi * 0.5d0
+        gbl_data%theta = gbl_data%theta*2-1d0 ! -1 to 1
+        gbl_data%theta = gbl_data%theta * pi * 0.5d0 ! From -90 to 90
       endif
       ! The first value of theta is the one used for integrated I and PI.
       ts_theta(iz,1) = gbl_data%theta
@@ -176,9 +175,11 @@ contains
           call message('calculating RM', gal_id=gal_id,  val_int=iz, info=2)
           do iRM=1, props%n_RMs
             if (iRM/=1) then
-              call random_number(gbl_data%theta)
-              gbl_data%theta = gbl_data%theta*2-1d0
-              gbl_data%theta = gbl_data%theta * pi * 0.5d0
+              if (random_theta) then
+                call random_number(gbl_data%theta)
+                gbl_data%theta = gbl_data%theta*2-1d0 ! -1 to 1
+                gbl_data%theta = gbl_data%theta * pi * 0.5d0 ! From -90 to 90
+              endif
               ts_theta(iz,iRM) = gbl_data%theta
             endif
             ! Picks up a random line of sight betwen 0 and 3/2 maximum radius
@@ -295,8 +296,8 @@ program Observables
   ! Tries to read a list of galaxy numbers from argument 5 onwards
   galaxies_list = jobs_reads_galaxy_list(5)
   ! Computes I and PI for the galaxies in the sample
-  ! gbl_data%theta = 30.d0 * 3.14156295358d0/180d0 TEST
-  ! call jobs_distribute(Compute_I_PI_RM, .false., galaxies_list) TEST
+  !gbl_data%theta = 30.d0 * 3.14156295358d0/180d0
+  !random_theta = .false.
   random_theta = .true.
   call jobs_distribute(Compute_I_PI_RM, write_observables, random_theta, &
                        galaxies_list)

@@ -49,6 +49,8 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: psi0
     double precision :: wavelength = 20d-2 ! 20 cm or 1.49 GHz
     double precision :: alpha = 3d0
+    double precision :: dust_alpha = 1d0
+    double precision :: dust_p0 = 0.2
     double precision :: theta = 0d0
     logical :: B_scale_with_z = .true.
     logical :: ignore_small_scale_field = .false.
@@ -64,7 +66,7 @@ module LoSintegrate_aux
 
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, iz, &
                           FRB_mode, RM_out, I_out, Q_out, U_out, iRM, error, &
-                          DM_out, SM_out)
+                          DM_out, SM_out, Idust_out, Qdust_out, Udust_out)
     use input_constants
     use messages
     use FRB
@@ -73,14 +75,15 @@ module LoSintegrate_aux
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
     logical, intent(in), optional :: I_out, Q_out, U_out, FRB_mode
+    logical, intent(in), optional :: Idust_out, Qdust_out, Udust_out
     logical, intent(in), optional :: RM_out, DM_out, SM_out
     integer, optional, intent(in) :: iRM
-    double precision, dimension(2*props%n_grid) :: xc, zc, ne_all, h_all
+    double precision, dimension(2*props%n_grid) :: xc, zc, ne_all, h_all, n_mol_all
     double precision, dimension(2*props%n_grid) :: Bx_all, By_all, Bz_all
     logical, dimension(2*props%n_grid) :: valid
-    logical :: lI, lQ, lU, lRM, lDM, lSM
+    logical :: lI, lQ, lU, lRM, lDM, lSM, lI_dust, lQ_dust, lU_dust
     double precision, allocatable, dimension(:) :: x_path, z_path
-    double precision, allocatable, dimension(:) :: psi, psi0
+    double precision, allocatable, dimension(:) :: psi, psi0, n_mol
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
     double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
@@ -93,6 +96,7 @@ module LoSintegrate_aux
     logical :: lFRB
     logical, optional, intent(inout) :: error
     double precision, parameter :: EPS=1e-6
+    logical :: compute_n_mol = .true.
 
     lFRB = .false.
     if (present(FRB_mode)) lFRB = FRB_mode
@@ -114,6 +118,9 @@ module LoSintegrate_aux
     if (present(I_out)) lI = I_out
     if (present(Q_out)) lQ = Q_out
     if (present(U_out)) lU = U_out
+    if (present(Idust_out)) lI_dust = Idust_out
+    if (present(Qdust_out)) lQ_dust = Qdust_out
+    if (present(Udust_out)) lU_dust = Udust_out
 
     lSM = .false.; lDM =.false.
     if (present(SM_out)) then
@@ -176,6 +183,15 @@ module LoSintegrate_aux
       ! NB the scaling with of n with z is done further ahead!
       ne_all(i) = props%n(iz,j) * ionisation_fraction
       h_all(i) = props%h(iz,j)
+
+      if (compute_n_mol) then
+        ! At the moment, the following is NOT strictly speaking the molecular
+        ! density, but is proportional to it
+        n_mol_all(i) = compute_molecular_density(props%Rcyl(iz,j), zc(i), &
+                                                 props%r_disk(iz),        &
+                                                 props%Mgas_disk(iz),     &
+                                                 props%Mstars_disk(iz) )
+      endif
     enddo
 
     ! Now work is done over the whole grid
@@ -190,6 +206,7 @@ module LoSintegrate_aux
     h = pack(h_all(:),valid(:))
     x_path = pack(xc(:),valid(:))
     z_path = pack(zc(:),valid(:))
+
 
     ! Requests at least 3 grid points
     if (size(z_path)<3) then
@@ -320,15 +337,14 @@ module LoSintegrate_aux
       ! TODO change this to the values used in the simulation
     endif
 
+    ! ------------ Synchrotron ------------
     data%number_of_cells = data%number_of_cells + size(x_path)
     if (lI) then
-      ! Synchrotron emission
+      ! Synchrotron total emission
       ! NB Using the total density as a proxy for cosmic ray electron density
-      ! NB2 Increments previous calculation
       data%Stokes_I = Compute_Stokes('I', Bperp, ne, x_path, z_path,&
-                                         wavelength_gal, data%alpha, Brnd)
+                                     wavelength_gal, data%alpha, Brnd)
     endif
-
     if (lQ .or. lU) then
       allocate(psi(size(z_path)))
       do i=1, size(z_path)
@@ -348,6 +364,23 @@ module LoSintegrate_aux
       endif
     endif
 
+    ! ------------ Aligned dust grains emission ------------
+    if (lI_dust) then
+      ! Synchrotron emission
+      data%Stokes_I = Compute_Stokes_dust('I', n_mol, x_path, z_path,&
+                                          data%dust_alpha, data%dust_p0, psi0)
+
+    endif
+    if (lQ_dust) then
+      data%Stokes_Q = Compute_Stokes_dust('Q', n_mol, x_path, z_path,&
+                                          data%dust_alpha, data%dust_p0, psi0)
+    endif
+    if (lU_dust) then
+      data%Stokes_U = Compute_Stokes_dust('U', n_mol, x_path, z_path,&
+                                          data%dust_alpha, data%dust_p0, psi0)
+    endif
+
+
     ! This will be used by RM, DM and SM calculations
     if (present(iRM)) then
       this_RM = iRM
@@ -355,6 +388,7 @@ module LoSintegrate_aux
       this_RM = 1
     endif
 
+    ! ------------ RM (backlit), SM, DM, column density ------------
     if (lRM) then
       ! Faraday rotation (backlit) and (neutral warm gas) column density
       ! NB Using the total density as a proxy for thermal electron density
@@ -363,7 +397,6 @@ module LoSintegrate_aux
       data%column_density(this_RM) = Compute_Column_Density(                   &
          ne*(1d0-ionisation_fraction)/ionisation_fraction, x_path, z_path)
     endif
-
     ! Dispersion measure
     if (lDM)  data%RM(this_RM) = Compute_DM(ne, x_path, z_path)
     ! Scattering measure
@@ -372,6 +405,19 @@ module LoSintegrate_aux
 
   end subroutine LoSintegrate
 
+  function compute_molecular_density(R, z, r_disk, Mgas_disk, Mstars_disk) result(n_mol)
+    use global_input_parameters, only: p_molecularHeightToRadiusScale
+    use surface_density, only: molecular_gas_surface_density
+    use input_constants
+    double precision, intent(in) :: R, z
+    double precision, intent(in) :: r_disk, Mgas_disk, Mstars_disk
+    double precision :: n_mol, h_m
+    double precision, dimension(1) :: Sigma_m
+
+    Sigma_m = molecular_gas_surface_density([R], r_disk, Mgas_disk, Mstars_disk)
+    h_m = r_disk * constDiskScaleToHalfMassRatio * p_molecularHeightToRadiusScale
+    n_mol = Sigma_m(1) * exp( -abs(z)/h_m )
+  end function compute_molecular_density
 
   function IntegrateImage(im_type, props,data,iz,number_of_calls,method,error) result(res)
     use fgsl
@@ -586,6 +632,40 @@ module LoSintegrate_aux
     Compute_Stokes = Integrator(integrand, x_path, z_path)
 
   end function Compute_Stokes
+
+
+  function Compute_Stokes_dust(S, n_mol, x_path, z_path, &
+                                    alpha, p0, psi)
+    ! Computes Stokes parameter I, Q or U along a line of sight
+    !
+    ! Input: n_mol -> 1d-array, density of H2 , in arbitrary units (future: cm^-3)
+    !        alpha -> real, parameter of the dust emissivity
+    !        x_path,z_path -> 1d-array, positions along path, in kpc
+    !        S -> character with the type of Stokes parameter to be computed
+    ! Output: integrated emission in arbitrary units
+    character(len=*), intent(in) :: S
+    double precision, dimension(:), intent(in) :: psi, n_mol, x_path, z_path
+    double precision, intent(in) :: alpha, p0
+    double precision, dimension(size(x_path)) :: integrand, emissivity
+    double precision :: Compute_Stokes_dust
+
+    emissivity = n_mol**alpha
+
+    if (S=='I') then
+      integrand = emissivity
+    else if (S=='Q') then
+        integrand = p0 * emissivity * cos(2d0*psi)
+    else if (S=='U') then
+        integrand = p0 * emissivity * sin(2d0*psi)
+    else
+        stop 'Error in Compute_Stokes_dust'
+    endif
+
+    Compute_Stokes_dust = Integrator(integrand, x_path, z_path)
+
+  end function Compute_Stokes_dust
+
+
 
   pure function compute_emissivity(Bperp, ncr, wavelength, alpha, Brnd)
     ! Synchrotron emissivity

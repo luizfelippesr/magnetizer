@@ -39,6 +39,7 @@ program Observables_single
   double precision, allocatable, dimension(:,:) :: buffer
   double precision, allocatable, dimension(:) :: bufferz
   double precision :: res, impact_y, impact_z
+  double precision, parameter :: minimum_disc_radius=0.15 ! kpc
   integer :: it, i
 
   ! Initializes MPI
@@ -203,6 +204,15 @@ program Observables_single
   call IO_read_dataset_vector('n', props%igal, buffer, group='Output')
   print *, 'n'
   props%n = buffer
+  call IO_read_dataset_scalar('z', props%igal, bufferz, group='Input')
+  props%z = bufferz
+  call IO_read_dataset_scalar('Mgas_disk', props%igal, bufferz, group='Input')
+  props%Mgas_disk = bufferz
+  call IO_read_dataset_scalar('Mstars_disk', props%igal, bufferz, group='Input')
+  props%Mstars_disk = bufferz
+  call IO_read_dataset_scalar('r_disk', props%igal, bufferz, group='Input')
+  props%r_disk = bufferz
+
 
 
   ! Prepares image if y and zarguments are present
@@ -239,6 +249,12 @@ program Observables_single
       ! [image_dir]
       call print_image(props, data, image_dir, impact_y, impact_z, &
                         nprint=70, isnap=it)
+    case ('dustImage')
+      call message('Preparing images for Q, U and I for dust emission', gal_id=props%igal, &
+                   msg_end='saving to dir: '//image_dir)
+      ! [image_dir]
+      call print_image(props, data, image_dir, impact_y, impact_z, &
+                        nprint=70, isnap=it, dust=.true.)
     case ('I')
       call message('Computed integrated synchrotron intensity for this choie of theta', gal_id=props%igal)
       res = IntegrateImage('I', props, data, it, 1700,'VEGAS', error)

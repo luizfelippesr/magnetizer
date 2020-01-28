@@ -40,9 +40,9 @@ module LoSintegrate_aux
   end type
 
   type LoS_data
-    double precision :: Stokes_I
-    double precision :: Stokes_Q
-    double precision :: Stokes_U
+    double precision :: Stokes_I, Stokes_Idust
+    double precision :: Stokes_Q, Stokes_Qdust
+    double precision :: Stokes_U, Stokes_Udust
     double precision, allocatable, dimension(:) :: RM, DM, SM
     double precision, allocatable, dimension(:) :: column_density
     double precision :: number_of_cells
@@ -113,7 +113,8 @@ module LoSintegrate_aux
     if (abs(impacty_rmax)>1) return
 
     ! Sets optional arguments and their default values
-    lRM=.false.; lI=.true.; lQ=.true.; lU=.true.
+    lRM=.false.; lI=.false.; lQ=.false.; lU=.false.
+    lI_dust = .false.; lQ_dust = .false.; lU_dust = .false.
     if (present(RM_out)) lRM = RM_out
     if (present(I_out)) lI = I_out
     if (present(Q_out)) lQ = Q_out
@@ -203,6 +204,7 @@ module LoSintegrate_aux
     By = pack(By_all(:),valid(:))
     Bz = pack(Bz_all(:),valid(:))
     ne = pack(ne_all(:),valid(:))
+    n_mol = pack(n_mol_all(:),valid(:))
     h = pack(h_all(:),valid(:))
     x_path = pack(xc(:),valid(:))
     z_path = pack(zc(:),valid(:))
@@ -210,7 +212,7 @@ module LoSintegrate_aux
 
     ! Requests at least 3 grid points
     if (size(z_path)<3) then
-      error = .true.
+      if (present(error)) error = .true.
       return
     endif
 
@@ -223,7 +225,7 @@ module LoSintegrate_aux
       if (z_path(1) < z_path(size(z_path))) then
         ! Checks wheter the line of sight is not too far away to be relevant
         if (z_end<z_path(1) .or. z_start>z_path(size(z_path))) then
-          error = .true.
+          if (present(error)) error = .true.
           return
         endif
 
@@ -240,7 +242,7 @@ module LoSintegrate_aux
 
         ! Checks wheter the line of sight is not too far away to be relevant
         if (z_start<z_path(size(z_path)) .or. z_end>z_path(1) ) then !
-          error = .true.
+          if (present(error)) error = .true.
           return
         endif
 
@@ -280,6 +282,7 @@ module LoSintegrate_aux
       call densify(By, z_path, z_path_new)
       call densify(Bz, z_path, z_path_new)
       call densify(ne, z_path, z_path_new)
+      call densify(n_mol, z_path, z_path_new)
       call densify(h, z_path, z_path_new)
 
       z_path = z_path_new
@@ -367,16 +370,16 @@ module LoSintegrate_aux
     ! ------------ Aligned dust grains emission ------------
     if (lI_dust) then
       ! Synchrotron emission
-      data%Stokes_I = Compute_Stokes_dust('I', n_mol, x_path, z_path,&
+      data%Stokes_Idust = Compute_Stokes_dust('I', n_mol, x_path, z_path,&
                                           data%dust_alpha, data%dust_p0, psi0)
 
     endif
     if (lQ_dust) then
-      data%Stokes_Q = Compute_Stokes_dust('Q', n_mol, x_path, z_path,&
+      data%Stokes_Qdust = Compute_Stokes_dust('Q', n_mol, x_path, z_path,&
                                           data%dust_alpha, data%dust_p0, psi0)
     endif
     if (lU_dust) then
-      data%Stokes_U = Compute_Stokes_dust('U', n_mol, x_path, z_path,&
+      data%Stokes_Udust = Compute_Stokes_dust('U', n_mol, x_path, z_path,&
                                           data%dust_alpha, data%dust_p0, psi0)
     endif
 
@@ -691,12 +694,13 @@ module LoSintegrate_aux
 
   end function compute_emissivity
 
-  subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap)
+  subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap, dust)
       use messages
       use IO
       character(len=*) :: directory
       character(len=20) :: form
       integer, optional, intent(in) :: nprint, isnap
+      logical, optional, intent(in) :: dust
       integer :: n, i, j, it, iz, it_max, it_min
       integer, dimension(7) :: unit
       double precision :: impact_y, impact_z, zmax, ymax, rmax
@@ -704,14 +708,16 @@ module LoSintegrate_aux
       real, dimension(:),allocatable :: y, z
       type(Galaxy_Properties), intent(in) :: props
       type(LoS_data), intent(inout) :: data
-      logical :: to_file = .true.
+      logical :: to_file, ldust
+
 
       n = 60; iz = 1 ! Default values
       if (present(nprint)) n = nprint
       if (present(isnap)) iz = isnap
 
+      to_file = .true.; ldust = .false.
       if (trim(directory)=='-') to_file = .false.
-
+      if (present(dust)) ldust = dust
       rmax = props%Rcyl(iz,props%n_grid)
 
       form ='('//str(n)//'E15.5)'
@@ -751,23 +757,42 @@ module LoSintegrate_aux
             impact_y =  -ymax + 2*ymax/dble(n)*i
             y(i) = real(impact_y)
 
-            call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
-                              I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
+            if (.not.ldust) then
+              call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
+                                I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
+              I_im(i,j) = real(data%Stokes_I)
+              data%Stokes_I = 0
 
-            I_im(i,j) = real(data%Stokes_I)
-            data%Stokes_I = 0
+              Q_im(i,j) = real(data%Stokes_Q)
+              data%Stokes_Q = 0
 
-            Q_im(i,j) = real(data%Stokes_Q)
-            data%Stokes_Q = 0
+              U_im(i,j) = real(data%Stokes_U)
+              data%Stokes_U = 0
 
-            U_im(i,j) = real(data%Stokes_U)
-            data%Stokes_U = 0
+              N_im(i,j) = real(data%number_of_cells)
+              data%number_of_cells = 0
 
-            N_im(i,j) = real(data%number_of_cells)
-            data%number_of_cells = 0
+              RM_im(i,j) = real(data%RM(1))
+              data%RM = 0
+            else
+              call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
+                                Idust_out=.true., Udust_out=.true., Qdust_out=.true.)
+              I_im(i,j) = real(data%Stokes_I)
+              data%Stokes_I = 0
 
-            RM_im(i,j) = real(data%RM(1))
-            data%RM = 0
+              Q_im(i,j) = real(data%Stokes_Q)
+              data%Stokes_Q = 0
+
+              U_im(i,j) = real(data%Stokes_U)
+              data%Stokes_U = 0
+
+              N_im(i,j) = real(data%number_of_cells)
+              data%number_of_cells = 0
+
+              RM_im(i,j) = real(data%RM(1))
+              data%RM = 0
+            endif
+
           enddo
 
           if (to_file) then

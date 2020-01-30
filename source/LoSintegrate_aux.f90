@@ -43,6 +43,7 @@ module LoSintegrate_aux
     double precision :: Stokes_I, Stokes_Idust
     double precision :: Stokes_Q, Stokes_Qdust
     double precision :: Stokes_U, Stokes_Udust
+    double precision :: test_Bx, test_By, test_Bz
     double precision, allocatable, dimension(:) :: RM, DM, SM
     double precision, allocatable, dimension(:) :: column_density
     double precision :: number_of_cells
@@ -52,9 +53,9 @@ module LoSintegrate_aux
     double precision :: dust_alpha = 1d0
     double precision :: dust_p0 = 0.2
     double precision :: theta = 0d0
-    logical :: B_scale_with_z = .true.
+    logical :: B_scale_with_z = .false.
     logical :: ignore_small_scale_field = .false.
-    integer :: nz_points = 200
+    integer :: nz_points = 2000
   end type
 
   ! Global variables for the integration
@@ -66,15 +67,17 @@ module LoSintegrate_aux
 
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, iz, &
                           FRB_mode, RM_out, I_out, Q_out, U_out, iRM, error, &
-                          DM_out, SM_out, Idust_out, Qdust_out, Udust_out)
+                          DM_out, SM_out, Idust_out, Qdust_out, Udust_out, test)
     use input_constants
     use messages
+    use global_input_parameters, only: p_molecularHeightToRadiusScale
+    use input_constants
     use FRB
     type(Galaxy_Properties), intent(in) :: props
     type(LoS_data), intent(inout) :: data
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
-    logical, intent(in), optional :: I_out, Q_out, U_out, FRB_mode
+    logical, intent(in), optional :: I_out, Q_out, U_out, FRB_mode, test
     logical, intent(in), optional :: Idust_out, Qdust_out, Udust_out
     logical, intent(in), optional :: RM_out, DM_out, SM_out
     integer, optional, intent(in) :: iRM
@@ -84,19 +87,20 @@ module LoSintegrate_aux
     logical :: lI, lQ, lU, lRM, lDM, lSM, lI_dust, lQ_dust, lU_dust
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: psi, psi0, n_mol
-    double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h
+    double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h, Brnd_B, cos2gamma
     double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
-    double precision :: rmax, wavelength_gal
+    double precision :: rmax, wavelength_gal, h_m
     double precision :: tmp, impact_y, impact_z
     double precision :: z_start, z_end, xmin, xmax
     integer, dimension(2*props%n_grid) :: js
     integer :: i, j, iz, this_RM, k
     logical, parameter :: ldense_z = .true.
-    logical :: lFRB
+    logical :: lFRB, lTest
     logical, optional, intent(inout) :: error
     double precision, parameter :: EPS=1e-6
-    logical :: compute_n_mol = .true.
+    logical :: compute_n_mol
+
 
     lFRB = .false.
     if (present(FRB_mode)) lFRB = FRB_mode
@@ -132,6 +136,14 @@ module LoSintegrate_aux
       lDM = DM_out
       if (.not.allocated(data%DM)) allocate(data%DM(props%n_RMs))
     endif
+
+    lTest = .false.
+    if (present(test)) then
+      lTest = test
+    endif
+
+    compute_n_mol = .false.
+    if (lI_dust .or. lQ_dust .or. lU_dust) compute_n_mol = .true.
 
     ! Computes maximum radius and impact parameters
     rmax = props%Rcyl(iz,props%n_grid)
@@ -171,6 +183,7 @@ module LoSintegrate_aux
       ! Sets z-coord
       zc(i) = xc(i) / tan(data%theta) + impact_z
 
+
       ! Bx = Br * x/R - Bp * y/R
       Bx_all(i) =   props%Br(iz,j) * xc(i)/props%Rcyl(iz,j)    &
                   - props%Bp(iz,j)*impact_y/props%Rcyl(iz,j)
@@ -188,6 +201,7 @@ module LoSintegrate_aux
       if (compute_n_mol) then
         ! At the moment, the following is NOT strictly speaking the molecular
         ! density, but is proportional to it
+        ! NB the scaling with of n with z is done further ahead!
         n_mol_all(i) = compute_molecular_density(props%Rcyl(iz,j), zc(i), &
                                                  props%r_disk(iz),        &
                                                  props%Mgas_disk(iz),     &
@@ -304,32 +318,46 @@ module LoSintegrate_aux
     allocate(Bperp(size(By)))
     Bperp = sqrt(B2_perp_not_y + By**2)
 
-    ! Intrinsic polarization angle
-    psi0 = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
-    where (psi0>pi)
-      psi0 = psi0-2d0*pi
-    endwhere
-
     ! Traps zero scaleheights
     where (h<1e-6) h=1e-6
 
+
     ! Adds the z dependence to the density
     ne = ne  * exp(-abs(z_path)/h)
+    ! And molecular density
+    h_m = props%r_disk(iz) * constDiskScaleToHalfMassRatio * p_molecularHeightToRadiusScale
+    n_mol = n_mol * exp( -abs(z_path)/h_m )
+
+
+
     ! Adds the z dependence the magnetic field
     if (data%B_scale_with_z) then
       ! Scale with z (coordinate)
       Bpara = Bpara * exp(-abs(z_path)/h)
       Bperp = Bperp * exp(-abs(z_path)/h)
+      B2_perp_not_y = B2_perp_not_y * exp(-abs(z_path)/h)
+      By = By * exp(-abs(z_path)/h)
     else
       ! Constant for |z|<h, zero otherwise
       where (abs(z_path)/h>1)
         Bpara = 0d0
         Bpara = 0d0
         Bperp = 0d0
+        B2_perp_not_y = 0d0
+        By = 0d0
       endwhere
     endif
 
     allocate(Brnd(size(Bpara)))
+    allocate(Brnd_B(size(Bpara)))
+    allocate(cos2gamma(size(Bpara)))
+
+    ! Computes the random field in microgauss, assuming hydrogen mass and:
+    !                      v0=1e5cm/s f=0.5  1d6\muG
+    Brnd = sqrt(4*pi*ne*Hmass)*10d5 * 0.5d0 *1d6
+    Brnd_B = 10
+    Brnd_B(i) = Brnd(i)/sqrt(Bperp(i)**2 + Bpara(i)**2 + 1e-10)
+
     if (data%ignore_small_scale_field) then
       Brnd = ne*0d0
     else
@@ -340,8 +368,16 @@ module LoSintegrate_aux
       ! TODO change this to the values used in the simulation
     endif
 
+    data%number_of_cells = size(x_path)
+
+    if (lTest) then
+      data%test_Bx = Compute_Test('x', x_path, z_path, Bx, By, Bz)
+      data%test_By = Compute_Test('y', x_path, z_path, Bx, By, Bz)
+      data%test_Bz = Compute_Test('z', x_path, z_path, Bx, By, Bz)
+      return
+    endif
+
     ! ------------ Synchrotron ------------
-    data%number_of_cells = data%number_of_cells + size(x_path)
     if (lI) then
       ! Synchrotron total emission
       ! NB Using the total density as a proxy for cosmic ray electron density
@@ -349,6 +385,11 @@ module LoSintegrate_aux
                                      wavelength_gal, data%alpha, Brnd)
     endif
     if (lQ .or. lU) then
+      ! Intrinsic polarization angle
+      psi0 = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
+      where (psi0>pi)
+        psi0 = psi0-2d0*pi
+      endwhere
       allocate(psi(size(z_path)))
       do i=1, size(z_path)
         ! Integrates (i.e. computes RM) until the i-th layer
@@ -368,21 +409,32 @@ module LoSintegrate_aux
     endif
 
     ! ------------ Aligned dust grains emission ------------
+    ! Intrinsic polarization angle
+    if (lQ_dust .or. lU_dust) then
+      psi0 = pi/2d0 + atan2(By,sqrt(B2_perp_not_y))
+      where (psi0>pi)
+        psi0 = psi0-2d0*pi
+      endwhere
+    endif
+
+
+    cos2gamma = Bperp**2/(Bpara**2+Bperp**2+1d-10)
+
     if (lI_dust) then
       ! Synchrotron emission
       data%Stokes_Idust = Compute_Stokes_dust('I', n_mol, x_path, z_path,&
-                                          data%dust_alpha, data%dust_p0, psi0)
+                                          data%dust_alpha, data%dust_p0, psi0, Brnd_B, cos2gamma)
 
     endif
     if (lQ_dust) then
+
       data%Stokes_Qdust = Compute_Stokes_dust('Q', n_mol, x_path, z_path,&
-                                          data%dust_alpha, data%dust_p0, psi0)
+                                          data%dust_alpha, data%dust_p0, psi0, Brnd_B, cos2gamma)
     endif
     if (lU_dust) then
       data%Stokes_Udust = Compute_Stokes_dust('U', n_mol, x_path, z_path,&
-                                          data%dust_alpha, data%dust_p0, psi0)
+                                          data%dust_alpha, data%dust_p0, psi0, Brnd_B, cos2gamma)
     endif
-
 
     ! This will be used by RM, DM and SM calculations
     if (present(iRM)) then
@@ -419,7 +471,7 @@ module LoSintegrate_aux
 
     Sigma_m = molecular_gas_surface_density([R], r_disk, Mgas_disk, Mstars_disk)
     h_m = r_disk * constDiskScaleToHalfMassRatio * p_molecularHeightToRadiusScale
-    n_mol = Sigma_m(1) * exp( -abs(z)/h_m )
+    n_mol = Sigma_m(1)
   end function compute_molecular_density
 
   function IntegrateImage(im_type, props,data,iz,number_of_calls,method,error) result(res)
@@ -638,7 +690,7 @@ module LoSintegrate_aux
 
 
   function Compute_Stokes_dust(S, n_mol, x_path, z_path, &
-                                    alpha, p0, psi)
+                                    alpha, p0, psi, Brnd_B, cos2gamma)
     ! Computes Stokes parameter I, Q or U along a line of sight
     !
     ! Input: n_mol -> 1d-array, density of H2 , in arbitrary units (future: cm^-3)
@@ -648,18 +700,21 @@ module LoSintegrate_aux
     ! Output: integrated emission in arbitrary units
     character(len=*), intent(in) :: S
     double precision, dimension(:), intent(in) :: psi, n_mol, x_path, z_path
+    double precision, dimension(:), intent(in) :: Brnd_B, cos2gamma
     double precision, intent(in) :: alpha, p0
-    double precision, dimension(size(x_path)) :: integrand, emissivity
+    double precision, dimension(size(x_path)) :: integrand, emissivity, p0_actual
     double precision :: Compute_Stokes_dust
-
+    integer i
     emissivity = n_mol**alpha
+
+    p0_actual = p0*dust_instrinsic_polarization(Brnd_B)
 
     if (S=='I') then
       integrand = emissivity
     else if (S=='Q') then
-        integrand = p0 * emissivity * cos(2d0*psi)
+        integrand = p0_actual * emissivity * cos(2d0*psi) * cos2gamma
     else if (S=='U') then
-        integrand = p0 * emissivity * sin(2d0*psi)
+        integrand = p0_actual * emissivity * sin(2d0*psi) * cos2gamma
     else
         stop 'Error in Compute_Stokes_dust'
     endif
@@ -667,6 +722,42 @@ module LoSintegrate_aux
     Compute_Stokes_dust = Integrator(integrand, x_path, z_path)
 
   end function Compute_Stokes_dust
+
+
+  function Compute_Test(S, x_path, z_path, Bx, By, Bz)
+    ! Computes Stokes parameter I, Q or U along a line of sight
+    !
+    ! Input: n_mol -> 1d-array, density of H2 , in arbitrary units (future: cm^-3)
+    !        alpha -> real, parameter of the dust emissivity
+    !        x_path,z_path -> 1d-array, positions along path, in kpc
+    !        S -> character with the type of Stokes parameter to be computed
+    ! Output: integrated emission in arbitrary units
+    character(len=*), intent(in) :: S
+    double precision, dimension(:), intent(in) :: x_path, z_path, Bx, By, Bz
+    double precision, dimension(size(x_path)) :: integrand, B
+    double precision :: Compute_Test, w
+    double precision :: z_threshold
+
+    if (S=='x') then
+        B = Bx
+    else if (S=='y') then
+        B = By
+    else if (S=='z') then
+        B = Bz
+    else
+        stop 'Error...'
+    endif
+
+    z_threshold = minval(abs(z_path))
+
+    integrand = 0d0
+    where (abs(z_path)<=z_threshold)
+      integrand = B
+    end where
+
+    Compute_Test = Integrator(integrand, x_path, z_path)
+
+  end function Compute_Test
 
 
 
@@ -694,13 +785,14 @@ module LoSintegrate_aux
 
   end function compute_emissivity
 
-  subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap, dust)
+  subroutine print_image(props, data, directory, ymax, zmax, nprint, isnap, &
+                         dust, test)
       use messages
       use IO
       character(len=*) :: directory
       character(len=20) :: form
       integer, optional, intent(in) :: nprint, isnap
-      logical, optional, intent(in) :: dust
+      logical, optional, intent(in) :: dust, test
       integer :: n, i, j, it, iz, it_max, it_min
       integer, dimension(7) :: unit
       double precision :: impact_y, impact_z, zmax, ymax, rmax
@@ -708,16 +800,17 @@ module LoSintegrate_aux
       real, dimension(:),allocatable :: y, z
       type(Galaxy_Properties), intent(in) :: props
       type(LoS_data), intent(inout) :: data
-      logical :: to_file, ldust
+      logical :: to_file, ldust, lTest
 
 
       n = 60; iz = 1 ! Default values
       if (present(nprint)) n = nprint
       if (present(isnap)) iz = isnap
 
-      to_file = .true.; ldust = .false.
+      to_file = .true.; ldust = .false.; lTest = .false.
       if (trim(directory)=='-') to_file = .false.
       if (present(dust)) ldust = dust
+      if (present(test)) lTest = test
       rmax = props%Rcyl(iz,props%n_grid)
 
       form ='('//str(n)//'E15.5)'
@@ -757,7 +850,19 @@ module LoSintegrate_aux
             impact_y =  -ymax + 2*ymax/dble(n)*i
             y(i) = real(impact_y)
 
-            if (.not.ldust) then
+            if (lTest) then
+              call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
+                                test=.true.)
+              I_im(i,j) = real(data%test_Bz)
+              data%Stokes_I = 0
+
+              Q_im(i,j) = real(data%test_By)
+              data%Stokes_Q = 0
+
+              U_im(i,j) = real(data%test_Bx)
+              data%Stokes_U = 0
+
+            else if (.not.ldust) then
               call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
                                 I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
               I_im(i,j) = real(data%Stokes_I)
@@ -777,13 +882,13 @@ module LoSintegrate_aux
             else
               call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
                                 Idust_out=.true., Udust_out=.true., Qdust_out=.true.)
-              I_im(i,j) = real(data%Stokes_I)
+              I_im(i,j) = real(data%Stokes_Idust)
               data%Stokes_I = 0
 
-              Q_im(i,j) = real(data%Stokes_Q)
+              Q_im(i,j) = real(data%Stokes_Qdust)
               data%Stokes_Q = 0
 
-              U_im(i,j) = real(data%Stokes_U)
+              U_im(i,j) = real(data%Stokes_Udust)
               data%Stokes_U = 0
 
               N_im(i,j) = real(data%number_of_cells)
@@ -859,5 +964,31 @@ module LoSintegrate_aux
     deallocate(array)
     call move_alloc(new_array, array)
   end subroutine
+
+  function dust_instrinsic_polarization(b_B) result(p)
+    use interpolation
+    double precision, dimension(:), intent(in) :: b_B
+    double precision, dimension(size(b_B)) :: p
+    double precision, dimension(2,201) :: v
+    double precision, dimension(201) :: p_ref, b_B_ref
+    double precision, dimension(1) :: p_1 ! workaround
+    integer u, i
+
+    ! Reads the file
+    open(newunit=u,file='data/depolar_random.dat', FORM='FORMATTED')
+    read(u,*) v
+    close(u)
+    b_B_ref = v(1,:); p_ref = v(2,:)
+    do i=1, size(b_B)
+      if (b_B(i)>=maxval(b_B_ref)) then
+        p(i) = 0d0
+      else if (b_B(i)<=minval(b_B_ref)) then
+        p(i) = 1d0
+      else
+        call interpolate(b_B_ref, p_ref, [b_B(i)], p_1)
+        p(i) = p_1(1)
+      endif
+    enddo
+  end function dust_instrinsic_polarization
 
 end module LoSintegrate_aux

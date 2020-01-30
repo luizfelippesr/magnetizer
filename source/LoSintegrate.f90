@@ -255,6 +255,12 @@ program Observables_single
       ! [image_dir]
       call print_image(props, data, image_dir, impact_y, impact_z, &
                         nprint=70, isnap=it, dust=.true.)
+    case ('testImage')
+      call message('Preparing images for Bx, By and Bz for testing', gal_id=props%igal, &
+                   msg_end='saving to dir: '//image_dir)
+      ! [image_dir]
+      call print_image(props, data, image_dir, impact_y, impact_z, &
+                        nprint=70, isnap=it, test=.true.)
     case ('I')
       call message('Computed integrated synchrotron intensity for this choie of theta', gal_id=props%igal)
       res = IntegrateImage('I', props, data, it, 1700,'VEGAS', error)

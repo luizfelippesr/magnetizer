@@ -114,7 +114,7 @@ class MagnetizerRun(object):
         self.parameters = Parameters(houts[0])
         self._cache = {}
         self._galaxies_cache = {}
-        self.name = self.parameters.name
+        self.name = self.parameters.name.decode()
         self._z_tolerance = z_tolerance
 
         self.ngrid, self.nz = self._data[0]['h'].shape[1:]
@@ -407,7 +407,11 @@ class MagnetizerRun(object):
         if iz not in self._valid[ivol]:
             # Pre-loads heights, which will be used to distinguish between valid
             # and invalid outputs.
-            self._valid[ivol][iz]=self._data[ivol]['h'][self._completed[ivol],:,iz]>0
+            try:
+                self._valid[ivol][iz]=self._data[ivol]['h'][self._completed[ivol],:,iz]>0
+            except OSError:
+                print('Problem with ivol:', ivol,'iz:',iz)
+                raise
 
         valid = self._valid[ivol][iz]
         completed = self._completed[ivol]

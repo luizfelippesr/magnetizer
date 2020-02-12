@@ -291,7 +291,7 @@ program Observables
   call get_command_argument(4, command_argument)
   call set_runtype(command_argument)
   ! Hard-coded parameters (varied for testing only)
-  gbl_data%B_scale_with_z = .false.
+  gbl_data%B_scale_with_z = .true.
   gbl_data%ignore_small_scale_field = .false.
   ! Tries to read a list of galaxy numbers from argument 5 onwards
   galaxies_list = jobs_reads_galaxy_list(5)

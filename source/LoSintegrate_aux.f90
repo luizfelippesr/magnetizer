@@ -99,7 +99,7 @@ module LoSintegrate_aux
     logical :: lFRB, lTest
     logical, optional, intent(inout) :: error
     double precision, parameter :: EPS=1e-6
-    logical :: compute_n_mol
+    logical :: dust_mode
 
 
     lFRB = .false.
@@ -142,8 +142,8 @@ module LoSintegrate_aux
       lTest = test
     endif
 
-    compute_n_mol = .false.
-    if (lI_dust .or. lQ_dust .or. lU_dust) compute_n_mol = .true.
+    dust_mode = .false.
+    if (lI_dust .or. lQ_dust .or. lU_dust) dust_mode = .true.
 
     ! Computes maximum radius and impact parameters
     rmax = props%Rcyl(iz,props%n_grid)
@@ -198,7 +198,7 @@ module LoSintegrate_aux
       ne_all(i) = props%n(iz,j) * ionisation_fraction
       h_all(i) = props%h(iz,j)
 
-      if (compute_n_mol) then
+      if (dust_mode) then
         ! At the moment, the following is NOT strictly speaking the molecular
         ! density, but is proportional to it
         ! NB the scaling with of n with z is done further ahead!
@@ -233,10 +233,18 @@ module LoSintegrate_aux
     ! The following makes the grid denser, to allow meaningful z-integration
     ! This step is irrelevant for edge-on, but is important for face-on
     if (ldense_z) then
-      ! Sets a tentative z-minimum/maximum to -3.5/3.5 times the scale-height
-      z_start = -3.5d0*h(1)
-      z_end = 3.5d0*h(size(h))
+
       if (z_path(1) < z_path(size(z_path))) then
+        ! Sets a tentative z-minimum/maximum to -3/3 times the (maximum) scale-height
+        z_start = -3d0*h(1)
+        z_end = 3d0*h(size(h))
+
+        ! If in dust mode, use the molecular gas as reference instead
+!         if (dust_mode) then
+!           z_start = max(z_start, -3d0*h_m)
+!           z_end = min(z_end, 3d0*h_m)
+!         endif
+
         ! Checks wheter the line of sight is not too far away to be relevant
         if (z_end<z_path(1) .or. z_start>z_path(size(z_path))) then
           if (present(error)) error = .true.
@@ -253,6 +261,12 @@ module LoSintegrate_aux
         ! Sets a tentative z-minimum/maximum to -3.5/3.5 times the scale-height
         z_start = 3.5d0*h(1)
         z_end = -3.5d0*h(size(h))
+
+        ! If in dust mode, use the molecular gas as reference instead
+!         if (dust_mode) then
+!           z_start = min(z_start, 3d0*h_m)
+!           z_end = max(z_end, -3d0*h_m)
+!         endif
 
         ! Checks wheter the line of sight is not too far away to be relevant
         if (z_start<z_path(size(z_path)) .or. z_end>z_path(1) ) then !
@@ -355,18 +369,18 @@ module LoSintegrate_aux
     ! Computes the random field in microgauss, assuming hydrogen mass and:
     !                      v0=1e5cm/s f=0.5  1d6\muG
     Brnd = sqrt(4*pi*ne*Hmass)*10d5 * 0.5d0 *1d6
-    Brnd_B = 10
-    Brnd_B(i) = Brnd(i)/sqrt(Bperp(i)**2 + Bpara(i)**2 + 1e-10)
 
-    if (data%ignore_small_scale_field) then
-      Brnd = ne*0d0
-    else
-      ! Computes the random field in microgauss, assuming hydrogen mass and:
-      !                      v0=1e5cm/s f=0.5  1d6\muG
-      Brnd = sqrt(4*pi*ne/ionisation_fraction*Hmass)*10d5 * 0.5d0 *1d6
+    Brnd_B = Brnd/sqrt(Bperp**2 + Bpara**2 + 1e-40)
 
-      ! TODO change this to the values used in the simulation
-    endif
+!     if (data%ignore_small_scale_field) then
+!       Brnd = ne*0d0
+!     else
+!       ! Computes the random field in microgauss, assuming hydrogen mass and:
+!       !                      v0=1e5cm/s f=0.5  1d6\muG
+!       Brnd = sqrt(4*pi*ne/ionisation_fraction*Hmass)*10d5 * 0.5d0 *1d6
+!
+!       ! TODO change this to the values used in the simulation
+!     endif
 
     data%number_of_cells = size(x_path)
 
@@ -418,7 +432,7 @@ module LoSintegrate_aux
     endif
 
 
-    cos2gamma = Bperp**2/(Bpara**2+Bperp**2+1d-10)
+    cos2gamma = Bperp**2/(Bpara**2 + Bperp**2 + 1d-40 ) + 1d-40
 
     if (lI_dust) then
       ! Synchrotron emission
@@ -707,7 +721,7 @@ module LoSintegrate_aux
     integer i
     emissivity = n_mol**alpha
 
-    p0_actual = p0*dust_instrinsic_polarization(Brnd_B)
+    p0_actual = p0*dust_instrinsic_polarization(Brnd_B / sqrt(cos2gamma))
 
     if (S=='I') then
       integrand = emissivity
@@ -969,8 +983,8 @@ module LoSintegrate_aux
     use interpolation
     double precision, dimension(:), intent(in) :: b_B
     double precision, dimension(size(b_B)) :: p
-    double precision, dimension(2,201) :: v
-    double precision, dimension(201) :: p_ref, b_B_ref
+    double precision, dimension(2,174) :: v
+    double precision, dimension(174) :: p_ref, b_B_ref
     double precision, dimension(1) :: p_1 ! workaround
     integer u, i
 
@@ -978,11 +992,12 @@ module LoSintegrate_aux
     open(newunit=u,file='data/depolar_random.dat', FORM='FORMATTED')
     read(u,*) v
     close(u)
+
     b_B_ref = v(1,:); p_ref = v(2,:)
     do i=1, size(b_B)
-      if (b_B(i)>=maxval(b_B_ref)) then
+      if (b_B(i) >= maxval(b_B_ref)) then
         p(i) = 0d0
-      else if (b_B(i)<=minval(b_B_ref)) then
+      else if (b_B(i) <= minval(b_B_ref)) then
         p(i) = 1d0
       else
         call interpolate(b_B_ref, p_ref, [b_B(i)], p_1)

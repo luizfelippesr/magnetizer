@@ -327,6 +327,21 @@ module global_input_parameters
     p_outflow_hot_gas_density, p_outflow_nu0, p_outflow_alphahot, &
     p_outflow_Vhot
 
+  ! -------------------------------------------------------
+  ! Observables
+  ! -------------------------------------------------------
+  ! CR spectral index
+  double precision :: p_obs_CR_alpha = 3d0
+  ! Dust emissivity power
+  ! emissivity is assumed to be proportional to n_H2^alpha
+  double precision :: p_obs_dust_alpha = 3d0
+  logical :: p_obs_scale_with_z = .true.
+  logical :: p_obs_ignore_small_scale = .true.
+
+  namelist /observables_parameters/ &
+    p_obs_CR_alpha, p_obs_dust_alpha, &
+    p_obs_ignore_small_scale, p_obs_scale_with_z
+
 
   contains
 
@@ -336,8 +351,8 @@ module global_input_parameters
     character(len=*), intent(in) :: global_pars_filename
     integer :: u
 
-!     open(newunit=u,file=global_pars_filename) ! Fortran 2008.. requires new gfortran
-    u = 17; open(unit=u,file=global_pars_filename) ! Old Fortran
+    open(newunit=u,file=global_pars_filename) ! Fortran 2008.. requires new gfortran
+!     u = 17; open(unit=u,file=global_pars_filename) ! Old Fortran
     ! Reads all the namelists
     ! Note: Rewinding makes the order of the namelists in the file unimportant
     read(u,nml=run_parameters); rewind(u)
@@ -345,7 +360,8 @@ module global_input_parameters
     read(u,nml=grid_parameters); rewind(u)
     read(u,nml=dynamo_parameters); rewind(u)
     read(u,nml=outflow_parameters); rewind(u)
-    read(u,nml=ISM_and_disk_parameters)
+    read(u,nml=ISM_and_disk_parameters); rewind(u)
+    read(u,nml=observables_parameters)
     close(u)
   end subroutine read_global_parameters
 

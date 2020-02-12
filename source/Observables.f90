@@ -84,6 +84,12 @@ contains
     allocate(buffer(number_of_redshifts,p_nx_ref))
     allocate(bufferz(number_of_redshifts))
 
+    ! Sets spectral index of the CR energy distribution
+    gbl_data%alpha = p_obs_CR_alpha
+    gbl_data%dust_alpha = p_obs_dust_alpha
+    gbl_data%B_scale_with_z = p_obs_scale_with_z
+    gbl_data%ignore_small_scale_field = p_obs_ignore_small_scale
+
     props%igal = gal_id
     call IO_read_dataset_vector('r', gal_id, buffer, group='Output')
     props%Rcyl = buffer
@@ -145,23 +151,6 @@ contains
       ! The first value of theta is the one used for integrated I and PI.
       ts_theta(iz,1) = gbl_data%theta
 
-      if (lRM) then
-        ! Picks up a random line of sight betwen 0 and maximum radius
-        ! NB this is done on the plane of the sky!
-        call random_number(impact_y)
-        call random_number(impact_z)
-        ! from -1 to 1
-        impact_y = impact_y*2-1d0
-        impact_z = impact_z*2-1d0
-        ! from -3/2 to 3/2
-        impact_y = impact_y*3/2d0
-        impact_z = impact_z*3/2d0
-        ts_y(iz,1) = impact_y
-        ts_z(iz,1) = impact_z
-        ! Converts from the plane of the sky into actual z
-        impact_z = impact_z/sin(gbl_data%theta)
-      endif
-
       if (props%Rcyl(iz,1)>0d0) then
         if (lI) then
           call message('calculating I', gal_id=gal_id, val_int=iz, info=2)
@@ -174,18 +163,19 @@ contains
         if (lRM) then
           call message('calculating RM', gal_id=gal_id,  val_int=iz, info=2)
           do iRM=1, props%n_RMs
-            if (iRM/=1) then
-              if (random_theta) then
-                call random_number(gbl_data%theta)
-                gbl_data%theta = gbl_data%theta*2-1d0 ! -1 to 1
-                gbl_data%theta = gbl_data%theta * pi * 0.5d0 ! From -90 to 90
-              endif
-              ts_theta(iz,iRM) = gbl_data%theta
-            endif
-            ! Picks up a random line of sight betwen 0 and 3/2 maximum radius
-            ! NB this is done on the plane of the sky!
             do
+              ! Tries different angles and lines of sights until
+              if (iRM/=1) then
+                if (random_theta) then
+                  call random_number(gbl_data%theta)
+                  gbl_data%theta = gbl_data%theta*2-1d0 ! -1 to 1
+                  gbl_data%theta = gbl_data%theta * pi * 0.5d0 ! From -90 to 90
+                endif
+                ts_theta(iz,iRM) = gbl_data%theta
+              endif
               error=.false.
+              ! Picks up a random line of sight betwen 0 and 3/2 maximum radius
+              ! NB this is done on the plane of the sky!
               call random_number(impact_y)
               call random_number(impact_z)
               ! from -1 to 1
@@ -271,30 +261,25 @@ program Observables
   use messages
   use jobs
   use Observables_aux
-
   implicit none
   character(len=300) :: command_argument
   integer, allocatable, dimension(:) :: galaxies_list
   logical :: random_theta
+
+
   ! Prints welcome message and prepares to distribute jobs
   ! By default, only previously run galaxies will be selected
   call jobs_prepare(completed=.true., incomplete=.false.)
-
   ! Reads the command arguments
-  ! Sets the wavelength in m
-  call get_command_argument(2, command_argument)
-  gbl_data%wavelength = str2dbl(command_argument)
-  ! Sets spectral index of the CR energy distribution
-  call get_command_argument(3, command_argument)
-  gbl_data%alpha = str2dbl(command_argument)
   ! Sets the type of run (all, RM, PI, I or PI/I)
-  call get_command_argument(4, command_argument)
+  call get_command_argument(2, command_argument)
+  print *, command_argument, 'a'
   call set_runtype(command_argument)
-  ! Hard-coded parameters (varied for testing only)
-  gbl_data%B_scale_with_z = .true.
-  gbl_data%ignore_small_scale_field = .false.
-  ! Tries to read a list of galaxy numbers from argument 5 onwards
-  galaxies_list = jobs_reads_galaxy_list(5)
+  ! Sets the wavelength in m
+  call get_command_argument(3, command_argument)
+  gbl_data%wavelength = str2dbl(command_argument)
+  ! Tries to read a list of galaxy numbers from argument 4 onwards
+  galaxies_list = jobs_reads_galaxy_list(4)
   ! Computes I and PI for the galaxies in the sample
   !gbl_data%theta = 30.d0 * 3.14156295358d0/180d0
   !random_theta = .false.

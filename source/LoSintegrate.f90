@@ -188,21 +188,15 @@ program Observables_single
   allocate(bufferz(number_of_redshifts))
   call IO_read_dataset_vector('r', props%igal, buffer, group='Output')
   props%Rcyl = buffer
-  print *, 'r'
   call IO_read_dataset_vector('Br', props%igal, buffer, group='Output')
   props%Br = buffer
-  print *, 'Br'
   call IO_read_dataset_vector('Bp', props%igal, buffer, group='Output')
   props%Bp = buffer
-  print *, 'Bp'
   call IO_read_dataset_vector('Bzmod', props%igal, buffer, group='Output')
   props%Bz = buffer
-  print *, 'Bzmod'
   call IO_read_dataset_vector('h', props%igal, buffer, group='Output')
-  print *, 'h'
   props%h = buffer/1d3 ! Converts from pc to kpc
   call IO_read_dataset_vector('n', props%igal, buffer, group='Output')
-  print *, 'n'
   props%n = buffer
   call IO_read_dataset_scalar('z', props%igal, bufferz, group='Input')
   props%z = bufferz

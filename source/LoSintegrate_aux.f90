@@ -55,7 +55,7 @@ module LoSintegrate_aux
     double precision :: theta = 0d0
     logical :: B_scale_with_z = .false.
     logical :: ignore_small_scale_field = .false.
-    integer :: nz_points = 2000
+    integer :: nz_points = 500
   end type
 
   ! Global variables for the integration
@@ -240,10 +240,10 @@ module LoSintegrate_aux
         z_end = 3d0*h(size(h))
 
         ! If in dust mode, use the molecular gas as reference instead
-!         if (dust_mode) then
-!           z_start = max(z_start, -3d0*h_m)
-!           z_end = min(z_end, 3d0*h_m)
-!         endif
+        if (dust_mode) then
+          z_start = max(z_start, -3d0*h_m)
+          z_end = min(z_end, 3d0*h_m)
+        endif
 
         ! Checks wheter the line of sight is not too far away to be relevant
         if (z_end<z_path(1) .or. z_start>z_path(size(z_path))) then
@@ -263,10 +263,10 @@ module LoSintegrate_aux
         z_end = -3.5d0*h(size(h))
 
         ! If in dust mode, use the molecular gas as reference instead
-!         if (dust_mode) then
-!           z_start = min(z_start, 3d0*h_m)
-!           z_end = max(z_end, -3d0*h_m)
-!         endif
+        if (dust_mode) then
+          z_start = min(z_start, 3d0*h_m)
+          z_end = max(z_end, -3d0*h_m)
+        endif
 
         ! Checks wheter the line of sight is not too far away to be relevant
         if (z_start<z_path(size(z_path)) .or. z_end>z_path(1) ) then !

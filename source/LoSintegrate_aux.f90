@@ -318,21 +318,6 @@ module LoSintegrate_aux
 
     endif
 
-    ! Allocates everything
-    allocate(Bpara(size(Bx)))
-    allocate(B_perp_not_y(size(Bx)))
-    allocate(Bperp(size(Bx)))
-
-    ! Simple vector calculations
-    ! B_\parallel = dot(B,n), where n is the LoS direction
-    ! i.e n = (sin(theta),0,cos(theta))
-    Bpara = Bx*sin(data%theta) + Bz*cos(data%theta)
-    ! B_\perp = dot(B,m), where m is perpendicular to the LoS direction and y
-    ! i.e. m = (-cos(theta),0,sin(theta))
-    B_perp_not_y = -Bx*cos(data%theta) + Bz*sin(data%theta)
-
-    ! Magnitude of the total perpendicular field
-    Bperp = sqrt(B_perp_not_y**2 + By**2)
 
     ! Traps zero scaleheights
     where (h<1e-6) h=1e-6
@@ -348,20 +333,34 @@ module LoSintegrate_aux
     ! Adds the z dependence the magnetic field
     if (data%B_scale_with_z) then
       ! Scale with z (coordinate)
-      Bpara = Bpara * exp(-abs(z_path)/h)
-      Bperp = Bperp * exp(-abs(z_path)/h)
-      B_perp_not_y = B_perp_not_y * exp(-abs(z_path)/h)
+      Bx = Bx * exp(-abs(z_path)/h)
       By = By * exp(-abs(z_path)/h)
+      Bz = Bz * exp(-abs(z_path)/h)
     else
       ! Constant for |z|<h, zero otherwise
       where (abs(z_path)/h>1)
-        Bpara = 0d0
-        Bpara = 0d0
-        Bperp = 0d0
-        B_perp_not_y = 0d0
+        Bx = 0d0
         By = 0d0
+        Bz = 0d0
       endwhere
     endif
+
+
+    ! Allocates everything
+    allocate(Bpara(size(Bx)))
+    allocate(B_perp_not_y(size(Bx)))
+    allocate(Bperp(size(Bx)))
+
+    ! Simple vector calculations
+    ! B_\parallel = dot(B,n), where n is the LoS direction
+    ! i.e n = (sin(theta),0,cos(theta))
+    Bpara = Bx*sin(data%theta) + Bz*cos(data%theta)
+    ! B_\perp = dot(B,m), where m is perpendicular to the LoS direction and y
+    ! i.e. m = (-cos(theta),0,sin(theta))
+    B_perp_not_y = -Bx*cos(data%theta) + Bz*sin(data%theta)
+
+    ! Magnitude of the total perpendicular field
+    Bperp = sqrt(B_perp_not_y**2 + By**2)
 
     allocate(Brnd(size(Bpara)))
     allocate(Brnd_B(size(Bpara)))

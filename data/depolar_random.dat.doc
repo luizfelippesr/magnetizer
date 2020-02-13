@@ -1,0 +1,4 @@
+#col 1: value of alpha for gamma = 0, i.e. magnetic field in the plane of the sky
+#alpha is the ratio between the sqrt of the mean of the norm squared of the random field and the norm of the coherant field
+#If gamma is not 0, use the value computed for at alpha/cos(gamma)
+#col 2: mean depolarization fraction caused by the random B field

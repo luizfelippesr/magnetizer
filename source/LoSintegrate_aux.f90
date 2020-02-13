@@ -88,7 +88,7 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: x_path, z_path
     double precision, allocatable, dimension(:) :: psi, psi0, n_mol
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h, Brnd_B, cos2gamma
-    double precision, allocatable, dimension(:) :: Bx, By, Bz, B2_perp_not_y
+    double precision, allocatable, dimension(:) :: Bx, By, Bz, B_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
     double precision :: rmax, wavelength_gal, h_m
     double precision :: tmp, impact_y, impact_z
@@ -318,23 +318,24 @@ module LoSintegrate_aux
 
     endif
 
+    ! Allocates everything
+    allocate(Bpara(size(Bx)))
+    allocate(B_perp_not_y(size(Bx)))
+    allocate(Bperp(size(Bx)))
+
     ! Simple vector calculations
     ! B_\parallel = dot(B,n), where n is the LoS direction
-    ! [NB  n = (sin(theta),0,cos(theta))  ]
+    ! i.e n = (sin(theta),0,cos(theta))
     Bpara = Bx*sin(data%theta) + Bz*cos(data%theta)
-    ! B_\perp = \sqrt{ (B_x - B_\parallel\sin\theta)^2 + B_y^2 +
-    !                  + (B_z -B_\parallel\cos\theta)^2 }
-    ! Magnitude of the field perpendicular to both y and the LoS
-    B2_perp_not_y = ( Bx - Bpara*sin(data%theta) )**2 + &
-                    ( Bz - Bpara*cos(data%theta) )**2
+    ! B_\perp = dot(B,m), where m is perpendicular to the LoS direction and y
+    ! i.e. m = (-cos(theta),0,sin(theta))
+    B_perp_not_y = -Bx*cos(data%theta) + Bz*sin(data%theta)
 
     ! Magnitude of the total perpendicular field
-    allocate(Bperp(size(By)))
-    Bperp = sqrt(B2_perp_not_y + By**2)
+    Bperp = sqrt(B_perp_not_y**2 + By**2)
 
     ! Traps zero scaleheights
     where (h<1e-6) h=1e-6
-
 
     ! Adds the z dependence to the density
     ne = ne  * exp(-abs(z_path)/h)
@@ -349,7 +350,7 @@ module LoSintegrate_aux
       ! Scale with z (coordinate)
       Bpara = Bpara * exp(-abs(z_path)/h)
       Bperp = Bperp * exp(-abs(z_path)/h)
-      B2_perp_not_y = B2_perp_not_y * exp(-abs(z_path)/h)
+      B_perp_not_y = B_perp_not_y * exp(-abs(z_path)/h)
       By = By * exp(-abs(z_path)/h)
     else
       ! Constant for |z|<h, zero otherwise
@@ -357,7 +358,7 @@ module LoSintegrate_aux
         Bpara = 0d0
         Bpara = 0d0
         Bperp = 0d0
-        B2_perp_not_y = 0d0
+        B_perp_not_y = 0d0
         By = 0d0
       endwhere
     endif
@@ -400,9 +401,12 @@ module LoSintegrate_aux
     endif
     if (lQ .or. lU) then
       ! Intrinsic polarization angle
-      psi0 = pi/2d0 + atan2(sqrt(B2_perp_not_y),By)
+      psi0 = pi/2d0 + atan2(By,B_perp_not_y)
       where (psi0>pi)
         psi0 = psi0-2d0*pi
+      endwhere
+      where (psi0<-pi)
+        psi0 = psi0+2d0*pi
       endwhere
       allocate(psi(size(z_path)))
       do i=1, size(z_path)
@@ -425,12 +429,14 @@ module LoSintegrate_aux
     ! ------------ Aligned dust grains emission ------------
     ! Intrinsic polarization angle
     if (lQ_dust .or. lU_dust) then
-      psi0 = pi/2d0 + atan2(By,sqrt(B2_perp_not_y))
+      psi0 = pi/2d0 + atan2(By,B_perp_not_y)
       where (psi0>pi)
         psi0 = psi0-2d0*pi
       endwhere
+      where (psi0<-pi)
+        psi0 = psi0+2d0*pi
+      endwhere
     endif
-
 
     cos2gamma = Bperp**2/(Bpara**2 + Bperp**2 + 1d-40 ) + 1d-40
 

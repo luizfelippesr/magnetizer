@@ -22,14 +22,14 @@ module Observables_aux
   private
   public Compute_I_PI_RM, set_runtype, write_observables
   type(LoS_data),public :: gbl_data
-  logical :: lRM=.false., lI=.false., lPI=.false., lFRB=.false., lDM=.false.
+  logical :: lRM=.false., lI=.false., lPI=.false., lFRB=.false., lDM=.false., lSM=.false.
   integer, parameter :: nRMs = 10
   double precision, parameter :: INVALID = -1d50
   ! Used to decide whether a galaxy should be neglected for being to small
   double precision, public, parameter :: minimum_disc_radius=0.15 ! kpc
 
-
-  double precision, allocatable, dimension(:) :: ts_I, ts_PI
+  double precision, allocatable, dimension(:) :: ts_I, ts_PI, ts_counts
+  double precision, allocatable, dimension(:,:) :: ts_SM, ts_DM
   double precision, allocatable, dimension(:,:) :: ts_RM, ts_column
   double precision, allocatable, dimension(:,:) :: ts_theta, ts_z, ts_y
   double precision :: impact_y, impact_z
@@ -46,10 +46,15 @@ contains
         lRM = .true.
       case ('DM')
         lDM = .true.
-      case ('FRB')
+      case ('FRBint')
+        lRM = .true.
+        lDM = .true.
+        lSM = .true.
+      case ('FRBhost')
         lFRB = .true.
         lRM = .true.
         lDM = .true.
+        lSM = .true.
       case ('I/PI', 'I+PI','PI/I','PI+I')
         lPI = .true.
         lI = .true.
@@ -74,8 +79,7 @@ contains
     type(Galaxy_Properties) :: props
     double precision, allocatable, dimension(:,:) :: buffer
     double precision, allocatable, dimension(:) :: bufferz
-
-    integer :: iz, iRM
+    integer :: iz, iRM, LoS_counter
 
     call cpu_time(cpu_time_start)
     error = .false.
@@ -118,10 +122,13 @@ contains
       allocate(ts_I(number_of_redshifts))
       allocate(ts_PI(number_of_redshifts))
       allocate(ts_RM(number_of_redshifts, props%n_RMs))
+      allocate(ts_SM(number_of_redshifts, props%n_RMs))
+      allocate(ts_DM(number_of_redshifts, props%n_RMs))
       allocate(ts_column(number_of_redshifts, props%n_RMs))
       allocate(ts_theta(number_of_redshifts, props%n_RMs))
       allocate(ts_y(number_of_redshifts, props%n_RMs))
       allocate(ts_z(number_of_redshifts, props%n_RMs))
+      allocate(ts_counts(number_of_redshifts))
     endif
 
     call message('Computing observables', gal_id=gal_id, info=1)
@@ -135,7 +142,10 @@ contains
         ts_y(iz,:) = INVALID
         ts_z(iz,:) = INVALID
         ts_RM(iz,:) = INVALID
+        ts_DM(iz,:) = INVALID
+        ts_SM(iz,:) = INVALID
         ts_column(iz,:) = INVALID
+        ts_counts(iz) = INVALID
         cycle
       endif
 
@@ -160,10 +170,12 @@ contains
           call message('calculating PI', gal_id=gal_id, val_int=iz, info=2)
           ts_PI(iz) = IntegrateImage('PI', props, gbl_data,iz)
         endif
-        if (lRM) then
-          call message('calculating RM', gal_id=gal_id,  val_int=iz, info=2)
+        if (lRM .or. lDM .or. lSM .or. lDM) then
+          LoS_counter = 0
+          call message('calculating RM/DM/SM', gal_id=gal_id,  val_int=iz, info=2)
           do iRM=1, props%n_RMs
             do
+              LoS_counter = LoS_counter + 1
               ! Tries different angles and lines of sights until
               if (iRM/=1) then
                 if (random_theta) then
@@ -194,13 +206,17 @@ contains
               ! Integrates
               call LoSintegrate(props, impact_y, impact_z, gbl_data, iz,     &
                                 I_out=.false., Q_out=.false., U_out=.false., &
-                                RM_out=.true., iRM=iRM, FRB_mode=lFRB,       &
+                                iRM=iRM, FRB_mode=lFRB,       &
+                                RM_out=lRM, DM_out=lDM, SM_out=lSM, &
                                 error=error)
               if (.not.error) exit
             enddo
           enddo
-          ts_RM(iz,:) = gbl_data%RM
+          if (lRM) ts_RM(iz,:) = gbl_data%RM
+          if (lSM) ts_SM(iz,:) = gbl_data%SM
+          if (lDM) ts_DM(iz,:) = gbl_data%DM
           ts_column(iz,:) = gbl_data%column_density
+          ts_counts(iz) = LoS_counter
         endif
       endif
     enddo
@@ -228,12 +244,22 @@ contains
       if (lRM) then
         call send_or_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
                                    description='Rotation measure along a random LoS')
-        call send_or_write_dataset('column_density', gal_id, ts_column, units='1/cm^3', &
-                                   description='Rotation measure along a random LoS')
+        call send_or_write_dataset('column_density', gal_id, ts_column, units='cm^-2', &
+                                   description='Column density of warm neutral gas')
         call send_or_write_dataset('RM_LoS_y', gal_id, ts_y, &
             description='Impact parameter used in the RM calculation in units of rmax')
         call send_or_write_dataset('RM_LoS_z', gal_id, ts_z, &
             description='Impact parameter used in the RM calculation in units of rmax')
+        call send_or_write_dataset('RM_counts', gal_id, ts_counts, &
+                                   description='Number of sighlines used')
+      endif
+      if (lDM) then
+        call send_or_write_dataset('DM', gal_id, ts_DM, units='pc cm^-3', &
+                                   description='Dispersion measure along a random LoS')
+      endif
+      if (lSM) then
+        call send_or_write_dataset('SM', gal_id, ts_SM, units='kpc m^-{20/3}', &
+                                   description='Scattering measure along a random LoS')
       endif
       call send_or_write_dataset('theta', gal_id, ts_theta, units='radians', &
                                  description='Inclination (for observables calculation)')
@@ -273,7 +299,6 @@ program Observables
   ! Reads the command arguments
   ! Sets the type of run (all, RM, PI, I or PI/I)
   call get_command_argument(2, command_argument)
-  print *, command_argument, 'a'
   call set_runtype(command_argument)
   ! Sets the wavelength in m
   call get_command_argument(3, command_argument)

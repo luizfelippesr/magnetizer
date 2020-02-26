@@ -222,7 +222,9 @@ class MagnetizerRun(object):
                     unit = self._data[0][quantity].attrs['Units']
                     if len(unit)==1:
                         unit = unit[0] # unpacks array..
-                    unit = units_dict[unit.decode("ascii")]
+                    unit = unit.decode("ascii")
+                    if unit in units_dict:
+                        unit = units_dict[unit]
                 else:
                     unit = 1
 
@@ -508,8 +510,8 @@ units_dict = {
               'Mpc^-3' : u.Mpc**-3,
               'Msun' : u.Msun,
               'Msun/yr' : u.Msun/u.yr,
+              'cm^-2' : u.cm**-2,
               'cm^-3' : u.cm**-3,
-              '1/cm^3' : u.cm**-3,
               'erg cm^-3' : u.erg*u.cm**-3,
               'km/s' : u.km/u.s,
               'km/s/kpc': u.km/u.s/u.kpc,
@@ -521,8 +523,12 @@ units_dict = {
               'arbitrary' : 1.0,
               'radians' : u.radian,
               'rad/m^2' : u.radian/u.m/u.m,
+              'kpc m^-{20/3}' : u.kpc * u.m**(-20/3),
+              'pc cm^-3' : u.pc * u.cm**(-3)
              }
 
 # Quantities with multiple entries per redshift
 multiple_entry_datasets = {'RM','RM_LoS_y','RM_LoS_z','column_density','theta',
-                           'FRB_RM','FRB_RM_LoS_y','FRB_RM_LoS_z','FRB_column_density','FRB_theta',}
+                           'DM','SM', 
+                           'FRB_RM','FRB_RM_LoS_y','FRB_RM_LoS_z',
+                           'FRB_column_density','FRB_theta',}

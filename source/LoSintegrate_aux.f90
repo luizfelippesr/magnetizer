@@ -70,7 +70,7 @@ module LoSintegrate_aux
                           DM_out, SM_out, Idust_out, Qdust_out, Udust_out, test)
     use input_constants
     use messages
-    use global_input_parameters, only: p_molecularHeightToRadiusScale
+    use global_input_parameters, only: p_molecularHeightToRadiusScale, p_ISM_turbulent_length
     use input_constants
     use FRB
     type(Galaxy_Properties), intent(in) :: props
@@ -222,7 +222,6 @@ module LoSintegrate_aux
     h = pack(h_all(:),valid(:))
     x_path = pack(xc(:),valid(:))
     z_path = pack(zc(:),valid(:))
-
 
     ! Requests at least 3 grid points
     if (size(z_path)<3) then
@@ -468,14 +467,13 @@ module LoSintegrate_aux
       ! NB Using the total density as a proxy for thermal electron density
       data%RM(this_RM) = Compute_RM(Bpara, ne, x_path, z_path)
       ! Computes column density using neutral gas
-      data%column_density(this_RM) = Compute_Column_Density(                   &
+      data%column_density(this_RM) = Compute_Column_Density( &
          ne*(1d0-ionisation_fraction)/ionisation_fraction, x_path, z_path)
     endif
     ! Dispersion measure
     if (lDM)  data%RM(this_RM) = Compute_DM(ne, x_path, z_path)
     ! Scattering measure
-    if (lSM)  data%SM(this_RM) = Compute_SM(ne, x_path, z_path)
-
+    if (lSM)  data%SM(this_RM) = Compute_SM(ne, h, x_path, z_path, p_ISM_turbulent_length)
 
   end subroutine LoSintegrate
 
@@ -627,10 +625,9 @@ module LoSintegrate_aux
   pure function Compute_DM(ne, x_path, z_path)
     ! Computes the Faraday rotation measure for one specific line of sight
     !
-    ! Input: Bpara -> 1d-array, B parallel to the LoS, in microgauss
-    !        ne -> 1d-array, number of thermal electrons, in cm^-3
+    ! Input: ne -> 1d-array, number of thermal electrons, in cm^-3
     !        x_path,z_path -> 1d-array, positions along path, in kpc
-    ! Output: RM, in rad m^-2
+    ! Output: DM, in pc m^-3
     !
     double precision, dimension(:), intent(in) :: ne, x_path, z_path
     double precision, dimension(size(ne)) :: integrand
@@ -638,22 +635,31 @@ module LoSintegrate_aux
 
     integrand = ne
 
-    Compute_DM = Integrator(integrand, x_path, z_path)
+    Compute_DM = Integrator(integrand, x_path, z_path) *1d3 ! kpc to pc
   end function Compute_DM
 
-  pure function Compute_SM(ne, x_path, z_path)
+  pure function Compute_SM(ne, h, x_path, z_path, l0)
     ! Computes the Faraday rotation measure for one specific line of sight
     !
-    ! Input: Bpara -> 1d-array, B parallel to the LoS, in microgauss
-    !        ne -> 1d-array, number of thermal electrons, in cm^-3
+    ! Input: ne -> 1d-array, number of thermal electrons, in cm^-3
+    !        h -> 1d-array, scaleheight profile, in kpc
+    !        l0 -> turbulent length in kpc
     !        x_path,z_path -> 1d-array, positions along path, in kpc
-    ! Output: RM, in rad m^-2
+    ! Output: SM, in kpc m^-20/3
     !
-    double precision, dimension(:), intent(in) :: ne, x_path, z_path
-    double precision, dimension(size(ne)) :: integrand
+    double precision, dimension(:), intent(in) :: ne, h, x_path, z_path
+    double precision, intent(in) :: l0
+    double precision, dimension(size(ne)) :: integrand, C2N, l
     double precision :: Compute_SM
 
-    integrand = ne**2
+    l = l0
+    where (h>l0)
+      l=l0
+    elsewhere
+      l=h
+    end where
+
+    integrand = 1.8d-3*(ne/0.01)**2*(l/1d-6)**(-2d0/3d0)
 
     Compute_SM = Integrator(integrand, x_path, z_path)
   end function Compute_SM

@@ -91,7 +91,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
         get = lambda quantity, redshift=z: mag_run.get(quantity, redshift,
                                                        cache=cache)
     else:
-        raise(ValueError, 'Must choose either gal_id or z')
+        raise ValueError('Must choose either gal_id or z')
 
     if qname == 'V':
         quantity = get('Omega')*get('r')
@@ -458,7 +458,7 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
             quantity = np.argmax(q,axis=1)
 
     else:
-        raise(ValueError, qname + ' is unknown.')
+        raise ValueError(qname + ' is unknown.')
 
     return quantity
 

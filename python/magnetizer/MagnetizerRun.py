@@ -353,11 +353,11 @@ class MagnetizerRun(object):
         print('{0:12s}{1:13s}{2}'.format('-'*9,'-'*10, '-'*35))
         for k in self._hout[0]['Output']:
             try:
-                unit = self._hout[0]['Output'][k].attrs['Units'][0]
+                unit = self._hout[0]['Output'][k].attrs['Units'][0].decode()
             except:
                 unit = ''
             try:
-                description = self._hout[0]['Output'][k].attrs['Description'][0]
+                description = self._hout[0]['Output'][k].attrs['Description'][0].decode()
             except:
                 description = ''
             print('{0:12s}{1:13s}{2}'.format(k, unit, description))

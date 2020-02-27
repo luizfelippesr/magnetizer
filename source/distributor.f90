@@ -343,7 +343,8 @@ contains
             exit
           else if (igal<=ngals) then
             ! Call dynamo code for each galaxy in mygals
-            call message('Starting',gal_id=galaxies_list(igal), rank=rank)
+            call message('Starting',gal_id=galaxies_list(igal), rank=rank, &
+                         info=3)
             ! Check whether the galaxy was processed previously
             start_galaxy = IO_start_galaxy(galaxies_list(igal))
             if (decide_run(start_galaxy)) then
@@ -353,7 +354,8 @@ contains
               mygals(nmygals) = galaxies_list(igal)
               ! Sends the result (to mark it done)
               if (runtime>0d0) then
-                call message('Done. Sending ',gal_id=galaxies_list(igal), rank=rank)
+                call message('Done. Sending ',gal_id=galaxies_list(igal), &
+                             rank=rank, info=3)
                 call MPI_Send(igal, 1, MPI_INTEGER, 0, finished_tag, MPI_COMM_WORLD, ierr)
                 call write_routine(galaxies_list(igal), runtime)
               else

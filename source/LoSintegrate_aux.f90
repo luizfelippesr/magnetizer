@@ -40,9 +40,9 @@ module LoSintegrate_aux
   end type
 
   type LoS_data
-    double precision :: Stokes_I, Stokes_Idust
-    double precision :: Stokes_Q, Stokes_Qdust
-    double precision :: Stokes_U, Stokes_Udust
+    double precision :: Stokes_I
+    double precision :: Stokes_Q
+    double precision :: Stokes_U
     double precision :: test_Bx, test_By, test_Bz
     double precision, allocatable, dimension(:) :: RM, DM, SM
     double precision, allocatable, dimension(:) :: column_density
@@ -60,6 +60,7 @@ module LoSintegrate_aux
 
   ! Global variables for the integration
   type(LoS_data) :: data_glb
+  logical :: dust_glb
   type(Galaxy_Properties) :: props_glb
   integer :: iz_glb
 
@@ -67,7 +68,7 @@ module LoSintegrate_aux
 
   subroutine LoSintegrate(props, impacty_rmax, impactz_rmax, data, iz, &
                           FRB_mode, RM_out, I_out, Q_out, U_out, iRM, error, &
-                          DM_out, SM_out, Idust_out, Qdust_out, Udust_out, test)
+                          DM_out, SM_out, dust_mode, test)
     use input_constants
     use messages
     use global_input_parameters, only: p_molecularHeightToRadiusScale, p_ISM_turbulent_length
@@ -78,7 +79,6 @@ module LoSintegrate_aux
     ! Impact parameter in y- and z-directions in units of rmax
     double precision, intent(in) :: impactz_rmax, impacty_rmax
     logical, intent(in), optional :: I_out, Q_out, U_out, FRB_mode, test
-    logical, intent(in), optional :: Idust_out, Qdust_out, Udust_out
     logical, intent(in), optional :: RM_out, DM_out, SM_out
     integer, optional, intent(in) :: iRM
     double precision, dimension(2*props%n_grid) :: xc, zc, ne_all, h_all, n_mol_all
@@ -96,10 +96,10 @@ module LoSintegrate_aux
     integer, dimension(2*props%n_grid) :: js
     integer :: i, j, iz, this_RM, k
     logical, parameter :: ldense_z = .true.
-    logical :: lFRB, lTest
+    logical :: lFRB, lTest, ldust
     logical, optional, intent(inout) :: error
     double precision, parameter :: EPS=1e-6
-    logical :: dust_mode
+    logical, intent(in), optional :: dust_mode
 
 
     lFRB = .false.
@@ -120,12 +120,20 @@ module LoSintegrate_aux
     lRM=.false.; lI=.false.; lQ=.false.; lU=.false.
     lI_dust = .false.; lQ_dust = .false.; lU_dust = .false.
     if (present(RM_out)) lRM = RM_out
+
     if (present(I_out)) lI = I_out
     if (present(Q_out)) lQ = Q_out
     if (present(U_out)) lU = U_out
-    if (present(Idust_out)) lI_dust = Idust_out
-    if (present(Qdust_out)) lQ_dust = Qdust_out
-    if (present(Udust_out)) lU_dust = Udust_out
+
+    ldust = .false.
+    if (present(dust_mode)) then
+      ldust = dust_mode
+      if (ldust) then
+        if (present(I_out)) lI_dust = I_out
+        if (present(Q_out)) lQ_dust = Q_out
+        if (present(U_out)) lU_dust = U_out
+      endif
+    endif
 
     lSM = .false.; lDM =.false.
     if (present(SM_out)) then
@@ -141,9 +149,6 @@ module LoSintegrate_aux
     if (present(test)) then
       lTest = test
     endif
-
-    dust_mode = .false.
-    if (lI_dust .or. lQ_dust .or. lU_dust) dust_mode = .true.
 
     ! Computes maximum radius and impact parameters
     rmax = props%Rcyl(iz,props%n_grid)
@@ -198,7 +203,7 @@ module LoSintegrate_aux
       ne_all(i) = props%n(iz,j) * ionisation_fraction
       h_all(i) = props%h(iz,j)
 
-      if (dust_mode) then
+      if (ldust) then
         ! At the moment, the following is NOT strictly speaking the molecular
         ! density, but is proportional to it
         ! NB the scaling with of n with z is done further ahead!
@@ -239,7 +244,7 @@ module LoSintegrate_aux
         z_end = 3d0*h(size(h))
 
         ! If in dust mode, use the molecular gas as reference instead
-        if (dust_mode) then
+        if (ldust) then
           z_start = max(z_start, -3d0*h_m)
           z_end = min(z_end, 3d0*h_m)
         endif
@@ -262,7 +267,7 @@ module LoSintegrate_aux
         z_end = -3.5d0*h(size(h))
 
         ! If in dust mode, use the molecular gas as reference instead
-        if (dust_mode) then
+        if (ldust) then
           z_start = min(z_start, 3d0*h_m)
           z_end = max(z_end, -3d0*h_m)
         endif
@@ -440,17 +445,17 @@ module LoSintegrate_aux
 
     if (lI_dust) then
       ! Synchrotron emission
-      data%Stokes_Idust = Compute_Stokes_dust('I', n_mol, x_path, z_path,&
+      data%Stokes_I = Compute_Stokes_dust('I', n_mol, x_path, z_path,&
                                           data%dust_alpha, data%dust_p0, psi0, Brnd_B, cos2gamma)
 
     endif
     if (lQ_dust) then
 
-      data%Stokes_Qdust = Compute_Stokes_dust('Q', n_mol, x_path, z_path,&
+      data%Stokes_Q = Compute_Stokes_dust('Q', n_mol, x_path, z_path,&
                                           data%dust_alpha, data%dust_p0, psi0, Brnd_B, cos2gamma)
     endif
     if (lU_dust) then
-      data%Stokes_Udust = Compute_Stokes_dust('U', n_mol, x_path, z_path,&
+      data%Stokes_U = Compute_Stokes_dust('U', n_mol, x_path, z_path,&
                                           data%dust_alpha, data%dust_p0, psi0, Brnd_B, cos2gamma)
     endif
 
@@ -471,7 +476,7 @@ module LoSintegrate_aux
          ne*(1d0-ionisation_fraction)/ionisation_fraction, x_path, z_path)
     endif
     ! Dispersion measure
-    if (lDM)  data%RM(this_RM) = Compute_DM(ne, x_path, z_path)
+    if (lDM)  data%DM(this_RM) = Compute_DM(ne, x_path, z_path)
     ! Scattering measure
     if (lSM)  data%SM(this_RM) = Compute_SM(ne, h, x_path, z_path, p_ISM_turbulent_length)
 
@@ -491,11 +496,12 @@ module LoSintegrate_aux
     n_mol = Sigma_m(1)
   end function compute_molecular_density
 
-  function IntegrateImage(im_type, props,data,iz,number_of_calls,method,error) result(res)
+  function IntegrateImage(im_type, props,data,iz,number_of_calls,method,error,dust) result(res)
     use fgsl
     use, intrinsic :: iso_c_binding
     character(len=*), intent(in) :: im_type
     type(Galaxy_Properties), intent(in) :: props
+    logical, optional, intent(in) :: dust
     type(LoS_data), intent(inout) :: data
     integer, intent(in) :: iz
     integer, intent(in), optional :: number_of_calls
@@ -512,6 +518,10 @@ module LoSintegrate_aux
     type(c_ptr) :: ptr
     integer(fgsl_int) :: status
     character(len=10) :: mthd
+    logical :: ldust
+
+    dust_glb = .false.
+    if (present(dust)) dust_glb = dust
 
     calls = 1600
     if (present(number_of_calls)) calls = number_of_calls
@@ -532,6 +542,10 @@ module LoSintegrate_aux
       gfun = fgsl_monte_function_init(IntegrandImage_I, 2_fgsl_size_t, ptr)
     elseif (im_type=='PI') then
       gfun = fgsl_monte_function_init(IntegrandImage_PI, 2_fgsl_size_t, ptr)
+    elseif (im_type=='Q') then
+      gfun = fgsl_monte_function_init(IntegrandImage_Q, 2_fgsl_size_t, ptr)
+    elseif (im_type=='U') then
+      gfun = fgsl_monte_function_init(IntegrandImage_U, 2_fgsl_size_t, ptr)
     else
       stop 'Error.'
     endif
@@ -568,9 +582,10 @@ module LoSintegrate_aux
     real(c_double), dimension(:), pointer :: v
     ! Reads the memory address
     call c_f_pointer(v_c, v, [n])
-    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
+    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb,   &
                                    RM_out=.false., I_out=.true., &
-                                   Q_out=.false., U_out=.false.)
+                                   Q_out=.false., U_out=.false., &
+                                   dust_mode=dust_glb)
     IntegrandImage_I = data_glb%Stokes_I
   end function IntegrandImage_I
 
@@ -585,11 +600,48 @@ module LoSintegrate_aux
     real(c_double), dimension(:), pointer :: v
     ! Reads the memory address
     call c_f_pointer(v_c, v, [n])
-    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb, &
+    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb,    &
                                    RM_out=.false., I_out=.false., &
-                                   Q_out=.true., U_out=.true.)
+                                   Q_out=.true., U_out=.true.,    &
+                                   dust_mode=dust_glb)
     IntegrandImage_PI = sqrt(data_glb%Stokes_Q**2 + data_glb%Stokes_U**2)
   end function IntegrandImage_PI
+
+  function IntegrandImage_Q(v_c, n, params) bind(c)
+    ! Wrapper to allow using LoSintegrate with FGSL
+    use fgsl
+    use, intrinsic :: iso_c_binding
+
+    integer(c_size_t), value :: n
+    type(c_ptr), value :: v_c, params
+    real(c_double) :: IntegrandImage_Q
+    real(c_double), dimension(:), pointer :: v
+    ! Reads the memory address
+    call c_f_pointer(v_c, v, [n])
+    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb,    &
+                                   RM_out=.false., I_out=.false., &
+                                   Q_out=.true., U_out=.false.,    &
+                                   dust_mode=dust_glb)
+    IntegrandImage_Q = data_glb%Stokes_Q
+  end function IntegrandImage_Q
+
+  function IntegrandImage_U(v_c, n, params) bind(c)
+    ! Wrapper to allow using LoSintegrate with FGSL
+    use fgsl
+    use, intrinsic :: iso_c_binding
+
+    integer(c_size_t), value :: n
+    type(c_ptr), value :: v_c, params
+    real(c_double) :: IntegrandImage_U
+    real(c_double), dimension(:), pointer :: v
+    ! Reads the memory address
+    call c_f_pointer(v_c, v, [n])
+    call LoSintegrate(props_glb, v(1), v(2), data_glb, iz_glb,    &
+                                   RM_out=.false., I_out=.false., &
+                                   Q_out=.false., U_out=.true.,    &
+                                   dust_mode=dust_glb)
+    IntegrandImage_U = data_glb%Stokes_U
+  end function IntegrandImage_U
 
   function Compute_Column_Density(nn, x_path, z_path)
     ! Computes column density measure for one specific line of sight
@@ -627,7 +679,7 @@ module LoSintegrate_aux
     !
     ! Input: ne -> 1d-array, number of thermal electrons, in cm^-3
     !        x_path,z_path -> 1d-array, positions along path, in kpc
-    ! Output: DM, in pc m^-3
+    ! Output: DM, in pc cm^-3
     !
     double precision, dimension(:), intent(in) :: ne, x_path, z_path
     double precision, dimension(size(ne)) :: integrand
@@ -887,9 +939,15 @@ module LoSintegrate_aux
               U_im(i,j) = real(data%test_Bx)
               data%Stokes_U = 0
 
-            else if (.not.ldust) then
-              call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
-                                I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
+            else
+              if (.not.ldust) then
+                  call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
+                                    I_out=.true., U_out=.true., Q_out=.true., RM_out=.true.)
+              else
+                  call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
+                                    I_out=.true., U_out=.true., Q_out=.true., &
+                                    dust_mode=.true.)
+              endif
               I_im(i,j) = real(data%Stokes_I)
               data%Stokes_I = 0
 
@@ -904,25 +962,7 @@ module LoSintegrate_aux
 
               RM_im(i,j) = real(data%RM(1))
               data%RM = 0
-            else
-              call LoSintegrate(props, impact_y/rmax, impact_z/rmax, data, it, &
-                                Idust_out=.true., Udust_out=.true., Qdust_out=.true.)
-              I_im(i,j) = real(data%Stokes_Idust)
-              data%Stokes_I = 0
-
-              Q_im(i,j) = real(data%Stokes_Qdust)
-              data%Stokes_Q = 0
-
-              U_im(i,j) = real(data%Stokes_Udust)
-              data%Stokes_U = 0
-
-              N_im(i,j) = real(data%number_of_cells)
-              data%number_of_cells = 0
-
-              RM_im(i,j) = real(data%RM(1))
-              data%RM = 0
             endif
-
           enddo
 
           if (to_file) then

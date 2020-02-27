@@ -22,13 +22,15 @@ module Observables_aux
   private
   public Compute_I_PI_RM, set_runtype, write_observables
   type(LoS_data),public :: gbl_data
-  logical :: lRM=.false., lI=.false., lPI=.false., lFRB=.false., lDM=.false., lSM=.false.
+  logical :: lRM = .false., lI = .false., lPI = .false., ldust = .false.
+  logical :: lFRB = .false., lDM = .false., lSM = .false., lU=.false., lQ=.false.
   integer, parameter :: nRMs = 10
   double precision, parameter :: INVALID = -1d50
   ! Used to decide whether a galaxy should be neglected for being to small
   double precision, public, parameter :: minimum_disc_radius=0.15 ! kpc
 
   double precision, allocatable, dimension(:) :: ts_I, ts_PI, ts_counts
+  double precision, allocatable, dimension(:) :: ts_U, ts_Q
   double precision, allocatable, dimension(:,:) :: ts_SM, ts_DM
   double precision, allocatable, dimension(:,:) :: ts_RM, ts_column
   double precision, allocatable, dimension(:,:) :: ts_theta, ts_z, ts_y
@@ -61,6 +63,12 @@ contains
       case ('I')
         lPI = .true.
       case ('PI')
+        lPI = .true.
+      case ('dust')
+        ldust = .true.
+        lQ = .true.
+        lU = .true.
+        lI = .true.
         lPI = .true.
     end select
   end subroutine
@@ -121,6 +129,8 @@ contains
     if (.not.allocated(ts_RM)) then
       allocate(ts_I(number_of_redshifts))
       allocate(ts_PI(number_of_redshifts))
+      allocate(ts_U(number_of_redshifts))
+      allocate(ts_Q(number_of_redshifts))
       allocate(ts_RM(number_of_redshifts, props%n_RMs))
       allocate(ts_SM(number_of_redshifts, props%n_RMs))
       allocate(ts_DM(number_of_redshifts, props%n_RMs))
@@ -131,8 +141,8 @@ contains
       allocate(ts_counts(number_of_redshifts))
     endif
 
-    call message('Computing observables', gal_id=gal_id, info=1)
-    do iz=1, number_of_redshifts
+    call message('Computing observables', gal_id=gal_id, info=3)
+    do iz=number_of_redshifts, 1, -1
       ! Catches invalid redshifts (markers for invalid runs)
       if (props%h(iz,2)<=0d0 .or. props%r_disk(iz)<minimum_disc_radius) then
         ! Marks them as invalid (will be converted into NaN by the python API)
@@ -164,12 +174,26 @@ contains
       if (props%Rcyl(iz,1)>0d0) then
         if (lI) then
           call message('calculating I', gal_id=gal_id, val_int=iz, info=2)
-          ts_I(iz) = IntegrateImage('I', props, gbl_data,iz)
+          ts_I(iz) = IntegrateImage('I', props, gbl_data,iz,dust=ldust)
+!           print*, iz, ts_I(iz)
         endif
         if (lPI) then
           call message('calculating PI', gal_id=gal_id, val_int=iz, info=2)
-          ts_PI(iz) = IntegrateImage('PI', props, gbl_data,iz)
+          ts_PI(iz) = IntegrateImage('PI', props, gbl_data,iz,dust=ldust)
+          print*, iz, ts_PI(iz)/ts_I(iz)*100
         endif
+        if (lI) then
+          call message('calculating Q (integrated)', gal_id=gal_id, val_int=iz, info=2)
+          ts_Q(iz) = IntegrateImage('Q', props, gbl_data,iz,dust=ldust)
+          print*, iz, ts_Q(iz)/ts_I(iz)*100
+        endif
+        if (lU) then
+          call message('calculating U (integrated)', gal_id=gal_id, val_int=iz, info=2)
+          ts_U(iz) = IntegrateImage('U', props, gbl_data,iz,dust=ldust)
+          print*, iz, ts_U(iz)/ts_I(iz)*100
+        endif
+        print*, 'comparison', ts_PI(iz)/sqrt(ts_Q(iz)**2+ts_U(iz)**2)
+        print *, gbl_data%theta*180d0/3.1416
         if (lRM .or. lDM .or. lSM .or. lDM) then
           LoS_counter = 0
           call message('calculating RM/DM/SM', gal_id=gal_id,  val_int=iz, info=2)
@@ -232,15 +256,42 @@ contains
       integer, intent(in) :: gal_id
       double precision, intent(in) :: runtime
 
-      if (.not.lFRB) then
-      if (lI) &
-        call send_or_write_dataset('I_'//str(gbl_data%wavelength*100, 2)//'cm', &
-                                   gal_id, ts_I, units='arbitrary', &
-                                   description='Integrated synchrotron emission')
-      if (lPI) &
-        call send_or_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
-                                   gal_id, ts_PI, units='arbitrary', &
-                                   description='Integrated polarised synchrotron emission')
+    if (.not.lFRB) then
+      if (.not.ldust) then
+        if (lI) &
+          call send_or_write_dataset('I_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                                     gal_id, ts_I, units='arbitrary', &
+                                     description='Integrated synchrotron emission')
+        if (lPI) &
+          call send_or_write_dataset('PI_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                                     gal_id, ts_PI, units='arbitrary', &
+                                     description='Integrated polarised synchrotron emission')
+        if (lQ) &
+          call send_or_write_dataset('Q_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                                     gal_id, ts_Q, units='arbitrary', &
+                                     description='Integrated polarised synchrotron emission')
+        if (lU) &
+          call send_or_write_dataset('U_'//str(gbl_data%wavelength*100, 2)//'cm', &
+                                     gal_id, ts_Q, units='arbitrary', &
+                                     description='Integrated polarised synchrotron emission')
+      else
+        if (lI) &
+          call send_or_write_dataset('I_dust', &
+                                    gal_id, ts_I, units='arbitrary', &
+                                    description='Integrated synchrotron emission')
+        if (lPI) &
+          call send_or_write_dataset('PI_dust', &
+                                     gal_id, ts_PI, units='arbitrary', &
+                                     description='Integrated polarised synchrotron emission')
+        if (lQ) &
+          call send_or_write_dataset('Q_dust', &
+                                    gal_id, ts_Q, units='arbitrary', &
+                                    description='Integrated polarised synchrotron emission')
+        if (lU) &
+          call send_or_write_dataset('U_dust', &
+                                    gal_id, ts_Q, units='arbitrary', &
+                                    description='Integrated polarised synchrotron emission')
+      endif
       if (lRM) then
         call send_or_write_dataset('RM', gal_id, ts_RM, units='rad/m^2', &
                                    description='Rotation measure along a random LoS')
@@ -306,8 +357,8 @@ program Observables
   ! Tries to read a list of galaxy numbers from argument 4 onwards
   galaxies_list = jobs_reads_galaxy_list(4)
   ! Computes I and PI for the galaxies in the sample
-  !gbl_data%theta = 30.d0 * 3.14156295358d0/180d0
-  !random_theta = .false.
+  ! gbl_data%theta = 77.d0 * 3.14156295358d0/180d0
+  ! random_theta = .false.
   random_theta = .true.
   call jobs_distribute(Compute_I_PI_RM, write_observables, random_theta, &
                        galaxies_list)

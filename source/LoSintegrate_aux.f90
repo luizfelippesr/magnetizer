@@ -52,7 +52,8 @@ module LoSintegrate_aux
     double precision :: alpha = 3d0
     double precision :: dust_alpha = 1d0
     double precision :: dust_p0 = 0.2
-    double precision :: theta = 0d0
+    ! Initial 1000 value is used as a tag to request random theta
+    double precision :: theta = 1000d0
     logical :: B_scale_with_z = .false.
     logical :: ignore_small_scale_field = .false.
     integer :: nz_points = 500
@@ -523,9 +524,9 @@ module LoSintegrate_aux
     dust_glb = .false.
     if (present(dust)) dust_glb = dust
 
-    calls = 1600
+    calls = 2500
     if (present(number_of_calls)) calls = number_of_calls
-    mthd = 'VEGAS'
+    mthd = 'MISER'
     if (present(method)) mthd = method
 
     data_glb = data
@@ -784,7 +785,7 @@ module LoSintegrate_aux
     integer i
     emissivity = n_mol**alpha
 
-    p0_actual = p0*dust_instrinsic_polarization(Brnd_B / sqrt(cos2gamma))
+    p0_actual = p0*dust_instrinsic_polarization(Brnd_B)
 
     if (S=='I') then
       integrand = emissivity
@@ -1034,8 +1035,8 @@ module LoSintegrate_aux
     use interpolation
     double precision, dimension(:), intent(in) :: b_B
     double precision, dimension(size(b_B)) :: p
-    double precision, dimension(2,174) :: v
-    double precision, dimension(174) :: p_ref, b_B_ref
+    double precision, dimension(2,173) :: v
+    double precision, dimension(173) :: p_ref, b_B_ref
     double precision, dimension(1) :: p_1 ! workaround
     integer u, i
 

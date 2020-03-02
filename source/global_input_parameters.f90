@@ -340,12 +340,16 @@ module global_input_parameters
   double precision :: p_obs_dust_alpha = 3d0
   logical :: p_obs_scale_with_z = .true.
   logical :: p_obs_ignore_small_scale = .true.
+  ! If set to true, will compute observables for all possible redshifts
+  logical :: p_obs_use_all_redshifts = .true.
+  ! If p_obs_use_all_redshifts==F, the indices of specific resdhifts
+  ! can be chosen using e.g. p_obs_redshift_indices = 45, 44, 43
   integer, dimension(50) :: p_obs_redshift_indices = -1
 
   namelist /observables_parameters/ &
     p_obs_CR_alpha, p_obs_dust_alpha, &
     p_obs_ignore_small_scale, p_obs_scale_with_z, &
-    p_obs_redshift_indices
+    p_obs_redshift_indices, p_obs_use_all_redshifts
 
 
   contains

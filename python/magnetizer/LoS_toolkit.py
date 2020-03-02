@@ -28,6 +28,7 @@ def run_LoS(runtype, parameters_file, gal_id, iz, theta, wavelength=20e-2,
         output = subprocess.check_output(cmd, cwd=cwd)
     except subprocess.CalledProcessError as e:
         print('error')
+        print(' '.join(cmd))
         print(e.output.decode())
         print('---')
         raise

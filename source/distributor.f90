@@ -303,6 +303,11 @@ contains
           call message('STOP file found. Will finish this cycle and then exit.', &
                       info=0, master_only=.true.)
         endif
+        if (p_max_walltime>0) then
+          if ((MPI_wtime()-tstart) > p_max_walltime) lstop = .true.
+          call message('Maximum walltime reached! Will finish this cycle and then exit.', &
+                      info=0, master_only=.true.)
+        end if
 
         ! Goes through all workers, requesting them to either stop or flush
         ! the data to the disk

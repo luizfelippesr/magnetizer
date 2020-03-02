@@ -82,11 +82,14 @@ module global_input_parameters
   logical :: p_no_magnetic_fields_test_run = .false.
   ! Seed for the random number generator (can be any integer different from 0)
   integer :: p_random_seed = 17
+  ! Maximum walltime for the run in seconds (if negative, this is unlimited)
+  double precision :: p_max_walltime = -1
 
   namelist /run_parameters/ &
     model_name, info, nsteps_0, p_courant_v, p_courant_eta, &
     p_variable_timesteps, p_nsteps_max, p_oneSnaphotDebugMode, &
-    p_no_magnetic_fields_test_run, p_MAX_FAILS, p_random_seed
+    p_no_magnetic_fields_test_run, p_MAX_FAILS, p_random_seed, &
+    p_max_walltime
 
   ! -------------------------------------------------------
   ! Grid settings
@@ -337,10 +340,12 @@ module global_input_parameters
   double precision :: p_obs_dust_alpha = 3d0
   logical :: p_obs_scale_with_z = .true.
   logical :: p_obs_ignore_small_scale = .true.
+  integer, dimension(50) :: p_obs_redshift_indices = -1
 
   namelist /observables_parameters/ &
     p_obs_CR_alpha, p_obs_dust_alpha, &
-    p_obs_ignore_small_scale, p_obs_scale_with_z
+    p_obs_ignore_small_scale, p_obs_scale_with_z, &
+    p_obs_redshift_indices
 
 
   contains

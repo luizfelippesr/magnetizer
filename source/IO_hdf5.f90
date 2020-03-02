@@ -170,7 +170,7 @@ contains
         call check(error)
       else
         if (lresuming_run) then
-          call message('Opening file '//trim(output_file_name)// 'in RW mode', info=3)
+          call message('Opening file '//trim(output_file_name)// ' in RW mode', info=3)
           call h5fopen_f(trim(output_file_name), H5F_ACC_RDWR_F, file_id_out, error)
           call check(error)
         else

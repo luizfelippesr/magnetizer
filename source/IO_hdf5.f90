@@ -41,6 +41,8 @@ module IO
   ! Maximum length of a text attribute
   integer, parameter :: ATTRIB_MAX_LEN = 200
 
+  double precision, parameter :: INVALID = -1d50
+
   integer(hid_t) :: file_id          ! hdf5 file identifier
   integer(hid_t) :: file_id_out      ! hdf5 file identifier
   integer(hid_t) :: output_group_id  ! hdf5 group identifier
@@ -60,6 +62,7 @@ module IO
   public IO_start, IO_start_galaxy, IO_write_dataset, IO_end
   public IO_read_dataset_single, IO_flush, IO_prepare
   public IO_read_dataset_scalar, IO_read_dataset_vector
+  public IO_dataset_exists
   public mpirank
 
 contains
@@ -258,6 +261,28 @@ contains
     endif
 
   end function IO_start_galaxy
+
+  function IO_dataset_exists(dataset_name, group) result(exists)
+    character(len=*), intent(in) :: dataset_name
+    character(len=*), optional :: group
+    integer(hid_t) :: group_id
+    integer ::  idx, error
+    logical :: exists
+
+    if (present(group)) then
+      group_id = choose_group_id(group)
+    else
+      group_id = output_group_id
+    endif
+    ! Tries to find a previously opened dataset (-1 signals new)
+    idx = find_dset(dataset_name)
+    ! If it wasn't previously opened, creates it (collectively)
+    if (idx < 0) then
+      call h5lexists_f(group_id, trim(dataset_name), exists, error)
+    else
+      exists = .true.
+    endif
+  end function IO_dataset_exists
 
   subroutine IO_write_dataset_scalar(dataset_name, gal_id, data, &
                                      units, description, group)
@@ -945,6 +970,11 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
         call check(error)
       endif
     endif
+
+    ! Sets the fill value to INVALID
+    call H5Pset_fill_value_f(plist_id, H5T_NATIVE_DOUBLE, INVALID, error)
+    call check(error)
+
     ! Creates the dataset
     call H5Dcreate_f(group_id_actual, dataset_name, datatype_actual, &
                     dataspace, dset_ids(idx), error,  dcpl_id=plist_id)

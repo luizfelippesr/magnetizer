@@ -63,7 +63,7 @@ contains
 
   end subroutine set_runtype
 
-  function Compute_I_PI_RM(gal_id, resume, error) result(runtime)
+  function Compute_I_PI_RM(gal_id, overwrite, error) result(runtime)
     use messages
     use IO
     use math_constants
@@ -71,7 +71,7 @@ contains
     use random
     integer, intent(in) :: gal_id
     logical :: random_theta
-    logical, intent(in) :: resume
+    logical, intent(in) :: overwrite
     logical, intent(out) :: error
     double precision :: runtime, err
     double precision :: cpu_time_start,cpu_time_finish
@@ -187,7 +187,7 @@ contains
 
       ! Chooses the random seed. This done combining galaxy id and redshift to
       ! ensure reproducibility (sometimes, one may run only a select set of
-      ! redshifts and still should get the same result
+      ! redshifts and still should get the same result)
       call set_random_seed(gal_id, p_random_seed+iz)
 
       if (random_theta) then
@@ -197,7 +197,7 @@ contains
 
       ! ------ Integrated observables -----------------------------------------
       if (lI) then
-        if (ts_I(iz,1)<-1d30) then
+        if (ts_I(iz,1)<-1d30 .or. overwrite) then
           call message('calculating I', gal_id=gal_id, val=props%z(iz), info=2)
           ts_I(iz,1) = IntegrateImage('I', props, gbl_data,iz,dust=ldust, &
                                       error=ts_I_err(iz,1))
@@ -205,7 +205,7 @@ contains
       endif
 
       if (lPI) then
-        if (ts_PI(iz,1)<-1d30) then
+        if (ts_PI(iz,1)<-1d30 .or. overwrite) then
           call message('calculating PI', gal_id=gal_id, val_int=iz, info=2)
           ts_PI(iz,1) = IntegrateImage('PI', props, gbl_data,iz,dust=ldust, &
                                        error=ts_PI_err(iz,1))
@@ -213,7 +213,7 @@ contains
       endif
 
       if (lQ) then
-        if (ts_Q(iz,1)<-1d30) then
+        if (ts_Q(iz,1)<-1d30 .or. overwrite) then
           call message('calculating Q (integrated)', gal_id=gal_id, val_int=iz, info=2)
           ts_Q(iz,1) = IntegrateImage('Q', props, gbl_data,iz,dust=ldust, &
                                       error=ts_Q_err(iz,1))
@@ -221,7 +221,7 @@ contains
       endif
 
       if (lU) then
-        if (ts_U(iz,1)<-1d30) then
+        if (ts_U(iz,1)<-1d30 .or. overwrite) then
           call message('calculating U (integrated)', gal_id=gal_id, val_int=iz, info=2)
           ts_U(iz,1) = IntegrateImage('U', props, gbl_data,iz,dust=ldust, &
                                       error=ts_U_err(iz,1))
@@ -230,7 +230,7 @@ contains
 
       ! ------ LoS observables -----------------------------------------
       if (lLoS) then
-        if (ts_counts(iz,1)>1) cycle
+        if (ts_counts(iz,1)>1 .and. (.not.overwrite)) cycle
         LoS_counter = 0
         call message('calculating RM/DM/SM', gal_id=gal_id,  val_int=iz, info=2)
         do iRM=1, props%n_RMs
@@ -389,9 +389,7 @@ contains
     ! substitutes glb_val by it, otherwise, stores glb_val in ts_val
     if (ts_val<-1d20) then
       ts_val = glb_val
-      print *, 'Using the glb_val'
     else
-      print *, 'Using the ts_val', ts_val
       glb_val = ts_val
     endif
   end subroutine set_random_val
@@ -409,7 +407,8 @@ program Observables
   implicit none
   character(len=300) :: command_argument
   integer, allocatable, dimension(:) :: galaxies_list
-  logical :: random_theta
+  logical :: overwrite
+  integer :: iarg
 
 
   ! Prints welcome message and prepares to distribute jobs
@@ -425,9 +424,7 @@ program Observables
   ! Tries to read a list of galaxy numbers from argument 4 onwards
   galaxies_list = jobs_reads_galaxy_list(4)
   ! Computes I and PI for the galaxies in the sample
-  ! gbl_data%theta = 45 * 3.14156295358d0/180d0
-  ! random_theta = .false.
-  random_theta = .true.
-  call jobs_distribute(Compute_I_PI_RM, write_observables, random_theta, &
+  overwrite = .false.
+  call jobs_distribute(Compute_I_PI_RM, write_observables, overwrite, &
                        galaxies_list)
 end program Observables

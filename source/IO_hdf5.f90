@@ -972,8 +972,10 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     endif
 
     ! Sets the fill value to INVALID
-    call H5Pset_fill_value_f(plist_id, H5T_NATIVE_DOUBLE, INVALID, error)
-    call check(error)
+    if (datatype_actual==H5T_NATIVE_DOUBLE) then
+      call H5Pset_fill_value_f(plist_id, H5T_NATIVE_DOUBLE, INVALID, error)
+      call check(error)
+    endif
 
     ! Creates the dataset
     call H5Dcreate_f(group_id_actual, dataset_name, datatype_actual, &

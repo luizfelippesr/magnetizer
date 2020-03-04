@@ -115,7 +115,10 @@ module LoSintegrate_aux
       data%Stokes_I = 0; data%Stokes_U = 0; data%Stokes_Q = 0
     endif
     ! Skips if outside the galaxy
-    if (abs(impacty_rmax)>1) return
+    if (abs(impacty_rmax)>1) then
+      if (present(error)) error = .true.
+      return
+    endif
 
     ! Sets optional arguments and their default values
     lRM=.false.; lI=.false.; lQ=.false.; lU=.false.
@@ -150,6 +153,7 @@ module LoSintegrate_aux
     if (present(test)) then
       lTest = test
     endif
+
 
     ! Computes maximum radius and impact parameters
     rmax = props%Rcyl(iz,props%n_grid)
@@ -217,7 +221,10 @@ module LoSintegrate_aux
 
     ! Now work is done over the whole grid
     ! Skips empty cells
-    if (all(.not.valid(:))) return
+    if (all(.not.valid(:)))  then
+      if (present(error)) error = .true.
+      return
+    endif
 
     ! Filters away invalid parts of the arrays
     Bx = pack(Bx_all(:),valid(:))
@@ -250,7 +257,7 @@ module LoSintegrate_aux
           z_end = min(z_end, 3d0*h_m)
         endif
 
-        ! Checks wheter the line of sight is not too far away to be relevant
+        ! Checks whether the line of sight is not too far away to be relevant
         if (z_end<z_path(1) .or. z_start>z_path(size(z_path))) then
           if (present(error)) error = .true.
           return
@@ -273,7 +280,7 @@ module LoSintegrate_aux
           z_end = max(z_end, -3d0*h_m)
         endif
 
-        ! Checks wheter the line of sight is not too far away to be relevant
+        ! Checks whether the line of sight is not too far away to be relevant
         if (z_start<z_path(size(z_path)) .or. z_end>z_path(1) ) then !
           if (present(error)) error = .true.
           return

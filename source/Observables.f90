@@ -20,20 +20,20 @@ module Observables_aux
   use messages
   implicit none
   private
-  public Compute_I_PI_RM, set_runtype, write_observables
+  public Compute_I_PI_RM, set_runtype, write_observables, lfrequency
   type(LoS_data),public :: gbl_data
   logical :: lI = .false., lPI = .false., lU=.false., lQ=.false.
-  logical :: lLoS=.false., lFRB = .false., ldust = .false.
+  logical :: lLoS=.false., lFRB = .false., ldust = .false., lfrequency = .false.
   integer, parameter :: nRMs = 10
   double precision, parameter :: INVALID = -1d50
   ! Used to decide whether a galaxy should be neglected for being to small
   double precision, public, parameter :: minimum_disc_radius=0.15 ! kpc
 
-  double precision, allocatable, dimension(:,:) :: ts_U, ts_Q, ts_I, ts_PI
+  double precision, allocatable, dimension(:,:) :: ts_U, ts_Q, ts_I, ts_PI, ts_theta
   double precision, allocatable, dimension(:,:) :: ts_U_err, ts_Q_err, ts_I_err, ts_PI_err
   double precision, allocatable, dimension(:,:) :: ts_SM, ts_DM, ts_counts
   double precision, allocatable, dimension(:,:) :: ts_RM, ts_column
-  double precision, allocatable, dimension(:,:) :: ts_theta, ts_z, ts_y
+  double precision, allocatable, dimension(:,:) :: ts_LoS_theta, ts_z, ts_y
   double precision :: impact_y, impact_z
   character(len=5) :: prefix
   character(len=10) :: tag
@@ -51,6 +51,7 @@ contains
         lQ = .true.
         lU = .true.
         lI = .true.
+        lfrequency = .true.
       case ('dust')
         ldust = .true.
         lQ = .true.
@@ -73,10 +74,10 @@ contains
     logical :: random_theta
     logical, intent(in) :: overwrite
     logical, intent(out) :: error
-    double precision :: runtime, err
+    double precision :: runtime
     double precision :: cpu_time_start,cpu_time_finish
     type(Galaxy_Properties) :: props
-    double precision, allocatable, dimension(:,:) :: buffer, ts_buffer
+    double precision, allocatable, dimension(:,:) :: buffer
     double precision, allocatable, dimension(:) :: bufferz
     integer :: i, iz, iRM, LoS_counter
 
@@ -136,7 +137,6 @@ contains
     call IO_read_dataset_scalar('r_disk', gal_id, bufferz, group='Input')
     props%r_disk = bufferz
 
-
     if (lLoS) then
       call prepare_ts(ts_RM, number_of_redshifts, props%n_RMs, &
                       trim(prefix)//'RM', gal_id)
@@ -153,6 +153,8 @@ contains
       call prepare_ts(ts_z, number_of_redshifts, props%n_RMs, &
                       trim(prefix)//'LoS_z', gal_id)
       call prepare_ts(ts_counts, number_of_redshifts, 1, trim(prefix)//'LoS_counts', gal_id)
+      call prepare_ts(ts_LoS_theta, number_of_redshifts, props%n_RMs, &
+                    trim(prefix)//'LoS_theta', gal_id)
     endif
 
     if (lU) call prepare_ts(ts_U, number_of_redshifts, 1, 'U_'//trim(tag), gal_id)
@@ -168,29 +170,33 @@ contains
     if (lPI) call prepare_ts(ts_PI_err, number_of_redshifts, 1, 'PI_'//trim(tag)//'_err', gal_id)
 
     ! Any option will have an inclination angle
-    call prepare_ts(ts_theta, number_of_redshifts, props%n_RMs, &
-                    trim(prefix)//'theta', gal_id)
+    if (lPI .or. lI .or. lU .or. lQ) then
+      call prepare_ts(ts_theta, number_of_redshifts, 1, 'theta', gal_id)
+    endif
+
 
     call message('Computing observables', gal_id=gal_id, info=3)
     do i=1, size(p_obs_redshift_indices)
-      if (.not.p_obs_use_all_redshifts .or. lLoS) then
+      if (.not.p_obs_use_all_redshifts .and. .not.lLoS) then
         ! If required, only a select set of redshifts will be run
         iz = p_obs_redshift_indices(i)
         ! negative values in p_obs_redshift_indices mean "skip-me"
+      else
+        iz = i
       endif
 
       ! Catches invalid cases!
       if (iz<1 .or. iz>number_of_redshifts) cycle ! invalid redshifts
       if (props%h(iz,2)<=0d0) cycle ! Invalid scaleheights
       if (props%r_disk(iz)<minimum_disc_radius) cycle  ! Invalid discs
-      if (props%Rcyl(iz,1)<0d0) cycle ! Invalid coordinates
+      if (props%Rcyl(iz,3)<0d0) cycle ! Invalid coordinates
 
       ! Chooses the random seed. This done combining galaxy id and redshift to
       ! ensure reproducibility (sometimes, one may run only a select set of
       ! redshifts and still should get the same result)
       call set_random_seed(gal_id, p_random_seed+iz)
 
-      if (random_theta) then
+      if (random_theta .and. (lPI .or. lI .or. lU .or. lQ)) then
         ! Sets theta, (automatically) only if it was not previously set
         call set_random_theta(gbl_data%theta, ts_theta(iz,1))
       endif
@@ -230,7 +236,11 @@ contains
 
       ! ------ LoS observables -----------------------------------------
       if (lLoS) then
-        if (ts_counts(iz,1)>1 .and. (.not.overwrite)) cycle
+        if (ts_counts(iz,1)>1 .and. (.not.overwrite)) then
+          call message('Skipping...', gal_id=gal_id,  val_int=iz, info=2)
+          cycle
+        endif
+
         LoS_counter = 0
         call message('calculating RM/DM/SM', gal_id=gal_id,  val_int=iz, info=2)
         do iRM=1, props%n_RMs
@@ -239,13 +249,14 @@ contains
           do
             error=.false.
             LoS_counter = LoS_counter + 1
-            if (iRM/=1) then
-              if (random_theta) call set_random_theta(gbl_data%theta, ts_theta(iz,iRM))
-            endif
-            ! Picks up a random line of sight betwen 0 and 3/2 maximum radius
+
+            if (random_theta) call set_random_theta(gbl_data%theta,&
+                                                    ts_LoS_theta(iz,iRM))
+
+            ! Picks up a random line of sight betwen 0 and 1 maximum radius
             ! NB this is done on the plane of the sky!
-            call set_random_val(impact_y, ts_y(iz,iRM), 10d0)
-            call set_random_val(impact_z, ts_z(iz,iRM), 10d0)
+            call set_random_val(impact_y, ts_y(iz,iRM), 1d0)
+            call set_random_val(impact_z, ts_z(iz,iRM), 1d0)
 
             ! Converts from the plane of the sky into actual z
             impact_z = impact_z/sin(gbl_data%theta)
@@ -262,22 +273,30 @@ contains
               exit
             else
               ! Bogus LoS, reset
-              ts_theta(iz,iRM) = INVALID
+              ts_LoS_theta(iz,iRM) = INVALID
               ts_y(iz,iRM) = INVALID; ts_z(iz,iRM) = INVALID
             endif
           enddo
         enddo
+        if (.not.allocated(gbl_data%SM)) then
+          cycle
+        endif
+
         ts_RM(iz,:) = gbl_data%RM
         ts_SM(iz,:) = gbl_data%SM
         ts_DM(iz,:) = gbl_data%DM
         ts_column(iz,:) = gbl_data%column_density
         ts_counts(iz,1) = LoS_counter
+        if (LoS_counter<2) stop 'Algo errado'
       endif
     enddo
+
     call cpu_time(cpu_time_finish)
     runtime = cpu_time_finish - cpu_time_start
     call message('Finished observables after ', runtime,  gal_id=gal_id, &
                  msg_end='s  CPU time', info=1)
+    ! Resets theta
+    if (random_theta) gbl_data%theta = 1000d0
   end function Compute_I_PI_RM
 
   subroutine write_observables(gal_id, runtime)
@@ -286,12 +305,13 @@ contains
     integer, intent(in) :: gal_id
     double precision, intent(in) :: runtime
 
-
-    call send_or_write_dataset(trim(prefix)//'theta', gal_id, ts_theta, units='radians', &
+    if (lPI .or. lI .or. lU .or. lQ) then
+      call send_or_write_dataset('theta', gal_id, ts_theta(:,1), &
+                                 units='radians', &
                                  description='Inclination (for observables calculation)')
+    endif
 
     if (lI) then
-      print *, shape(ts_I(:,1)), shape(ts_I(:,2))
       call send_or_write_dataset('I_'//trim(tag), &
                                  gal_id, ts_I(:,1), units='arbitrary', &
                                  description='Integrated synchrotron emission')
@@ -342,6 +362,9 @@ contains
                                  description='Impact parameter used in the RM calculation in units of rmax')
       call send_or_write_dataset(trim(prefix)//'LoS_counts', gal_id, ts_counts(:,1), &
                                  description='Number of sighlines used')
+      call send_or_write_dataset(trim(prefix)//'LoS_theta', gal_id, ts_LoS_theta, &
+                                 units='radians', &
+                                 description='Inclination (for observables calculation)')
     endif
 
     call send_end_message
@@ -418,11 +441,16 @@ program Observables
   ! Sets the type of run (all, RM, PI, I or PI/I)
   call get_command_argument(2, command_argument)
   call set_runtype(command_argument)
-  ! Sets the wavelength in m
-  call get_command_argument(3, command_argument)
-  gbl_data%wavelength = str2dbl(command_argument)
-  ! Tries to read a list of galaxy numbers from argument 4 onwards
-  galaxies_list = jobs_reads_galaxy_list(4)
+  if (lfrequency) then
+    ! Sets the wavelength in m
+    call get_command_argument(3, command_argument)
+    gbl_data%wavelength = str2dbl(command_argument)
+    iarg = 4
+  else
+    iarg = 3
+  endif
+  ! Tries to read a list of galaxy numbers from argument iarg onwards
+  galaxies_list = jobs_reads_galaxy_list(iarg)
   ! Computes I and PI for the galaxies in the sample
   overwrite = .false.
   call jobs_distribute(Compute_I_PI_RM, write_observables, overwrite, &

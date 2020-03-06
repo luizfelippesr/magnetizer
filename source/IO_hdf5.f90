@@ -50,7 +50,7 @@ module IO
   integer(hid_t) :: log_group_id
 
   ! The following store dataset names and ids
-  character(len=15), dimension(max_number_of_datasets) :: dset_names = ''
+  character(len=25), dimension(max_number_of_datasets) :: dset_names = ''
   integer(hid_t), dimension(max_number_of_datasets) :: dset_ids
   integer(hid_t), dimension(max_number_of_datasets) :: dataspace_ids
   integer(hid_t), dimension(max_number_of_datasets) :: memspace_ids
@@ -676,14 +676,14 @@ subroutine IO_read_dataset_vector(dataset_name, gal_id, data, group)
     ! Closes all dataspaces, namespaces and datasets
     ! (this may be moved to IO_finish_galaxy, if necessary)
     do i=1,ndsets
-      call message('Preparing to close dataset '//dset_names(i), info=3)
+      call message('Preparing to close dataset '//trim(dset_names(i)), info=3)
       call message('Closing dataspace ', val_int=i, info=4)
       call H5Sclose_f(dataspace_ids(i), error)
       call check(error)
       call message('Closing memspace ', val_int=i, info=4)
       call H5Sclose_f(memspace_ids(i), error)
       call check(error)
-      call message('Closing dataset '//dset_names(i), info=4)
+      call message('Closing dataset '//trim(dset_names(i)), info=4)
       call H5Dclose_f(dset_ids(i), error)
       call check(error)
     end do

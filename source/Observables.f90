@@ -42,21 +42,28 @@ contains
     character(len=50) :: run_type
     select case (trim(run_type))
       case ('intervening')
+        call message('Computing LoS observables for intervening', info=1, master_only=.true.)
         lLoS = .true. ! Line of sight observables: RM, DM, SM
       case ('FRB_host')
+        call message('Computing LoS observables FRB host galaxies', info=1, master_only=.true.)
         lFRB = .true.
         lLoS = .true. ! Line of sight observables: RM, DM, SM
       case ('synchrotron')
+        call message('Computing synchrotron observables', info=1, master_only=.true.)
         lPI = .true.
         lQ = .true.
         lU = .true.
         lI = .true.
         lfrequency = .true.
       case ('dust')
+        call message('Computing dust emission observables', info=1, master_only=.true.)
         ldust = .true.
         lQ = .true.
         lU = .true.
         lI = .true.
+      case default
+        call error_message('Observables','Invalid option "'//trim(run_type)//'"',&
+                           abort=.true.)
     end select
 
     prefix = ''
@@ -175,7 +182,7 @@ contains
     endif
 
 
-    call message('Computing observables', gal_id=gal_id, info=3)
+    call message('Computing observables', gal_id=gal_id, info=2)
     do i=1, size(p_obs_redshift_indices)
       if (.not.p_obs_use_all_redshifts .and. .not.lLoS) then
         ! If required, only a select set of redshifts will be run
@@ -204,7 +211,7 @@ contains
       ! ------ Integrated observables -----------------------------------------
       if (lI) then
         if (ts_I(iz,1)<-1d30 .or. overwrite) then
-          call message('calculating I', gal_id=gal_id, val=props%z(iz), info=2)
+          call message('calculating I', gal_id=gal_id, val=props%z(iz), info=3)
           ts_I(iz,1) = IntegrateImage('I', props, gbl_data,iz,dust=ldust, &
                                       error=ts_I_err(iz,1))
         endif
@@ -212,7 +219,7 @@ contains
 
       if (lPI) then
         if (ts_PI(iz,1)<-1d30 .or. overwrite) then
-          call message('calculating PI', gal_id=gal_id, val_int=iz, info=2)
+          call message('calculating PI', gal_id=gal_id, val_int=iz, info=3)
           ts_PI(iz,1) = IntegrateImage('PI', props, gbl_data,iz,dust=ldust, &
                                        error=ts_PI_err(iz,1))
         endif
@@ -220,7 +227,7 @@ contains
 
       if (lQ) then
         if (ts_Q(iz,1)<-1d30 .or. overwrite) then
-          call message('calculating Q (integrated)', gal_id=gal_id, val_int=iz, info=2)
+          call message('calculating Q (integrated)', gal_id=gal_id, val_int=iz, info=3)
           ts_Q(iz,1) = IntegrateImage('Q', props, gbl_data,iz,dust=ldust, &
                                       error=ts_Q_err(iz,1))
         endif
@@ -228,7 +235,7 @@ contains
 
       if (lU) then
         if (ts_U(iz,1)<-1d30 .or. overwrite) then
-          call message('calculating U (integrated)', gal_id=gal_id, val_int=iz, info=2)
+          call message('calculating U (integrated)', gal_id=gal_id, val_int=iz, info=3)
           ts_U(iz,1) = IntegrateImage('U', props, gbl_data,iz,dust=ldust, &
                                       error=ts_U_err(iz,1))
         endif
@@ -237,12 +244,12 @@ contains
       ! ------ LoS observables -----------------------------------------
       if (lLoS) then
         if (ts_counts(iz,1)>1 .and. (.not.overwrite)) then
-          call message('Skipping...', gal_id=gal_id,  val_int=iz, info=2)
+          call message('Skipping...', gal_id=gal_id,  val_int=iz, info=3)
           cycle
         endif
 
         LoS_counter = 0
-        call message('calculating RM/DM/SM', gal_id=gal_id,  val_int=iz, info=2)
+        call message('calculating RM/DM/SM', gal_id=gal_id,  val_int=iz, info=3)
         do iRM=1, props%n_RMs
           ! Tries different angles and lines of sights until something
           ! useful is intercepted

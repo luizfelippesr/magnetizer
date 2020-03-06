@@ -195,6 +195,8 @@ contains
       ! Catches invalid cases!
       if (iz<1 .or. iz>number_of_redshifts) cycle ! invalid redshifts
       if (props%h(iz,2)<=0d0) cycle ! Invalid scaleheights
+      if (props%Mstars_disk(iz)<1d5) cycle ! Negligible stellar content
+      if (props%Mgas_disk(iz)<1d3) cycle ! Negligible gas content
       if (props%r_disk(iz)<minimum_disc_radius) cycle  ! Invalid discs
       if (props%Rcyl(iz,3)<0d0) cycle ! Invalid coordinates
 
@@ -267,7 +269,7 @@ contains
 
             ! Converts from the plane of the sky into actual z
             impact_z = impact_z/sin(gbl_data%theta)
-            call message('  Theta', gal_id=gal_id,  val=gbl_data%theta, info=4)
+            call message('  Theta', gal_id=gal_id,  val=gbl_data%theta, val_int=LoS_counter, info=4)
             call message('  impact_y', gal_id=gal_id,  val=impact_y, info=4)
             call message('  impact_z', gal_id=gal_id,  val=impact_z*1000, info=4)
             ! Integrates

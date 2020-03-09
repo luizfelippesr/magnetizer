@@ -528,7 +528,7 @@ units_dict = {
              }
 
 # Quantities with multiple entries per redshift
-multiple_entry_datasets = {'RM','LoS_y','LoS_z','column_density','theta',
+multiple_entry_datasets = {'RM','LoS_y','LoS_z','column_density',
                            'DM','SM', 'LoS_theta',
                            'FRB_RM','FRB_RM_LoS_y','FRB_RM_LoS_z',
                            'FRB_column_density','FRB_theta',}

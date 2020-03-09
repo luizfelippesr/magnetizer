@@ -10,7 +10,7 @@ def run_LoS(runtype, parameters_file, gal_id, iz, theta, wavelength=20e-2,
     os.makedirs(imgdir, exist_ok=True)
 
     cmd = "./Observables_single.exe {type} {param} {ig} {iz} {theta} {lamb} {ignore_small}".format(
-      param=parameters_file, ig=gal_id, iz=iz, theta=theta_rad,
+      param=parameters_file, ig=gal_id+1, iz=iz, theta=theta_rad,
       lamb=wavelength, ignore_small=int(ignore_small_scale), type=runtype)
 
     if zmax is not None:
@@ -67,7 +67,10 @@ class Stokes_data(object):
         self._Psi = None
         self._p = None
         self._zsky = None
-
+        
+        self.extent = (self.y.min(), self.y.max(), 
+                       self.z_sky.min(), self.z_sky.max())
+        
     @property
     def z_sky(self):
         if self._zsky is None:

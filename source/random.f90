@@ -20,7 +20,7 @@ module random
   implicit none
   private
 
-  public :: set_random_seed, random_normal, draw_from_pdf, random_sign
+  public :: set_random_seed, random_normal, draw_from_pdf, random_sign, random_cos
 
 contains
 
@@ -108,6 +108,15 @@ contains
     random_normal = v/u
     return
   end function random_normal
+
+  double precision function random_cos()
+    ! Draws angles between -pi/2 and pi/2 from a cosine distribution
+    use math_constants
+    double precision :: t
+
+    call random_number(t)
+    random_cos = acos(t*2d0 - 1d0) - pi/2d0
+  end function random_cos
 
   function random_sign()
     ! Returns a random choice -1.0 or 1.0

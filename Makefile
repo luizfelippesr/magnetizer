@@ -112,5 +112,5 @@ $(srcdir)/distributor.f90: ${builddir}/global_input_parameters.o ${builddir}/inp
 $(srcdir)/tests.distributor.f90:  ${builddir}/grid.o ${builddir}/distributor.o ${builddir}/messages.o
 $(srcdir)/FRB.f90: ${builddir}/random.o ${builddir}/surface_density.o ${builddir}/tools.o
 $(srcdir)/surface_density.f90: ${builddir}/constants.o ${builddir}/global_input_parameters.o
-$(srcdir)/random.f90: ${builddir}/interpolation.o
+$(srcdir)/random.f90: ${builddir}/interpolation.o ${builddir}/constants.o
 $(srcdir)/interpolation.f90: ${builddir}/global_input_parameters.o

@@ -115,7 +115,7 @@ contains
     double precision :: t
 
     call random_number(t)
-    random_cos = acos(t*2d0 - 1d0) - pi/2d0
+    random_cos = asin(t*2d0 - 1d0)
   end function random_cos
 
   function random_sign()

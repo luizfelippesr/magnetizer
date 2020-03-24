@@ -161,7 +161,7 @@ contains
                       trim(prefix)//'LoS_z', gal_id)
       call prepare_ts(ts_counts, number_of_redshifts, 1, trim(prefix)//'LoS_counts', gal_id)
       call prepare_ts(ts_LoS_theta, number_of_redshifts, props%n_RMs, &
-                    trim(prefix)//'LoS_theta', gal_id)
+                    trim(prefix)//'LoS_theta2', gal_id)
     endif
 
     if (lU) call prepare_ts(ts_U, number_of_redshifts, 1, 'U_'//trim(tag), gal_id)
@@ -400,20 +400,29 @@ contains
   end subroutine prepare_ts
 
   subroutine set_random_theta(glb_val, ts_val)
-    use math_constants
+    use random, only: random_cos
     double precision, intent(inout) :: glb_val, ts_val
     ! Unless a fixed angle is signaled, selects a random inclination
     ! from a uniform distribution between -90 and 90 degrees
-    call set_random_val(glb_val, ts_val, pi * 0.5d0 ) ! From -90 to 90
+
+    glb_val = random_cos()
+    ! If ts_val contains a valid value (from a previous run),
+    ! substitutes glb_val by it, otherwise, stores glb_val in ts_val
+    if (ts_val<-1d20) then
+      ts_val = glb_val
+    else
+      glb_val = ts_val
+    endif
+
   end subroutine set_random_theta
 
   subroutine set_random_val(glb_val, ts_val, max_val)
     double precision, intent(inout) :: glb_val, ts_val
     double precision, intent(in) :: max_val
-    ! Unless a fixed angle is signaled, selects a random inclination
-    ! from a uniform distribution between -90 and 90 degrees
-    call random_number(glb_val)
+    ! Sets glb_val to random number from -max_val to max_val if
+    ! ts_val is invalid. Otherwise, sets glb_val to ts_val.
 
+    call random_number(glb_val)
     glb_val = glb_val*2-1d0 ! -1 to 1
     glb_val = glb_val * max_val ! From -max_val to max_val
 

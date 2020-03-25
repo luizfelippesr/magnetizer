@@ -377,7 +377,7 @@ class MagnetizerRun(object):
         if quantity is None:
             self._cache = {}
         else:
-            keys = self._cache.keys()
+            keys = list(self._cache.keys())
             for key in keys:
                 if key[0] == quantity:
                     if iz is None or key == (quantity,iz):
@@ -438,7 +438,10 @@ class MagnetizerRun(object):
             # These kind of datasets can also have some extra invalid entries,
             # due to, e.g., the disk size being to small for a meaningful
             # line-of-sight integration. The following takes care of this
-            return np.where( output>-1e10, output, np.NaN)
+            with np.errstate(invalid='ignore'):
+                # Avoids warnings due to comparison containing NaNs
+                 mask = output>-1e10
+            return np.where( mask, output, np.NaN)
         else:
             # If doesn't correspond to a profile
             if pre_selected_z:
@@ -529,7 +532,7 @@ units_dict = {
 
 # Quantities with multiple entries per redshift
 multiple_entry_datasets = {'RM','LoS_y','LoS_z','column_density',
-                           'DM','SM', 'LoS_theta',
+                           'DM','SM', 'LoS_theta','LoS_theta2',
                            'FRB_RM','FRB_DM','FRB_SM',
                            'FRB_LoS_y','FRB_LoS_z',
                            'FRB_column_density','FRB_LoS_theta',}

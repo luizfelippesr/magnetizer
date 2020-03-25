@@ -161,7 +161,7 @@ contains
                       trim(prefix)//'LoS_z', gal_id)
       call prepare_ts(ts_counts, number_of_redshifts, 1, trim(prefix)//'LoS_counts', gal_id)
       call prepare_ts(ts_LoS_theta, number_of_redshifts, props%n_RMs, &
-                    trim(prefix)//'LoS_theta2', gal_id)
+                    trim(prefix)//'LoS_theta', gal_id)
     endif
 
     if (lU) call prepare_ts(ts_U, number_of_redshifts, 1, 'U_'//trim(tag), gal_id)
@@ -207,7 +207,7 @@ contains
 
       if (random_theta .and. (lPI .or. lI .or. lU .or. lQ)) then
         ! Sets theta, (automatically) only if it was not previously set
-        call set_random_theta(gbl_data%theta, ts_theta(iz,1))
+        call set_random_theta(gbl_data%theta, ts_theta(iz,1), overwrite)
       endif
 
       ! ------ Integrated observables -----------------------------------------
@@ -259,13 +259,14 @@ contains
             error=.false.
             LoS_counter = LoS_counter + 1
 
-            if (random_theta) call set_random_theta(gbl_data%theta,&
-                                                    ts_LoS_theta(iz,iRM))
+            if (random_theta) call set_random_theta(gbl_data%theta,      &
+                                                    ts_LoS_theta(iz,iRM),&
+                                                    overwrite)
 
             ! Picks up a random line of sight betwen 0 and 1 maximum radius
             ! NB this is done on the plane of the sky!
-            call set_random_val(impact_y, ts_y(iz,iRM), 1d0)
-            call set_random_val(impact_z, ts_z(iz,iRM), 1d0)
+            call set_random_val(impact_y, ts_y(iz,iRM), 1d0, overwrite)
+            call set_random_val(impact_z, ts_z(iz,iRM), 1d0, overwrite)
 
             ! Converts from the plane of the sky into actual z
             impact_z = impact_z/sin(gbl_data%theta)
@@ -399,16 +400,17 @@ contains
     endif
   end subroutine prepare_ts
 
-  subroutine set_random_theta(glb_val, ts_val)
+  subroutine set_random_theta(glb_val, ts_val, overwrite)
     use random, only: random_cos
     double precision, intent(inout) :: glb_val, ts_val
+    logical, intent(in) :: overwrite
     ! Unless a fixed angle is signaled, selects a random inclination
-    ! from a uniform distribution between -90 and 90 degrees
+    ! from a cosine distribution between -90 and 90 degrees
 
     glb_val = random_cos()
     ! If ts_val contains a valid value (from a previous run),
     ! substitutes glb_val by it, otherwise, stores glb_val in ts_val
-    if (ts_val<-1d20) then
+    if ((ts_val<-1d20) .or. overwrite) then
       ts_val = glb_val
     else
       glb_val = ts_val
@@ -416,9 +418,10 @@ contains
 
   end subroutine set_random_theta
 
-  subroutine set_random_val(glb_val, ts_val, max_val)
+  subroutine set_random_val(glb_val, ts_val, max_val, overwrite)
     double precision, intent(inout) :: glb_val, ts_val
     double precision, intent(in) :: max_val
+    logical, intent(in) :: overwrite
     ! Sets glb_val to random number from -max_val to max_val if
     ! ts_val is invalid. Otherwise, sets glb_val to ts_val.
 
@@ -428,7 +431,7 @@ contains
 
     ! If ts_val contains a valid value (from a previous run),
     ! substitutes glb_val by it, otherwise, stores glb_val in ts_val
-    if (ts_val<-1d20) then
+    if ((ts_val<-1d20) .or. overwrite) then
       ts_val = glb_val
     else
       glb_val = ts_val
@@ -470,7 +473,7 @@ program Observables
   ! Tries to read a list of galaxy numbers from argument iarg onwards
   galaxies_list = jobs_reads_galaxy_list(iarg)
   ! Computes I and PI for the galaxies in the sample
-  overwrite = .false.
+  overwrite = .true.
   call jobs_distribute(Compute_I_PI_RM, write_observables, overwrite, &
                        galaxies_list)
 end program Observables

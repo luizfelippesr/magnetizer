@@ -1011,6 +1011,7 @@ def prepare_mass_bins_list(mag_run, redshifts,
                            spirals_only=False,
                            fixed_binning_redshift=None,
                            binning_obj=magnetizer.MassBinningObject,
+                           extra_filter_list=None,
                            **kwargs):
     """
     Helper function that prepares a list of `MassBinningObject`s computed at
@@ -1051,6 +1052,12 @@ def prepare_mass_bins_list(mag_run, redshifts,
                 filt = spiral_filter
             else:
                 filt = spiral_filter * filt
+
+        if extra_filter_list is not None:
+            if filt is None:
+                filt = extra_filter_list[i]
+            else:
+                filt *= extra_filter_list[i]
 
         if fixed_binning_redshift is None:
             bin_obj = binning_obj(mag_run, extra_filter=filt, z=z, **kwargs)

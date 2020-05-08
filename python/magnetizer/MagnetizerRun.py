@@ -75,31 +75,47 @@ class MagnetizerRun(object):
         Number associated with the file from each galaxy was read.
     """
     def __init__(self, output_path, input_path=None,
-                 z_tolerance=0.01, verbose=False):
+                 z_tolerance=0.01, verbose=False,
+                 check_files=True, check_dset='h'):
 
         if isinstance(output_path, str):
             output_path = [output_path]
         if isinstance(input_path, str):
             input_path = [input_path]
 
+        houts = []; hins = []
         # Open files for reading
-        houts = [h5py.File(path,'r') for path in output_path]
+        # Automatically remove bogus files
+        for inpath, outpath in zip(input_path, output_path):
+            try:
+                hout = h5py.File(outpath,'r')
 
-        if input_path is not None:
-            hins = [h5py.File(path,'r') for path in input_path]
-        else:
+                if input_path is not None:
+                    hin = h5py.File(inpath,'r')
+
+            except OSError:
+                print('Skipping file {} or {}.'.format(
+                inpath, outpath))
+                continue
+
+            if check_files:
+                try:
+                    _ = hout['Output'][check_dset][0]
+                except:
+                    print('Skipping file ', hout.filename)
+                    continue
+
+            houts.append(hout)
+            if input_path is not None:
+                hins.append(hin)
+
+        if input_path is None:
             hins = houts
 
         # Construct a dictionaries of references to the hdf5 files
         # (merges all groups...)
         self._data = []
         for hout, hin in zip(houts, hins):
-            if 'Output' not in hout:
-                print('Problems with file', hout.filename)
-                continue
-            if 'Input' not in hin:
-                print('Problems with file', hin.filename)
-                continue
             data_dict = {x: hout['Output'][x] for x in hout['Output']}
             data_dict.update({x: hin['Input'][x] for x in hin['Input']})
             data_dict.update({x: hout['Log'][x] for x in hout['Log']})

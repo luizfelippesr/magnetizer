@@ -403,21 +403,20 @@ def compute_extra_quantity(qname, mag_run, gal_id=None, z=None, ivol=0,
             raise NotImplementedError
 
     elif qname == r'B2_B2b2':
-          B2  = get('Btot')*get('Btot')
-          B2b2 = get('b')*get('b') + B2
-
-          quantity = B2/B2b2
+        B2  = get('Btot')*get('Btot')
+        B2b2 = get('b')*get('b') + B2
+        
+        quantity = B2/B2b2
 
     elif qname == r'B2_B2b2_avg':
-          if z is not None:
-
-              B2_B2b2 = get('B2_B2b2')
-              r = get('r')
-              # Area weigthed average (see Bavg)
-              quantity = (B2_B2b2*r).sum(axis=1)/r.sum(axis=1) #Sums for each galaxy
-          else:
-              #TODO
-              raise NotImplementedError
+        if z is not None:
+            B2_B2b2 = get('B2_B2b2')
+            r = get('r')
+            # Area weigthed average (see Bavg)
+            quantity = (B2_B2b2*r).sum(axis=1)/r.sum(axis=1) #Sums for each galaxy
+        else:
+            #TODO
+            raise NotImplementedError
 
     elif qname == r'Bmax_Beq':
         Bmax = get('Bmax')

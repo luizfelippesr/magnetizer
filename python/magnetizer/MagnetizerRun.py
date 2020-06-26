@@ -76,7 +76,8 @@ class MagnetizerRun(object):
     """
     def __init__(self, output_path, input_path=None,
                  z_tolerance=0.01, verbose=False,
-                 check_files=True, check_dset='h'):
+                 check_files=True, check_dsetout='h',
+                 check_dsetin='Mstars_disk'):
 
         if isinstance(output_path, str):
             output_path = [output_path]
@@ -100,7 +101,8 @@ class MagnetizerRun(object):
 
             if check_files:
                 try:
-                    _ = hout['Output'][check_dset][0]
+                    _ = hout['Output'][check_dsetout][0]
+                    _ = hin['Input'][check_dsetin][0]
                 except:
                     print('Skipping file ', hout.filename)
                     continue

@@ -171,7 +171,7 @@ def PDF(data, name='', plot_histogram=False, ax=None, vmax=None, vmin=None,
         values_min = vmin
 
     if use_seaborn:
-        import seaborn.apionly as sns
+        import seaborn as sns
         if plot_histogram:
             sns.distplot(values, ax=ax, kde_kws={'gridsize': gridsize}, **args)
         else:

@@ -25,7 +25,7 @@ def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False,
         Dataframe containing all the selected quantities in selected redshifts.
     """
     if verbose:
-      print('Preparing a pandas DataFrame object')
+        print('Preparing a pandas DataFrame object')
     df = pd.DataFrame()
 
     for quantity in quantities:
@@ -40,7 +40,7 @@ def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False,
 
             datum = magnetizer_run.get(quantity, z,
                                        cache=cache,
-                                       cache_intermediate=cache_intermediate)
+                                       cache_intermediate=cache_intermediate).value
             data = np.append(data, datum)
 
             if 'z' not in df:

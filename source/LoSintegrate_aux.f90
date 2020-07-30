@@ -247,9 +247,9 @@ module LoSintegrate_aux
     if (ldense_z) then
 
       if (z_path(1) < z_path(size(z_path))) then
-        ! Sets a tentative z-minimum/maximum to -3/3 times the (maximum) scale-height
-        z_start = -3d0*h(1)
-        z_end = 3d0*h(size(h))
+        ! Sets a tentative z-minimum/maximum to -3.5/3.5 times the (maximum) scale-height
+        z_start = -3.5d0*h(1)
+        z_end = 3.5d0*h(size(h))
 
         ! If in dust mode, use the molecular gas as reference instead
         if (ldust) then

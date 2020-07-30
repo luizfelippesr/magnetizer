@@ -61,6 +61,7 @@ dataset_names = {'rdisk' : 'r_disk',
                  'vhalo' : 'v_halo',
                  'strc' : 'nfw_cs1',
                  'mcold' : 'Mgas_disk',
+                 'mcold_burst' : 'Mgas_bulge',
                  'mchalo' : 'Mhalo',
                  'mstars_disk' : 'Mstars_disk',
                  'mstars_bulge' : 'Mstars_bulge',
@@ -77,6 +78,7 @@ units_dictionary = {
         'Mstars_disk': 'Msun',
         'Mstars_bulge': 'Msun',
         'Mgas_disk': 'Msun',
+        'Mgas_bulge': 'Msun',
         'Mhalo': 'Msun',
         'r_disk' : 'kpc',
         'v_disk' : 'km/s',
@@ -112,7 +114,8 @@ def prepares_hdf5_input(data_dict, output_file):
         if len(dset)==0: continue
         dset = np.vstack(dset)
         # Loads what is necessary (and removes the little-h dependence)
-        if name in ('Mstars_disk','Mgas_disk','Mstars_bulge', 'weight','Mhalo'):
+        if name in ('Mstars_disk','Mgas_disk','Mstars_bulge','Mgas_bulge',
+                    'Mhalo', 'weight'):
             dset = dset/h0
         elif name == 'SFR':
             dset = dset*1e-9/h0 # Msun/Gyr/h -> Msun/yr

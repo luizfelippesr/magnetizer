@@ -117,7 +117,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=None,
 
             if ((np.sum(halo_ngals) != fout['mstars_disk'].size) or
                  (len(halo_weight) != len(halo_ngals))):
-                print "ERROR: not enough galaxies in the file"
+                print("ERROR: not enough galaxies in the file")
                 exit()
 
             # count galaxies, assiging weight from their halo weight.

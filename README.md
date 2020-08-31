@@ -1,8 +1,8 @@
 # Magnetizer #
 
 [![arXiv:1809.10521](http://img.shields.io/badge/arXiv-1809.03595-B31B1B.svg)](https://arxiv.org/abs/1809.10521)
+[![ascl:2008.011](https://img.shields.io/badge/ascl-2008.011-blue.svg?colorB=262255)](http://ascl.net/2008.011)
 [![DOI](https://zenodo.org/badge/101327620.svg)](https://zenodo.org/badge/latestdoi/101327620)
-
 
 This code takes the output of the [Galform][GLF] [semi-analytic model of galaxy formation][SAM]
 (SAM) and computes radial dependent ISM properties and magnetic field for each

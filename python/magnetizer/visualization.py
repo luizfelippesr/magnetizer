@@ -242,7 +242,7 @@ def plot_output(ts, rs, quantity, name='', cmap=plt.cm.YlGnBu,
     ax.grid(alpha=0.2)
 
 
-def plot_input(ts, quantity, name='', zs=None, ax=None, **args):
+def plot_input(ts, quantity, name='', zs=None, ax=None, log=False, **args):
     """
     Plots the time variation of a quantity
     """
@@ -253,7 +253,7 @@ def plot_input(ts, quantity, name='', zs=None, ax=None, **args):
 
     ax.plot(ts, quantity, **args)
 
-    if name in log_quantities:
+    if name in log_quantities or log:
         ax.set_yscale('log')
     # Some advanced formating
     if name in quantities_dict:

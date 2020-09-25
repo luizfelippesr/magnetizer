@@ -144,7 +144,7 @@ def read_time_data(sam_output_filepath, maximum_final_B_over_T=None,
         old_indices = []
         GalaxyIDs = f[output_id]['GalaxyID'][:]
 
-        IDs_with_target_IDs = target_IDs.keys()
+        IDs_with_target_IDs = list(target_IDs.keys())
 
         for ID in IDs_with_target_IDs:
             old = np.where(GalaxyIDs==target_IDs[ID])[0]

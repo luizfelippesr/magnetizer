@@ -473,7 +473,7 @@ program Observables
   ! Tries to read a list of galaxy numbers from argument iarg onwards
   galaxies_list = jobs_reads_galaxy_list(iarg)
   ! Computes I and PI for the galaxies in the sample
-  overwrite = .true.
+  overwrite = .false.
   call jobs_distribute(Compute_I_PI_RM, write_observables, overwrite, &
                        galaxies_list)
 end program Observables

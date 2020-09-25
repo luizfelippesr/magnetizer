@@ -276,10 +276,7 @@ class MagnetizerRun(object):
             # Returns the cached quantity at selected radius
             rmax_rdisc = self.parameters.grid['P_RMAX_OVER_RDISK']
             target_pos = int(self.ngrid/rmax_rdisc*position)
-            if isinstance(result, u.Quantity):
-                return_data = result.base[:,target_pos]*result.unit
-            else:
-                return_data = result[:,target_pos]
+            return_data = result[:,target_pos]
 
 
         if binning is None:
@@ -368,7 +365,9 @@ class MagnetizerRun(object):
 
         return size/1e6 * u.Mbyte
 
-    def show_outputs(self):
+    def show_outputs(self, inputs=True):
+        if inputs: 
+            print('=='*25,'\nOutputs\n', '=='*25, sep='')
         print('{0:12s}{1:13s}{2}'.format('Quantity','Units','Description'))
         print('{0:12s}{1:13s}{2}'.format('-'*9,'-'*10, '-'*35))
         for k in self._hout[0]['Output']:
@@ -381,6 +380,20 @@ class MagnetizerRun(object):
             except:
                 description = ''
             print('{0:12s}{1:13s}{2}'.format(k, unit, description))
+        if inputs:
+            print('=='*25,'\nInputs\n', '=='*25, sep='')
+            print('{0:12s}{1:13s}{2}'.format('Quantity','Units','Description'))
+            print('{0:12s}{1:13s}{2}'.format('-'*9,'-'*10, '-'*35))
+            for k in self._hin[0]['Input']:
+                try:
+                    unit = self._hin[0]['Input'][k].attrs['Units'][0].decode()
+                except:
+                    unit = ''
+                try:
+                    description = self._hin[0]['Input'][k].attrs['Description'][0].decode()
+                except:
+                    description = ''
+                print('{0:12s}{1:13s}{2}'.format(k, unit, description))
 
     def reset_galaxy_cache(self, gal_id=None):
         if gal_id is None:

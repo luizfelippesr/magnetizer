@@ -280,6 +280,8 @@ module equ  !Contains the partial differential equations to be solved
                      ctau*alp*(Br**2+Bp**2+0d0*Bzmod**2)/Beq**2                        &
                      ! Emf.B term 2 (etat)
                      +ctau*3*etat/pi**(3d0/2d0)/h*abs(Dyn_gen)**(1d0/2d0)*Br*Bp/Beq**2 &
+                     ! Correction term due to alpha squared
+                      *(1d0 + pi/4d0*alp/G/h)**(1d0/2d0)                               &
                      ! Ohmic dissipation
                      +Rm_inv*alp_m)                                                    &
                      ! Vertical velocity terms
@@ -367,6 +369,7 @@ module equ  !Contains the partial differential equations to be solved
                       ctau*alp*Bp                                    &
                      !etat part of Emf.B (phi-component)
                      +ctau*etat*pi/2/h*Br*(1d0 +1d0/2/pi**(3d0/2)*abs(Dyn_gen)**(1d0/2)) &
+                     ! NB the correction term for alpha^2 may be absent here!
                      !Damping term
                      -Ep)
 

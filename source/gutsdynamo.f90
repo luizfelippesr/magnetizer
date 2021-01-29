@@ -149,7 +149,7 @@ module equ  !Contains the partial differential equations to be solved
       double precision, dimension(nx) :: dBrdr, d2Brdr2
       double precision, dimension(nx) :: dBpdr,d2Bpdr2
       double precision, dimension(nx) :: dalp_mdr, d2alp_mdr2
-      double precision, dimension(nx) :: detatdr
+      double precision, dimension(nx) :: detatdr, alpha_squared_correction
       double precision, dimension(nx) :: Bsqtot, Dyn_gen, Bfloor, Afloor
       ! Other
       double precision, dimension(nx), target :: zeros_array
@@ -274,6 +274,19 @@ module equ  !Contains the partial differential equations to be solved
           dfdt(:,2)= dfdt(:,2) +2.d0/pi/h*ctau*alp*Br
         endif
         if (Dyn_quench) then
+          if (.not.p_use_alpha_squared_correction) then
+            alpha_squared_correction = 1d0
+          else
+            ! Correction term due to alpha squared
+            alpha_squared_correction = (abs(1d0 + pi/4d0*alp/(G-1d-40)/h))**(1d0/2d0)
+            if (p_alpha_squared_correction_alt) then
+              ! Alternatively, instead of taking the absolute value, make it 1
+              where (pi/4d0*alp/(G-1d-40)/h + 1d0 < 0d0)
+                alpha_squared_correction = 1d0
+              end where
+            endif
+          endif
+
           ! dalp_m/dt
           dfdt(:,3)= -2*(h0_kpc/l_kpc)**2*etat*(                                       &
                      !Emf.B term 1 (alpha)
@@ -281,7 +294,7 @@ module equ  !Contains the partial differential equations to be solved
                      ! Emf.B term 2 (etat)
                      +ctau*3*etat/pi**(3d0/2d0)/h*abs(Dyn_gen)**(1d0/2d0)*Br*Bp/Beq**2 &
                      ! Correction term due to alpha squared
-                      *(1d0 + pi/4d0*alp/G/h)**(1d0/2d0)                               &
+                      * alpha_squared_correction &
                      ! Ohmic dissipation
                      +Rm_inv*alp_m)                                                    &
                      ! Vertical velocity terms

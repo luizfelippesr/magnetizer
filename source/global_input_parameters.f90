@@ -193,6 +193,8 @@ module global_input_parameters
   !     DIFFUSIVE MAGNETIC HELICITY FLUX
   !Ratio kappa_t/eta_t of turbulent diffusivities of alpha_m and B
   double precision :: R_kappa = 1.0d0
+  logical :: p_alpha_squared_correction_alt = .false.
+  logical :: p_use_alpha_squared_correction = .false.
 
   namelist /dynamo_parameters/ &
     Dyn_quench, Alg_quench, lFloor, Damp, &
@@ -200,7 +202,8 @@ module global_input_parameters
     Alp_ceiling, Alp_squared, Krause, Advect, Turb_dif, &
     p_neumann_boundary_condition_rmax, C_alp, C_floor, &
     p_floor_kappa, p_space_varying_floor, p_time_varying_floor, &
-    fmag, R_kappa
+    fmag, R_kappa, &
+    p_use_alpha_squared_correction, p_alpha_squared_correction_alt
 
 
   ! -------------------------------------------------------

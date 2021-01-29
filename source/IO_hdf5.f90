@@ -139,18 +139,18 @@ contains
     !     call h5pset_fapl_mpio_f(plist_id, mpi_comm, mpi_info, error)
     ! Opens the file collectively.
 
-    if (rank==0) then
-        access_mode = H5F_ACC_RDWR_F
-    else
-        access_mode = H5F_ACC_RDONLY_F
-    endif
+!     if (rank==0) then
+!         access_mode = H5F_ACC_RDWR_F
+!     else
+!         access_mode = H5F_ACC_RDONLY_F
+!     endif
 
-    if (rank /= 0) then
-      call message('Opening file '//trim(input_file_name), info=3)
-      call h5fopen_f(trim(input_file_name), access_mode, file_id, error)
-      call check(error)
-
-    endif
+!     if (rank /= 0) then
+!       call message('Opening file '//trim(input_file_name), info=3)
+!       call h5fopen_f(trim(input_file_name), access_mode, file_id, error)
+!       call check(error)
+!
+!     endif
 
     if (.not.lseparate_output) then
       if (rank == 0) then

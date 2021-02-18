@@ -4,7 +4,6 @@ Utilities interfacing between magnetizer and pandas.
 import pandas as pd
 import numpy as np
 
-
 def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False,
                       cache_intermediate=False, cache=True):
     """
@@ -40,7 +39,10 @@ def prepare_DataFrame(quantities, magnetizer_run, redshifts, verbose=False,
 
             datum = magnetizer_run.get(quantity, z,
                                        cache=cache,
-                                       cache_intermediate=cache_intermediate).value
+                                       cache_intermediate=cache_intermediate)
+            if hasattr(datum, 'value'):
+                # If it is an astropy.units.Quantity, convert to number
+                datum = datum.value
             data = np.append(data, datum)
 
             if 'z' not in df:

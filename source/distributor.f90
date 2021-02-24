@@ -436,14 +436,14 @@ contains
       enddo
       ngals = i-1
       if (ngals<200 .and. ngals>1) then
-        print *,
+        print *, ''
         print *, '  Galaxies in this run:'
         print *, mygals(:ngals)
-        print *,
+        print *, ''
       else
-        print *,
+        print *, ''
         print *, '  Number of galaxies in this run:', ngals
-        print *,
+        print *, ''
       endif
     endif
 

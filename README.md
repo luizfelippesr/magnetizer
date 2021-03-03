@@ -20,7 +20,7 @@ For more details about the physical model, we refer the reader to the original [
 Galaxy Magnetizer requires the following libraries to run:
 
  * MPI - [OpenMPI](https://www.open-mpi.org/)(>=3.1) or [MPICH](https://www.mpich.org/)(>=3.3)
- * [HDF5](https://www.hdfgroup.org/) - compiled with Fortran and parallel support
+ * [HDF5](https://www.hdfgroup.org/) - compiled with Fortran support
  * [GSL](https://www.gnu.org/software/gsl/)
  * [FGSL](http://www.lrz.de/services/software/mathematik/gsl/fortran/)
 
@@ -31,11 +31,16 @@ For building using multiple processors, the command
 `make -j <number of processors>` should work.
 
 The code can be run using mpi:
-```
+```console
+export HDF5_USE_FILE_LOCKING=FALSE
 mpirun ./Magnetizer.exe <parameters_file>
 ```
 The parameter file must include the path to the HDF5 input file, containing the
-time-evolving galaxy properties.
+time-evolving galaxy properties. The first line sets an environment variable which 
+disables file locking for HDF5. This is used to allow multiple processes to read
+the input and output files simultaneously (while the writing is exclusively done by the 
+root/master process).
+
 The input file can be generated using the scripts/prepare_input.py script.
 Parameters not specified in the parameters file are set to their default values,
 thus the minimal parameters file is

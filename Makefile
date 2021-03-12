@@ -18,7 +18,7 @@ help:
 	@echo '  make prod -> Builds main program for a production run.'
 	@echo '  make test -> Builds main program for a test run (debugging and backtracing enabled).'
 	@echo '  make Observables -> Builds the Observables.exe excecutable, which computes polarized and total synchrotron intensity, as well as rotation measures, and includes them in the output.'
-	@echo '  make Observables -> Builds the Observables_single.exe excecutable, which computes line-of-sight quantities for individual galaxies in the output.'
+	@echo '  make Observables_single -> Builds the Observables_single.exe excecutable, which computes line-of-sight quantities for individual galaxies in the output.'
 	@echo '  make clean -> Removes all object files.'
 	@echo '  make cleanall -> Removes all object files, executables files and python bytecode.'
 	@echo '  make all -> Builds all test programs and main program (test settings).'

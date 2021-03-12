@@ -8,3 +8,4 @@
 *.blg
 *.out
 *.exe
+.ipynb_checkpoints

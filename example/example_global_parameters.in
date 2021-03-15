@@ -1,11 +1,14 @@
 ! Please, check the comments at source/global_input_parameters.f90 for
 ! the description of the various parameters.
-&run_parameters  !Sets run mode, details of timestepping
+!Sets run mode, details of timestepping
+&run_parameters  
   model_name = "Example run"
-  info = 2
+  info = 3
 /
-&io_parameters	!Sets io paths, details of HDF5 configuration
-  p_io_separate_output = .true.	 !set to F if you want output saved inside the input file
+!Sets io paths, details of HDF5 configuration
+&io_parameters   
+  p_io_separate_output = .true.   
+  !set to F if you want output saved inside the input file
   input_file_name = "example/example_input.hdf5"
   output_file_name = "example/example_output.hdf5"
   output_quantities_list = 'rkpc', 'Omega','Shear',
@@ -22,3 +25,7 @@
 /
 &outflow_parameters  !Parameters controlling outflows
 /
+&observables_parameters 
+/
+
+

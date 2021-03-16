@@ -39,9 +39,6 @@ module global_input_parameters
   logical :: p_IO_chunking = .true.
   integer :: p_IO_number_of_galaxies_in_chunks = 1000
   ! Compression options
-  ! NB currently, March/2016, the HDF5 library does not support filters
-  ! (including compression) when using parallel IO. Therefore this options
-  ! have limited use.
   logical :: p_IO_compression = .true. ! requires chunking!
   integer :: p_IO_compression_level = 6
   ! Number of galaxies after which output file is updated
@@ -49,7 +46,9 @@ module global_input_parameters
   ! The master/root process takes part in the calculation? If .true. it will
   ! distribute work and do some work by himself once every
   ! (nproc+int(nproc/p_master_skip)) galaxies.
-  logical :: p_master_works_too = .true.
+  ! NB Currently (March/2021), there is a bug in p_master_works_too=.true.
+  ! See issue #7 on GitHub for details.
+  logical :: p_master_works_too = .false.
   double precision :: p_master_skip = 2
   ! Sets which quantities should be added to the output see doc files for
   ! possible values

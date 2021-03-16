@@ -3,7 +3,7 @@
 !Sets run mode, details of timestepping
 &run_parameters  
   model_name = "Example run"
-  info = 3
+  info = 2
 /
 !Sets io paths, details of HDF5 configuration
 &io_parameters   

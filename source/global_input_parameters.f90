@@ -47,7 +47,7 @@ module global_input_parameters
   ! distribute work and do some work by himself once every
   ! (nproc+int(nproc/p_master_skip)) galaxies.
   ! NB Currently (March/2021), there is a bug in p_master_works_too=.true.
-  ! See issue #7 on GitHub for details.
+  ! See issue #7 on GitHub for details
   logical :: p_master_works_too = .false.
   double precision :: p_master_skip = 2
   ! Sets which quantities should be added to the output see doc files for

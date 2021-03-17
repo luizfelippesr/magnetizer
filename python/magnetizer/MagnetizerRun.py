@@ -366,7 +366,7 @@ class MagnetizerRun(object):
         return size/1e6 * u.Mbyte
 
     def show_outputs(self, inputs=True):
-        if inputs: 
+        if inputs:
             print('=='*25,'\nOutputs\n', '=='*25, sep='')
         print('{0:12s}{1:13s}{2}'.format('Quantity','Units','Description'))
         print('{0:12s}{1:13s}{2}'.format('-'*9,'-'*10, '-'*35))
@@ -385,6 +385,8 @@ class MagnetizerRun(object):
             print('{0:12s}{1:13s}{2}'.format('Quantity','Units','Description'))
             print('{0:12s}{1:13s}{2}'.format('-'*9,'-'*10, '-'*35))
             for k in self._hin[0]['Input']:
+                if k in ('IDs','t','z'):
+                    continue
                 try:
                     unit = self._hin[0]['Input'][k].attrs['Units'][0].decode()
                 except:

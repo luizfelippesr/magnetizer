@@ -67,9 +67,12 @@ class Parameters(object):
         #self.date = h5file.attrs['Run date'][0]
         self.file = h5file
         self.txt = ''
-        for p in ('ISM_and_disk','dynamo', 'grid','io','outflow','run'):
-            setattr(self, p, self.__parse_parameters__(p+'_parameters'))
-        #self.txt.replace('/\n\n&', '\n/\n\n&')
+        for p in ('ISM_and_disk','dynamo', 'grid','io','outflow','run', 'observables'):
+            try:
+                setattr(self, p, self.__parse_parameters__(p+'_parameters'))
+            except KeyError:
+                # Skips missing namelists to ensure backwards compatibility
+                pass
 
     def __parse_parameters__(self,attribute):
         """

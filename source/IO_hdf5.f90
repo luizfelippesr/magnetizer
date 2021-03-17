@@ -210,6 +210,9 @@ contains
       write(namelist_str, nml=outflow_parameters)
       call add_text_attribute(file_id_out,'outflow_parameters',trim(namelist_str))
 
+      write(namelist_str, nml=observables_parameters)
+      call add_text_attribute(file_id_out,'observables_parameters',trim(namelist_str))
+
       call add_text_attribute(file_id_out,'File creation',trim(time_str))
 
       ! Creates log group

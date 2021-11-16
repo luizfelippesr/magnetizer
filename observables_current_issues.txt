@@ -1,0 +1,15 @@
+#Minor issues to be fixed. Working on them currently
+
+1) ./Observables.exe 'example/example_global_parameters.in' 'synchrotron' 0.0  produces all intensities zero
+
+2) ./Observables_single.exe "I" example/example_global_parameters.in 10 12 0.7 0.002 0 0 produces output. 
+But ./Observables_single.exe "I" example/example_global_parameters.in 13 12 0.7 0.002 0 0 gives interpolation error. Seems like igal=13, iz=10 is an unfinished galaxy. But somehow the program not excluding this galaxy. 
+
+3)Check conversion of arbitrary units to Physical units
+
+4)check if los integral can done via some adaptive step size method. This will speed up the code
+
+5) Modify convergence criteria for total and polarized intensities
+
+
+5)In certain cases there is up to 10 % difference between synchrotron intensities calculated using volume and LoS method 

@@ -219,29 +219,29 @@ contains
         endif
       endif
 
-      if (lPI) then
-        if (ts_PI(iz,1)<-1d30 .or. overwrite) then
-          call message('calculating PI', gal_id=gal_id, val_int=iz, info=3)
-          ts_PI(iz,1) = IntegrateImage('PI', props, gbl_data,iz,dust=ldust, &
-                                       error=ts_PI_err(iz,1))
-        endif
-      endif
+ !     if (lPI) then
+ !       if (ts_PI(iz,1)<-1d30 .or. overwrite) then
+ !         call message('calculating PI', gal_id=gal_id, val_int=iz, info=3)
+ !         ts_PI(iz,1) = IntegrateImage('PI', props, gbl_data,iz,dust=ldust, &
+ !                                      error=ts_PI_err(iz,1))
+ !       endif
+ !     endif
 
-      if (lQ) then
-        if (ts_Q(iz,1)<-1d30 .or. overwrite) then
-          call message('calculating Q (integrated)', gal_id=gal_id, val_int=iz, info=3)
-          ts_Q(iz,1) = IntegrateImage('Q', props, gbl_data,iz,dust=ldust, &
-                                      error=ts_Q_err(iz,1))
-        endif
-      endif
+ !     if (lQ) then
+ !       if (ts_Q(iz,1)<-1d30 .or. overwrite) then
+ !         call message('calculating Q (integrated)', gal_id=gal_id, val_int=iz, info=3)
+ !         ts_Q(iz,1) = IntegrateImage('Q', props, gbl_data,iz,dust=ldust, &
+ !                                     error=ts_Q_err(iz,1))
+ !       endif
+ !     endif
 
-      if (lU) then
-        if (ts_U(iz,1)<-1d30 .or. overwrite) then
-          call message('calculating U (integrated)', gal_id=gal_id, val_int=iz, info=3)
-          ts_U(iz,1) = IntegrateImage('U', props, gbl_data,iz,dust=ldust, &
-                                      error=ts_U_err(iz,1))
-        endif
-      endif
+ !     if (lU) then
+ !       if (ts_U(iz,1)<-1d30 .or. overwrite) then
+ !         call message('calculating U (integrated)', gal_id=gal_id, val_int=iz, info=3)
+ !         ts_U(iz,1) = IntegrateImage('U', props, gbl_data,iz,dust=ldust, &
+ !                                     error=ts_U_err(iz,1))
+ !       endif
+ !     endif
 
       ! ------ LoS observables -----------------------------------------
       if (lLoS) then

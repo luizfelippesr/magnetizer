@@ -98,7 +98,7 @@ module LoSintegrate_aux
     double precision, allocatable, dimension(:) :: Bpara, Bperp, Brnd, ne, h, Brnd_B, cos2gamma
     double precision, allocatable, dimension(:) :: Bx, By, Bz, B_perp_not_y
     double precision, allocatable, dimension(:) :: z_path_new, x_path_new
-    double precision :: rmax, wavelength_gal, h_m
+    double precision :: rmax, lambda_m, h_m
     double precision :: tmp, impact_y, impact_z
     double precision :: z_start, z_end 
     integer :: i, j, iz, this_RM
@@ -193,9 +193,9 @@ module LoSintegrate_aux
 
 
     ! Computes wavelength at the frame of the galaxy
-    wavelength_gal = data%wavelength/(1d0 + props%z(iz) )
+    lambda_m = data%wavelength/(1d0 + props%z(iz) )
     if (test_CJ == 1) then
-       wavelength_gal = 1.0 
+       lambda_m = 1.0 
     end if 
 
 
@@ -476,7 +476,7 @@ module LoSintegrate_aux
       ! Synchrotron total emission
       ! NB Using the total density as a proxy for cosmic ray electron density
       data%Stokes_I = Compute_Stokes('I', Bperp, ne, x_path, z_path,&
-                                     wavelength_gal, data%alpha, Brnd)
+                                     lambda_m, data%alpha, Brnd)
     endif
     if (lQ .or. lU) then
       ! Intrinsic polarization angle
@@ -491,17 +491,17 @@ module LoSintegrate_aux
       do i=1, size(z_path)
         ! Integrates (i.e. computes RM) until the i-th layer
         psi(i) = psi0(i) &
-                + (wavelength_gal)**2 * Compute_RM(Bpara(1:i),ne(1:i), &
+                + (lambda_m)**2 * Compute_RM(Bpara(1:i),ne(1:i), &
                                                    x_path(1:i),z_path(1:i))
       enddo
 
       if (lQ) then
         data%Stokes_Q = Compute_Stokes('Q', Bperp, ne, x_path, z_path,&
-                                       wavelength_gal, data%alpha, psi)
+                                       lambda_m, data%alpha, psi)
       endif
       if (lU) then
         data%Stokes_U = Compute_Stokes('U', Bperp, ne, x_path, z_path,&
-                                       wavelength_gal, data%alpha, psi)
+                                       lambda_m, data%alpha, psi)
       endif
     endif
 
@@ -605,7 +605,7 @@ module LoSintegrate_aux
    double precision:: res1, res2, res3, resq, resu
 !steps sizes and grid sizes for los integration. 
    double precision:: d_los,hfac
-   integer :: steps_xp, steps_yp, steps_los_orig 
+   integer :: steps_xp, steps_yp, steps_los_orig, i_run_vol_int 
    logical ::run_vol_int 
    double precision :: resq_last, resu_last
 
@@ -617,6 +617,8 @@ module LoSintegrate_aux
    double precision :: time_calc, error_i, error_q, error_u
 !tolerence for stokes parameters in percent. Also threshold (I_pol/I).  
    double precision :: tol_i, tol_qu, pol_th
+
+
 
     dust_glb = .false.
     if (present(dust)) dust_glb = dust
@@ -642,6 +644,7 @@ module LoSintegrate_aux
 !    mthd = 'IntVol'
 !    mthd = 'plain' ! 
     mthd = 'IntLoS' ! 
+     
 
     ! Sets up FGSL stuff
     t = fgsl_rng_env_setup()
@@ -686,15 +689,23 @@ module LoSintegrate_aux
       !To Compute total and polarized Intensities by doing an LoS integral along different LoSs (CJ)
       case('IntLoS') 
         CR_B_equipartition = .true. 
-        ! Calls function to compute the synchrotron total intensity by doing volume integral to obtain I_vol (stored in res1) 
-        ! I_vol will be compared with total synchrotron intensity, I_los, obtained through the LoS integration.
-        ! We adjust grid points used for integration until I_los is within 3-4% of I_vol.
+        ! Calls function to compute the synchrotron total intensity by doing volume integral to obtain I_vol (stored in res2) 
+        ! I_vol will be compared with total synchrotron intensity, I_los, obtained through the LoS integration (stored in res3).
+        ! We adjust grid points used for integration until I_los is within 3-5% of I_vol.
         vol_int_dimn = '2D'
         call Total_Synchrotron_Intensity_volume_integral(props_glb, data_glb, iz_glb, vol_int_dimn, res2)
         ! Calls functions to compute total and polarized intensities (stokes parameters) by doiing an LoS integral       
         ! The accuracy of calculation depends on  steps_xp^2, the number of grid points on x'y plane (see manual). 
-        ! steps_xp is varied until integrations to compute intensities converges or integral falls below some threshold. 
+        ! steps_xp is varied in steps until integrations to compute intensities converges or integral falls below some threshold. 
         ! The program will run atleast for 2 values of steps_xp because only then we can determine if Q and U are converged. 
+
+        
+   !     do steps_xp =1, size(props%Br(iz,:)), 1   !comehere
+   !         if  (props%Br(iz,steps_xp) > 10.0) then 
+   !           print *, props%igal, iz,  props%Br(iz,steps_xp)
+   !         end if
+   !    end do
+        
 
         !Parameters affecting convergence of results including steps_xp
         steps_xp       = 50 !Should be even
@@ -702,21 +713,29 @@ module LoSintegrate_aux
         d_los          = 2.e-2 !Minimum grid seperation along any given LoS 
         hfac           = 0.8   !Maximum Height from disc plane upto which integrations are done is hfac * max(scale height)
                               !If hfac = 1 produces good accuracy for exponentially decaying magnetic fields and gas densities
+      
+!tol_i and tol_qu -  percentage numerical convergence of integral for computing I,Q and U should be less than this 
+!pol_th - If percentage of total Q or U is less than pol_th * I, then it won't computed.  
         tol_i  = 5.0
         tol_qu = 5.0
         pol_th = 0.01        
 
-        run_vol_int = .True. !Intensities are computed in a loop while this variable is True.
-        if (res2 <1.e-9) then ! If I is below a threshold, there is no point in finding I,Q,U using LoS integral 
-          run_vol_int= .true.
-        end if
-
-        ! below two variables store  Q,U computed in previous integrations to compare with values from present integration. 
+! resq_last, resu_last store  Q,U computed in previous integrations which will be compare with values computed 
+! from latest integration (stored in resq, resu) until required tolerence is reached. 
+! res3 is the total I comuted from LoS method and compared with res2 (computed above) until tolerence is reached. 
         resq_last = 0.0    
         resu_last = 0.0
         res3  = 0.0
         resq  = 0.0
         resu  = 0.0
+
+!To avoid numerical convergence issues, intensities are computed multiple times by varying steps_xp until convergence is reached        
+        run_vol_int   = .true. !Intensities are computed for different steps_xp as long as run_vol_int = true
+        i_run_vol_int = 0
+        if (res2 < 1.e-9) then !If I is below a threshold, there is no point in finding I,Q,U using LoS integral 
+          run_vol_int= .false.
+          print *, 'I(syn) less than threshold. Will not compute I, Q and U', props%igal, iz, res2
+        end if
         time_calc = 0.0 !total time for obtaining results
         do while (run_vol_int) 
           steps_yp =  steps_xp 
@@ -725,11 +744,11 @@ module LoSintegrate_aux
                     !Stokes parameters I, Q, U are computed in one go along an LoS and stored in res3, resq and resu
           call Total_Synchrotron_Intensity_LoS_integral(props_glb, data_glb, iz_glb, steps_xp, steps_yp, & 
                                                            steps_los_orig, d_los, hfac,  res3, resq, resu)
-          call cpu_time(time2)
           time_calc = time_calc + (time2-time1)
 
-          !To check accuracy of computed I, Q, U. The integration stops when specified accuray is reached or intensities fall below 
-          !a thresold or the specified grid size steps_xp is greater than some thresold.   
+!To check accuracy of computed I, Q, U. The integration stops when specified accuray is reached or intensities fall below 
+!a thresold or the specified grid size steps_xp is greater than some thresold.  
+!When calculated intensity is zero, then also error is set to zero. 
           if (res2 .ne. 0.0) then 
             error_i= 100*abs( (res3-res2)/res2 )
           else 
@@ -745,32 +764,40 @@ module LoSintegrate_aux
           else 
             error_u = 0.0
           end if
-           !To compare previous Q and U values with new Q and U values 
+          !To compare previous Q and U values with new Q and U values 
           resu_last = resu
           resq_last = resq
-       
-          !If errors are below a threshold, then run_vol_int is set to False
-          !If intensities are below a threshold, then run_vol_int is set to False
-          !During the first run, error_q and error_u are 100 % so the program is run atleast twice 
-          if (error_i<= tol_i .and. error_u <= tol_qu .and. error_q <= tol_qu ) then
-            run_vol_int= .False.
-          end if  
-        print *, props%igal, iz, run_vol_int, res2, res3, resq, resu
-          if (res3 > 0.0) then 
+      
+          ! Below decides when to stop the program
+          ! If errors are below a threshold (or zero), then run_vol_int is set to False.
+          ! since i_run_vol_int >=1, program is run atleast twice 
+          if (i_run_vol_int >=1 .and. res3 > 0.0) then
+            ! If all integrals are converged, then run_vol_int is set to False
+            ! This also happens if all integrals give zero result
+            if (error_i<= tol_i .and. error_u <= tol_qu .and. error_q <= tol_qu ) then
+              run_vol_int= .False.
+            end if 
+            !If Q is below a fraction of I, then run_vol_int is set to False, provided I, U integrals converged.
             if (error_i<= tol_i .and. error_u<= tol_qu .and. resq/res3 <= pol_th ) then 
                run_vol_int= .False.
                resq = 0.0
             end if   
+            !If U is below a fraction of I, then run_vol_int is set to False, provided I, Q integrals converged.
             if (error_i<= tol_i .and. error_q <= tol_qu .and. resu/res3 <= pol_th ) then 
                run_vol_int= .False.
                resu = 0.0
             end if  
+            !If U and Q are below a fraction of I, then run_vol_int is set to False
+            !computed atleast twice. 
+            if ( error_i<= tol_i .and. resq/res3 <= pol_th .and. resu/res3 <= pol_th ) then 
+               run_vol_int= .False.
+               resu = 0.0
+               resq = 0.0
+            end if  
           end if  
-        print *, props%igal, iz, run_vol_int, res2, res3, resq, resu
-                !steps_xp is varied from 50-250 in steps of 50
         
         ! Priting all outputs .  
-          print "(i5, 2f12.6, 3i5, 3f5.2, 4e12.4, 4f10.3)",props%igal,props%z(iz), data%theta, steps_xp, steps_yp, &
+          print "(i5, 2f10.4, 3i5, 3f5.2, 4e12.4, 4f10.3)",props%igal,props%z(iz), data%theta, steps_xp, steps_yp, &
                steps_los_orig,  data%wavelength, d_los, hfac, res2, res3, resq, resu, error_i, error_q, error_u, time_calc
 
           open(33,file='./output_text_files/out_I.txt', FORM='FORMATTED', status='old', position="append")
@@ -778,18 +805,19 @@ module LoSintegrate_aux
               steps_los_orig,  data%wavelength, d_los, hfac, res2, res3, resq, resu, error_i, error_q, error_u, time_calc 
           close(33)
 
+          !steps_xp is varied from 50-250 in steps of 50
           steps_xp = steps_xp +50
           if ( steps_xp >= 270) then 
             run_vol_int= .False.
           end if    
-
+          i_run_vol_int = i_run_vol_int + 1 
         end do
         ! Writing final (possibly) converged output to a file. If steps_xp >250, not sure if converged unless q and u are zero.  
         open(34,file='./output_text_files/out_converged_I.txt', FORM='FORMATTED', status='old', position="append")
           write(34,"(i5, 2f12.6, 3i5, 3f5.2, 4e13.5, 4f12.3)"),props%igal,props%z(iz), data%theta, steps_xp, steps_yp, &
            steps_los_orig,  data%wavelength, d_los, hfac, res2, res3, resq, resu, error_i, error_q, error_u, time_calc 
         close(34)
-        res = res2
+        res = res3
    end select
    if (present(error)) error=err
  end function IntegrateImage
@@ -1309,20 +1337,22 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
     double precision ::   zval
     real(fgsl_double) :: rlim(2), plim(2)
     integer:: rint, pint
-    double precision :: res, wavelength_gal
+    double precision :: res, lambda_m
    
     character(len=2), intent(in) :: vol_int_dimn
     integer, parameter:: steps_rint=150, steps_pint=150
-    double precision, dimension(steps_rint) :: rval, Br_rval,  Bp_rval, Bz_rval, ncr_rval, h_rval
+    double precision, dimension(steps_rint) :: rval, B2_rval, Br_muG,  Bp_muG, Bz_muG,  &
+           n_cm3, ncr_cm3, h_kpc
     double precision, dimension(steps_pint) :: nr_LoS, np_LoS, pval 
     double precision, dimension(steps_rint, steps_pint) :: Bparal_up, Bparal_low, int_syn_grid  
     double precision, dimension(steps_rint, steps_pint) :: int_syn_full_grid 
 
     double precision :: nz_LoS, Bmag, Bmag2, drval, dpval
-    double precision :: sint, cost, alphaB, twoalphaB, factor_z, factor_r, int_syn    
+    double precision :: sint, cost, splus1by4, splus1by2, sminus1by2, s, factor_z, factor_r, int_syn    
     !temporary variable
-    double precision :: Brmid, Bpmid, Bzmid, ncrmid, hmid, int_syn1, int_syn2, rmid
+    double precision :: Brmid, Bpmid, Bzmid, ncrmid, Ke_fac, hmid, int_syn1, int_syn2, rmid
     real time1, time2, time3
+    double precision :: Bmax, Bavg, B2avg, havg
 
 ! Volume integral in (r, phi,z) to calculate the total synchrtron emission.  
 ! result = integral_V  epsilon;  episilon is the emissivity at a given r, phi, z
@@ -1345,7 +1375,7 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
        pval(pint)  =  plim(1) + (pint-1) * dpval
     end do 
 
-  !Below step is to avoid floating point errors. Occassionally you may get  r_ay(steps_rint)> rlim(2) 
+  !Below step is to avoid floating point errors. Occassionally you may get  ray_kpc(steps_rint)> rlim(2) 
     if (rval(steps_rint)> rlim(2) ) then
           rval(steps_rint) = rlim(2)
     end if
@@ -1354,45 +1384,70 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
     end if
 
 ! Wavelength of observation 
-    wavelength_gal = data%wavelength/(1d0 + props%z(iz))
+    lambda_m = data%wavelength/(1d0 + props%z(iz))
 
 !Input parameters 
-    call interpolate( props%Rcyl(iz,:), props%Br(iz,:), rval, Br_rval)
-    call interpolate( props%Rcyl(iz,:), props%Bp(iz,:), rval, Bp_rval)
-    call interpolate( props%Rcyl(iz,:), props%Bz(iz,:), rval, Bz_rval)
-    call interpolate( props%Rcyl(iz,:), props%n(iz,:), rval, ncr_rval)
-    call interpolate( props%Rcyl(iz,:), props%h(iz,:), rval, h_rval)
-    ncr_rval  = ncr_rval  * ionisation_fraction
+    call interpolate( props%Rcyl(iz,:), props%Br(iz,:), rval, Br_muG)
+    call interpolate( props%Rcyl(iz,:), props%Bp(iz,:), rval, Bp_muG)
+    call interpolate( props%Rcyl(iz,:), props%Bz(iz,:), rval, Bz_muG)
+    call interpolate( props%Rcyl(iz,:), props%n(iz,:), rval, n_cm3)
+    call interpolate( props%Rcyl(iz,:), props%h(iz,:), rval, h_kpc)
+    ncr_cm3  = n_cm3  * ionisation_fraction
+
+
+    !To find the maximum and average value of magnetic field
+    B2_rval = Br_muG**2.0 + Bp_muG**2.0 + Bz_muG**2.0
+    Bmax  = sqrt(  MAXVAL(B2_rval) )
+    Bavg  = 0.0
+    B2avg = 0.0
+    havg  = 0.0
+    do rint = 1, steps_rint-1, 1
+         Bavg  = Bavg  +   sqrt(B2_rval(rint)) * rval(rint) * ( rval(rint+1)-rval(rint) ) 
+         B2avg = B2avg +   B2_rval(rint) * rval(rint) * ( rval(rint+1)-rval(rint) ) 
+         havg  = havg  + h_kpc(rint) * rval(rint) * ( rval(rint+1)-rval(rint) )
+    end do
+    Bavg  = Bavg  / ( rlim(2)**2.0/2.0 ) !dividing by area = integral r dr = r^2/2
+    B2avg = B2avg / ( rlim(2)**2.0/2.0 ) !dividing by area = integral r dr = r^2/2
+    havg  = havg /  ( rlim(2)**2.0/2.0 )
+
+    print "(A,  e10.4, A, e10.4, A, e10.4, A, e10.4, A, e10.4, A, e10.4)",  &
+             'z=', props%z(iz), 'r=', rlim(2), 'B_max=', Bmax, 'Bavg=', Bavg, 'B2avg=', B2avg, 'havg=', havg   
+
 !factor to account for integration along z-direction
     factor_z = 1.0/3.0 !.  !h(r)*factor_z = int_0^infinity exp(-3z/h(r)) see below  
                            !
     if (test_CJ == 1) then ! test run where simple models are assumed 
-       call Test_Model(rval, Br_rval, Bp_rval, Bz_rval, ncr_rval, h_rval, drval, &
-            rlim,plim, factor_z, wavelength_gal, steps_rint, steps_pint, data%theta) 
+       call Test_Model(rval, Br_muG, Bp_muG, Bz_muG, ncr_cm3, h_kpc, drval, &
+            rlim,plim, factor_z, lambda_m, steps_rint, steps_pint, data%theta) 
     end if    
 
 !Cosine of Sine of LoS angle
     cost = COS(data%theta) 
     sint = SIN(data%theta)
 
-!Computing intensity by doing a single numerical r-integral
+   s          = data%alpha
+   splus1by4  = (s+1.0)/4.0
+   splus1by2  = 2.0*splus1by4  ! power of B_perp
+   sminus1by2 = (s - 1.0)/2.0
+
+   !Computing intensity by doing a single numerical r-integral
    if (vol_int_dimn == '1D') then
      print *, 'cosmic ray - magnetic field equipartition can not be applied for 1D integration'
      int_syn1 = 0
      int_syn2 = 0
      do rint =1, steps_rint-1, 1
-       Brmid =     ( Br_rval(rint+1)+Br_rval(rint) )/2.0 
-       Bpmid =     ( Bp_rval(rint+1)+Bp_rval(rint) )/2.0  
-       Bzmid =      ( Bz_rval(rint+1)+Bz_rval(rint) )/2.0 
-       ncrmid  =     ( ncr_rval(rint+1)+ncr_rval(rint) )/2.0 
-       hmid  =     ( h_rval(rint+1)+h_rval(rint) )/2.0 
-       rmid  =     ( rval(rint+1)+rval(rint) )/2.0 
+       Brmid  =     ( Br_muG(rint+1)+Br_muG(rint) )/2.0 
+       Bpmid  =     ( Bp_muG(rint+1)+Bp_muG(rint) )/2.0  
+       Bzmid  =      ( Bz_muG(rint+1)+Bz_muG(rint) )/2.0 
+       ncrmid =     ( ncr_cm3(rint+1)+ncr_cm3(rint) )/2.0 
+       hmid   =     ( h_kpc(rint+1)+h_kpc(rint) )/2.0 
+       rmid   =     ( rval(rint+1)+rval(rint) )/2.0 
 
        int_syn1 = int_syn1 + rmid * ncrmid * hmid * (Brmid**2.0+Bpmid**2.0) * ( rval(rint+1) - rval(rint) )
        int_syn2 = int_syn2 + rmid * ncrmid * hmid *  Bzmid**2.0 * ( rval(rint+1) - rval(rint) )
      end do
      int_syn = (6.2830*factor_z) * ( (2.0-sint*sint)*int_syn1 + 2.0* (1.0-cost*cost)*int_syn2 )!6.2830 accounts for phi integral
-     res1  = int_syn*wavelength_gal**((data%alpha-1.0)/2d0)
+     res1  = int_syn*lambda_m** sminus1by2 
 
  
     ! 2D numerical integration on the galactic disc plane over  r and phi grid points defined above.
@@ -1400,7 +1455,7 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
    else if ( vol_int_dimn == '2D' ) then
          !Here if equiparition b/w B and Cosmic rays assumed then integrant scale as exp(-4z/h(r)).  
       if ( CR_B_equipartition ) then 
-         factor_z = 1.0   /4.0 
+         factor_z = 1.0/4.0 
       end if
 
          ! Array to store Components of LoS unit vectors as a function of phi 
@@ -1413,30 +1468,29 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
       np_LoS = -sint * np_LoS 
       nz_LoS = cost
 
-      alphaB = (data%alpha+1.0)/4.0 
-      twoalphaB = 2.0*alphaB  ! power of B_perp
- 
       do rint =1, steps_rint-1, 1
                    !Evaluating functions at grid mid points
-        Brmid =    ( Br_rval(rint+1)+Br_rval(rint) )/2.0 
-        Bpmid =    ( Bp_rval(rint+1)+Bp_rval(rint) )/2.0  
-        Bzmid =    ( Bz_rval(rint+1)+Bz_rval(rint) )/2.0 
-        hmid  =    ( h_rval(rint+1)+h_rval(rint) )/2.0 
+        Brmid =    ( Br_muG(rint+1)+Br_muG(rint) )/2.0 
+        Bpmid =    ( Bp_muG(rint+1)+Bp_muG(rint) )/2.0  
+        Bzmid =    ( Bz_muG(rint+1)+Bz_muG(rint) )/2.0 
+        hmid  =    ( h_kpc(rint+1)+h_kpc(rint) )/2.0 
         rmid  =    ( rval(rint+1)+rval(rint) )/2.0 
+        ncrmid  =  ( ncr_cm3(rint+1)+ncr_cm3(rint) )/2.0 
         Bmag2  =   Brmid**2.0 + Bpmid**2.0 + Bzmid**2.0 !B^2
+
         if ( CR_B_equipartition ) then 
-           call  Ke_equipart( Bmag2, data%alpha, ncrmid)  !ncrmid is essentially the factor KE
-        else 
-           ncrmid  =  ( ncr_rval(rint+1)+ncr_rval(rint) )/2.0 
+           Ke_fac = Ke_equipart( Bmag2, s)  !ncrmid is essentially the factor KE
+        else
+           Ke_fac = ncrmid 
         end if
 
-        factor_r =  ncrmid * rmid * (hmid * factor_z)  !hmid*factor_z = int_0^infinity exp(-3z/h(r))  
+        factor_r =  Ke_fac * rmid * (hmid * factor_z)  !hmid*factor_z = int_0^infinity exp(-3z/h(r))  
         do pint =1, steps_pint-1, 1
            Bparal_up(rint, pint)    = Brmid*nr_LoS(pint) + Bpmid*np_LoS(pint) + Bzmid*nz_LoS ! B.n 
            Bparal_low(rint, pint)   = Brmid*nr_LoS(pint) + Bpmid*np_LoS(pint) - Bzmid*nz_LoS ! B.n 
 
-           int_syn_grid(rint, pint) = ( 2.0*Bmag2 -  Bparal_up(rint, pint)**twoalphaB - & 
-                                       Bparal_low(rint, pint)**twoalphaB ) *factor_r 
+           int_syn_grid(rint, pint) = ( 2.0*Bmag2 -  Bparal_up(rint, pint)**splus1by2 - & 
+                                       Bparal_low(rint, pint)**splus1by2 ) *factor_r 
            int_syn_grid(rint, pint) = int_syn_grid(rint, pint) * ( pval(pint+1) -pval(pint) )
         end do
       int_syn_grid(rint, :) = int_syn_grid(rint, :) * ( rval(rint+1) -rval(rint) )
@@ -1448,9 +1502,10 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
           int_syn = int_syn +  int_syn_grid(rint, pint)
         end do
       end do
-      res1 = int_syn*wavelength_gal**((data%alpha-1.0)/2d0)
+
+      res1 = int_syn*lambda_m**sminus1by2
       if ( CR_B_equipartition ) then 
-        res1 =  ext_factor_luminosity(props%z(iz))*emissivity_syn_constant(data%alpha)*res1 !to multiply various res1 with numerical constants
+        res1 =  ext_factor_luminosity(props%z(iz))*emissivity_syn_constant(s)*res1 !to multiply various res1 with numerical constants
       else 
         res1 =  ext_factor_luminosity(props%z(iz))*res1 !to multiply various res1 with numerical constants
       end if
@@ -1470,14 +1525,14 @@ end subroutine Total_Synchrotron_Intensity_volume_integral
 ! The mangetic field and gas density is also a constant inside the disc. The intensity of the galaxy in this case 
 ! can be computed analytically and compared with numerical results. 
 
-subroutine Test_Model(rval, Br_rval, Bp_rval, Bz_rval, ncr_rval, h_rval, drval, &
-                rlim,plim,  factor_z, wavelength_gal, steps_rint, steps_pint, theta)
+subroutine Test_Model(rval, Br_muG, Bp_muG, Bz_muG, ncr_cm3, h_kpc, drval, &
+                rlim,plim,  factor_z, lambda_m, steps_rint, steps_pint, theta)
  
     real(fgsl_double), intent(inout) :: rlim(2), plim(2)
     integer, intent(in):: steps_rint, steps_pint
-    double precision, intent(inout), dimension(steps_rint) :: rval, Br_rval,  Bp_rval
-    double precision, intent(inout), dimension(steps_rint) ::  Bz_rval, ncr_rval, h_rval
-    double precision, intent(inout) :: factor_z, wavelength_gal, theta, drval
+    double precision, intent(inout), dimension(steps_rint) :: rval, Br_muG,  Bp_muG
+    double precision, intent(inout), dimension(steps_rint) ::  Bz_muG, ncr_cm3, h_kpc
+    double precision, intent(inout) :: factor_z, lambda_m, theta, drval
     integer :: rint
 
     print *, 'test_mode'  
@@ -1488,18 +1543,22 @@ subroutine Test_Model(rval, Br_rval, Bp_rval, Bz_rval, ncr_rval, h_rval, drval, 
     do rint =1, steps_rint, 1
          rval(rint) = rlim(1)  + (rint-1)*drval
             !magnetic field, density, scale height etc. assigned
-         Br_rval(rint)  = 0.0
-         Bp_rval(rint)  = 0.0
-         Bz_rval(rint)  = 1.0 
-         ncr_rval(rint) = 1.0 
-         h_rval(rint)   = 0.05  !height of disc
-    end do 
+         Br_muG(rint)  = 0.0
+         Bp_muG(rint)  = 0.0
+         Bz_muG(rint)  = 1.0 
+         ncr_cm3(rint) = 1.0 
+         h_kpc(rint)   = 0.05  !height of disc
+    end do
+
+  
     factor_z = 1.0 !in test run, z-dependence is absent. So factor_z=1.  
-    wavelength_gal = 1.0
+    lambda_m = 1.0
     theta = 2.0*ATAN(1.d0) 
 
 end subroutine Test_Model
 
+!Several constants appear in the calculation for total synchrotron intensity. They  are estimated here. 
+!This will convert synchrotron intensity from arbitrary units to Physical units
 function emissivity_syn_constant(s) result(const)
  double precision, intent(in) :: s
  double precision :: const 
@@ -1509,26 +1568,30 @@ function emissivity_syn_constant(s) result(const)
   e     =  4.8032e-10 ! cm^3/2 g^1/2 s^-1 units
   kpc    =  3.086e+21 ! kparsec in cm
   const =  e**3.0/(m_e*c**2.0) * ( 3.0*e/( 12.5663706144 * m_e**3.0 * c**5.0) )**((s-1.0)/2.0) &
-           * sqrt(3.0) / ( 12.5663706144 * (s+1) ) * gamma( (3*s-1)/12 ) * gamma( (3*s+19)/12 ) & 
-           / c ** ((s-1.0)/2.0) & !This last factor is included because emissivity is calculated using lambda and not nu
+           * sqrt(3.0) / ( 12.5663706144 * (s+1.0) ) * gamma( (3.0*s-1.0)/12.0 ) * gamma( (3.0*s+19.0)/12.0 ) & 
+           / (c/100.00) ** ((s-1.0)/2.0) & !This factor is included because emissivity is calculated using lambda and not nu. 
+                                           !Also lambda is in meter whereas c is here in cm/s. So c/100 -> c in meter/s
            / 1.e-23   & !converting to Janski
-           * kpc**3.0  ! volume element in parsec **3.0
+           * kpc**3.0 & ! volume element in kpc**3.0
+           * (1.e-6)**((s+1.0)/2.0) !magnetic field in units of muG. Converting it into Gauss
 end function  emissivity_syn_constant    
 
-
-subroutine Ke_equipart( Bsq,s, Ke)
+!Determines  K_E  (related to cosmic ray particle number density) by assuming equipartition between local magnetic fields and cosmic rays
+function Ke_equipart( Bsq,s) result(Ke)
  double precision, intent(in) :: Bsq, s
- double precision, intent(out) :: Ke
+ double precision :: Ke
  double precision :: ratio_np, E1, E2
     ratio_np   = 0.01
     E1         = 5
     E2         = 100
-    Ke   =  ratio_np * (s-2.0) * (Bsq/25.1327412287) / ( E1**(2.0-s) - E2**(2.0-s) ) !25.1327412287 = 8 pi
-    Ke   =  Ke * 1.e-12 / (0.00160218)**(2-s)   ! (0.00160218)**(2.0-s) -> Energy in GeV to erg
-                        !1.0e-12 -> Magnetic field from Gauss to micro-gauss  
-                       ! Ke in units of cm^-3 erg^-3 
-end subroutine Ke_equipart        
+    Ke   =  ratio_np * (s-2.0) * (1.e-12 * Bsq/25.1327412287)/( ((0.00160218)**(2-s)) * (E1**(2.0-s) - E2**(2.0-s)) )!25.1327412287 = 8 pi
+                                                  !1.0e-12 -> Magnetic field from micro-gauss * Gauss 
+                                                  ! (0.00160218)**(2.0-s) -> Energy in GeV to erg
+                                                  ! Ke/Bsq ~ 3.35*10**-18
+end function Ke_equipart        
 
+! For computing the relation between emitted luminosity and observed luminosity, luminosity distance is calculated below
+! Also accounts for the k-correction to account for the shrinking of frequency band due to expansion of the Universe
 function ext_factor_luminosity(z1) result(ext_factor)
  double precision, intent(in) ::  z1
  double precision :: ext_factor 
@@ -1539,8 +1602,8 @@ function ext_factor_luminosity(z1) result(ext_factor)
  h            = 0.7
  Mpc    =  3.086e+24 ! megaparsec in cm
 
- if (z1 <= 0.003) then
-  zfinal = 0.003
+ if (z1 <= 0.001) then
+  zfinal = 0.001
  else 
   zfinal = z1
  end if
@@ -1548,14 +1611,14 @@ function ext_factor_luminosity(z1) result(ext_factor)
  var1 = 0.0 ;
  z2   = 0.0
  do while ( z2 <= zfinal )
-   z2   = z2 + 0.001 ;
+   z2   = z2 + 0.0002 ;
    var2 = 1.0 / sqrt( omega_lambda + omega_m * (1.0+z2)**3.0 ) 
-   var1 = var1 + 0.002 * var2 
-   z2   = z2 + 0.001 
+   var1 = var1 + 0.0004 * var2 
+   z2   = z2 + 0.0002 
  end do
- var1     = (1.0+z1) * (2997.92/h) * var1
- ext_factor  =  (1+z1) / ( 4*3.1415 * (var1*Mpc)**2.0 )  ! parsec in cm
-
+ var1     = (1.0+z1) * (2997.92/h) * var1 !here var1 is luminosity distance. Varified by online calculator
+ ext_factor  =  (1.0+z1) / ( 4*3.1415 * (var1*Mpc)**2.0 )  ! megaparsec in cm
+         !The last (1.0+z1) factor accounts for K correction shinking of observed frequency band. 
 end function ext_factor_luminosity
 
 
@@ -1582,14 +1645,15 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
   
     real(fgsl_double) :: rlim(2), plim(2)
     integer:: rint, pint
-    double precision :: res, wavelength_gal,wavelength_gal_sq
+    double precision :: res, lambda_m,lambdasq_m2
     character(len=20) :: form
 
     integer, parameter:: steps_rint=200, steps_pint=200
-    double precision, dimension(steps_rint) :: r_ay, Br_rval,  Bp_rval, Bz_rval, ncr_rval, ne_rval, h_rval
+    double precision, dimension(steps_rint) :: ray_kpc, Br_muG,  Bp_muG, Bz_muG, B2_rval, ncr_cm3, &
+            n_cm3, ne_cm3, h_kpc
     double precision, dimension(steps_pint) :: nr_LoS, np_LoS, p_ay 
     double precision :: nz_LoS, Bmag2, drval, dpval
-    double precision :: sint, cost, tant, signt, alphaB, twoalphaB, factor_z, int_syn    
+    double precision :: sint, cost, tant, signt, s, splus1by2, splus1by4, sminus1by2, factor_z, int_syn    
     double precision :: Brmid, Bpmid, Bzmid, ncrmid, nemid, hmid, rmid
  
 
@@ -1611,18 +1675,17 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
     double precision :: Bperp_los_sq, Bpar_los, Bperp_los
     double precision :: r_max, lval, dlval
     double precision :: np, nr
-    double precision :: z_tmp, x_tmp, Stokes_I_tmp, Stokes_Q_tmp, Stokes_U_tmp, RM_tmp, & 
-                        IQU_integrant_tmp, const 
+    double precision :: z_tmp, x_tmp, Stokes_I_tmp, Stokes_Q_tmp, Stokes_U_tmp, RM_tmp, const,p0, Ke_fac 
     double precision :: tot_syn_I, psi0, psi
     double precision :: x1,rvalsq, z2, x3,r3, z4  
     double precision :: ratio_del_r, ratio_del_p 
     double precision :: By, Bxp
 
-    double precision :: f_Br_rval, f_Bp_rval, f_Bz_rval, f_ncr_rval, f_h_rval
-    double precision :: a_Br_rval, a_Bp_rval, a_Bz_rval, a_ncr_rval, a_h_rval
+!    double precision :: f_Br_muG, f_Bp_muG, f_Bz_muG, f_ncr_cm3, f_h_kpc
+!    double precision :: a_Br_muG, a_Bp_muG, a_Bz_muG, a_ncr_cm3, a_h_kpc
 
-    ! limits of r and phi variables. The r-cordinate gives the radial distance to any point from center of galaxy.  
-    rlim(1) = props%Rcyl(iz,1)    !The limit of r are ~0, R_disk_of_galaxy
+! limits of r and phi variables. The r-cordinate gives the radial distance to any point from center of galaxy.  
+    rlim(1) = props%Rcyl(iz,1)    !The limit of r are ~0 to R_disk_of_galaxy
     rlim(2) = props%Rcyl(iz,props%n_grid) 
     plim(1) = 0.0 !limits of phi-variable 0<phi<2pi
     plim(2) = 6.28318530718
@@ -1631,40 +1694,48 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
 
 !creating  grids  of r and phi 
     do rint =1, steps_rint, 1
-         r_ay(rint) = rlim(1) + (rint-1) * drval
+         ray_kpc(rint) = rlim(1) + (rint-1) * drval
     end do
     do pint =1, steps_pint, 1
        p_ay(pint)  =  plim(1) + (pint-1) * dpval
     end do
-!Below step is to avoid floating point errors. 
-!Occassionally you may get the last r value greater than disc radius (i.e. r_ay(steps_rint)> rlim(2))
-!Then you have to set it back as r_ay(steps_rint) = rlim(2)
-    if (r_ay(steps_rint)> rlim(2) ) then
-          r_ay(steps_rint) = rlim(2)
+
+!Occassionally you may get the last r value greater than disc radius (i.e. ray_kpc(steps_rint)> rlim(2))
+!Then you have to set it back as ray_kpc(steps_rint) = rlim(2) to avoid interpolation errors
+    if (ray_kpc(steps_rint)> rlim(2) ) then
+          ray_kpc(steps_rint) = rlim(2)
     end if
     if (p_ay(steps_pint)> plim(2) ) then
           p_ay(steps_pint) = plim(2)
     end if
 
 !On the r-phi grid points, magnetic field, scale height, and density are assigned from magnetizer output by interpolation
-    call interpolate( props%Rcyl(iz,:), props%Br(iz,:), r_ay, Br_rval)
-    call interpolate( props%Rcyl(iz,:), props%Bp(iz,:), r_ay, Bp_rval)
-    call interpolate( props%Rcyl(iz,:), props%Bz(iz,:), r_ay, Bz_rval)
-    call interpolate( props%Rcyl(iz,:), props%n(iz,:), r_ay, ne_rval)
-    call interpolate( props%Rcyl(iz,:), props%h(iz,:), r_ay, h_rval)
-    ncr_rval  = ne_rval  * ionisation_fraction
-   ! print *, 'interpolation of B,h and n on r-phi grid complete'
+    call interpolate( props%Rcyl(iz,:), props%Br(iz,:), ray_kpc, Br_muG)
+    call interpolate( props%Rcyl(iz,:), props%Bp(iz,:), ray_kpc, Bp_muG)
+    call interpolate( props%Rcyl(iz,:), props%Bz(iz,:), ray_kpc, Bz_muG)
+    call interpolate( props%Rcyl(iz,:), props%n(iz,:), ray_kpc, n_cm3)
+    call interpolate( props%Rcyl(iz,:), props%h(iz,:), ray_kpc, h_kpc)
+    ne_cm3   = n_cm3  * ionisation_fraction
+    ncr_cm3  = n_cm3  * ionisation_fraction
+  
+
+
+    ! print *, 'interpolation of B,h and n on r-phi grid complete'
+
 
 ! Wavelength of observation and power law index of electron/CR energy distribution 
-    wavelength_gal    = data%wavelength/(1d0 + props%z(iz))
-    wavelength_gal_sq = wavelength_gal*wavelength_gal
-    alphaB    = (data%alpha+1.0)/4.0 
-    twoalphaB = 2.0*alphaB  ! 
- 
+    lambda_m     = data%wavelength/(1d0 + props%z(iz))
+    lambdasq_m2  = lambda_m*lambda_m
+
+    s          = data%alpha
+    splus1by4  = (s+1.0)/4.0
+    splus1by2  = 2.0*splus1by4  ! power of B_perp
+    sminus1by2 = (s - 1.0)/2.0
+    p0       = (s+1.0)/(s+7.0/3.0)
 !Simple toy model values are assigned to magnetic field, scale height, and density. 
     if (test_CJ == 1) then 
-       call Test_Model(r_ay, Br_rval, Bp_rval, Bz_rval, ncr_rval, h_rval, drval, &
-            rlim,plim, factor_z, wavelength_gal, steps_rint, steps_pint, data%theta) 
+       call Test_Model(ray_kpc, Br_muG, Bp_muG, Bz_muG, ncr_cm3, h_kpc, drval, &
+            rlim,plim, factor_z, lambda_m, steps_rint, steps_pint, data%theta) 
     end if    
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1678,6 +1749,7 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
     sint = SIN(data%theta)
     tant = TAN(data%theta)
     signt = sign(1.d0, sint)
+
 ! We assume the xy plane coincides with galaxy disc plane. 
 ! The LoS is then assumed to be contained in xz plane so that its y component is always zero (nx, ny=0, nz) 
 ! The components of LoS unit vector in this case function of phi variable.    
@@ -1704,7 +1776,7 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
     
 !We assume galaxy is a disc with radius r_max and height z_max. 
 !limit of height of galactic disc. The z-integration is limited up few times maximum scale height. 
-    hr_max=  MAXVAL(h_rval) !maximum of scale height
+    hr_max=  MAXVAL(h_kpc) !maximum of scale height
     z_max   = hfac*hr_max
     r_max   = rlim(2)
     if (test_CJ == 1) then ! test run where simple models are assumed 
@@ -1714,13 +1786,10 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
 !Below defines an X'Y' plane perpenticular to Los. Y' axis coincides with Y axis of galactic plane
 !All LoS that pass through the galaxy will also pass through X'Y' plane. 
        !The maximum of X' value in so that all the LoSs through galaxy are counted
-    xp_max = r_max * abs(cost) + z_max* abs(sint)
+   xp_max = r_max * abs(cost) + z_max* abs(sint)
           ! Allocating X' and Y' grids with definite size. Each point on grid will contain an LoS
           ! If integral is not sufficienty accurate, then it will be done with finer grid.
-
-
-    
-    if (modulo(steps_xp,2) /= 0 .or. modulo(steps_yp,2) /= 0) then 
+   if (modulo(steps_xp,2) /= 0 .or. modulo(steps_yp,2) /= 0) then 
        print *, 'steps_xp and steps_yp should be even integers'
        stop
     end if  
@@ -1736,14 +1805,13 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
     do i_yp =1, steps_yp, 1
          yp_ay(i_yp) = -r_max + dyp * (i_yp-1)
     end do
-  !below steps to avoid floating point errors. Occassionally you will get  xp_ay(steps_xp) >xp_max
+!below steps to avoid floating point errors. Occassionally you will get  xp_ay(steps_xp) >xp_max
     if (xp_ay(steps_xp) >xp_max) then 
       xp_ay(steps_xp) = xp_max
     end if
     if (yp_ay(steps_yp) >r_max) then 
       yp_ay(steps_yp) = r_max
     end if
-
 
 !Some LoS will not pass through the galaxy. Below we find those LoS and set int_LoS=0
 !For LoSs that enter the galaxy, they enter either through:
@@ -1845,11 +1913,11 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
 
 ! (x_entry, z_entry) and (x_exit, z_exit) stores (x, z) locations where LoS passing through X'Y' plane intersects the galaxy.
 ! An LoS can potentially intersect galaxy one two of the four possible faces. Below we finds those locations. 
-   do i_yp =1, steps_yp, 1
-     yval = yp_ay(i_yp)
-     do i_xp =1, steps_xp, 1
-       xval = xp_ay(i_xp) * cost !y value of LoS on the plane perpenticular to LoS
-       zval = xp_ay(i_xp) * (-sint) !z value of LoS on the plane perpenticular to LoS
+   do i_xp =1, steps_xp, 1
+     xval = xp_ay(i_xp) * cost !y value of LoS on the plane perpenticular to LoS
+     zval = xp_ay(i_xp) * (-sint) !z value of LoS on the plane perpenticular to LoS
+     do i_yp =1, steps_yp, 1
+       yval = yp_ay(i_yp)
        if (int_LoS(  i_xp, i_yp) == 1) then   
          x_entry = xz_entexit_ay(i_xp, i_yp,1)
          z_entry = xz_entexit_ay(i_xp, i_yp,2)
@@ -1857,7 +1925,6 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
          z_exit  = xz_entexit_ay(i_xp, i_yp,4)
          
          steps_los = steps_los_orig
-
                    !Total length of LoS along the galaxy
          len_los = sqrt( ( x_exit-x_entry )**2.0 + (z_exit-z_entry)**2.0 )
          dlval = MIN(d_los, len_los/steps_los)
@@ -1878,7 +1945,6 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
          RM_LoSay            = 0.0
          Psi0_LoSay          = 0.0
          IQU_integrant_LoSay = 0.0
-         IQU_integrant_tmp   = 0.0
 
                 !, Half of the change in dx and dz, for one step along LoS
          dxvalby2 = dlval * sint/2.0
@@ -1887,13 +1953,11 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
          xval  = x_entry
          zval  = z_entry
            !Initializing various parameters
-         lval    = 0
+         lval         = 0
          RM_tmp       = 0.0
          Stokes_I_tmp = 0.0
 
          i_los = 1
-!         do i_los =1, steps_los, 1
-       !  print *, dlval
          do while( lval < len_los-dlval )
                 !x,z, r, phi values along the LoS
           xval = xval + dxvalby2  !dxval = dlval*sint/2 
@@ -1904,20 +1968,22 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
           if ( rval< r_max .and. abs(zval) <z_max  ) then 
              !rval is located between rint and rint+1 on input r-value array. 
              rint = INT( (rval-rlim(1)) / drval) + 1  !
-             if (rint==steps_rint) then !to avoid errors below
+             if (rint==steps_rint) then !to avoid errors below during interpolation
                 rint = steps_rint -1
              end if
 !Interpolating to find Br, Bphi, Bz, ncr, h etc on the above r and phi
-             ratio_del_r =  (rval - r_ay(rint)) / ( r_ay(rint+1) - r_ay(rint) )
-             Brmid  =  Br_rval(rint)  + ratio_del_r * (Br_rval(rint+1)  - Br_rval(rint))  
-             Bpmid  =  Bp_rval(rint)  + ratio_del_r * (Bp_rval(rint+1)  - Bp_rval(rint))  
-             Bzmid  =  Bz_rval(rint)  + ratio_del_r * (Bz_rval(rint+1)  - Bz_rval(rint))  
-             hmid   =  h_rval(rint)   + ratio_del_r * (h_rval(rint+1)   - h_rval(rint))   
-             Bmag2  =   Brmid**2.0 + Bpmid**2.0 + Bzmid**2.0 !B^2
+             ratio_del_r =  (rval - ray_kpc(rint)) / ( ray_kpc(rint+1) - ray_kpc(rint) )
+             Brmid  =  Br_muG(rint)  + ratio_del_r * (Br_muG(rint+1)  - Br_muG(rint))  
+             Bpmid  =  Bp_muG(rint)  + ratio_del_r * (Bp_muG(rint+1)  - Bp_muG(rint))  
+             Bzmid  =  Bz_muG(rint)  + ratio_del_r * (Bz_muG(rint+1)  - Bz_muG(rint))  
+             hmid   =  h_kpc(rint)   + ratio_del_r * (h_kpc(rint+1)   - h_kpc(rint))
+             nemid  =  ne_cm3(rint)  + ratio_del_r * ( ne_cm3(rint+1) - ne_cm3(rint) ) 
+             ncrmid =  ncr_cm3(rint)  + ratio_del_r * ( ncr_cm3(rint+1) - ncr_cm3(rint) ) 
+             Bmag2  =  Brmid**2.0 + Bpmid**2.0 + Bzmid**2.0 !B^2
              if (CR_B_equipartition) then 
-                call  Ke_equipart( Bmag2, data%alpha, ncrmid)  !ncrmid is essentially the factor KE
+                Ke_fac = Ke_equipart( Bmag2, s)  
              else 
-                ncrmid  =  ( ncr_rval(rint+1)+ncr_rval(rint) )/2.0 
+                Ke_fac = ncrmid
              end if
 
              pval =  ATAN2( yval, xval )  !returns correct value of phi between 0 and 2 pi
@@ -1926,71 +1992,64 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
              end if
              !pval is located between pint and pint+1 on the phi-value array. 
              pint = INT(pval/dpval) + 1 
-             if (pint==steps_pint) then  !to avoid errors below
+             if (pint==steps_pint) then  !to avoid errors below during interpolation
               pint = steps_pint -1
              end if
 !Interpolating to find components of unit LoS vector along r, phi, z directions.
-
              ratio_del_p =  (pval - p_ay(pint)) / ( p_ay(pint+1) - p_ay(pint) )
              np = np_LoS(pint) + ratio_del_p * (np_LoS(pint+1)-np_LoS(pint))     
              nr = nr_LoS(pint) + ratio_del_p * (nr_LoS(pint+1)-nr_LoS(pint))    
 
 !Parelle and perpenticular components of B wrt to LoS at r and phi 
              Bpar_los      = Brmid*nr + Bpmid*np + sign(Bzmid, zval) * nz_LoS ! B.n 
-             Bperp_los_sq   = Bmag2 -   Bpar_los**2.0
-!            Bperp_los      = sqrt(Bperp_los_sq)
-               
+             Bperp_los_sq  = Bmag2 -   Bpar_los**2.0
              By       =  Brmid*sin(pval) + Bpmid*cos(pval)
-             Bxp      =  (Brmid*cos(pval) - Bpmid*sin(pval) )*cost -  sign(Bzmid, zval)*sint
+             Bxp      = (Brmid*cos(pval) - Bpmid*sin(pval) )*cost -  sign(Bzmid, zval)*sint
                                   ! Below exponential factors are z-dependence of density (which is proportional to sqaure of field)
                                   ! and square of field
              if (CR_B_equipartition) then 
-                IQU_integrant_tmp          =  Bperp_los_sq**alphaB * ncrmid * exp(-abs(4.0*zval/hmid))   
-                RM_tmp                     =  RM_tmp +  ncrmid * Bpar_los * exp(-abs(3.0*zval/hmid) ) * dlval
+              IQU_integrant_LoSay(i_los) = Bperp_los_sq**splus1by4 * Ke_fac * exp(-abs(4.0*zval/hmid))*dlval 
+              RM_tmp                     = RM_tmp +  nemid * Bpar_los * exp(-abs(3.0*zval/hmid) ) * dlval
              else 
-                IQU_integrant_tmp          =  Bperp_los_sq**alphaB * ncrmid * exp(-abs(3.0*zval/hmid))   
-                RM_tmp                     =  RM_tmp +  ncrmid * Bpar_los * exp(-abs(2.0*zval/hmid) ) * dlval
+              IQU_integrant_LoSay(i_los) = Bperp_los_sq**splus1by4 * Ke_fac * exp(-abs(3.0*zval/hmid))*dlval   
+              RM_tmp                     = RM_tmp +  nemid * Bpar_los * exp(-abs(2.0*zval/hmid) ) * dlval
              end if
-
-             IQU_integrant_LoSay(i_los) =  IQU_integrant_tmp * dlval  
-                                  !For test model there is no z-dependence 
+        !For test model there is no z-dependence 
              if (test_cj==1) then 
-               IQU_integrant_tmp =  Bperp_los_sq**alphaB * ncrmid  
-               IQU_integrant_LoSay(i_los) =  IQU_integrant_tmp * dlval  
-               RM_tmp                     =  RM_tmp +  ncrmid * Bpar_los * (1.0 - exp(-abs(2.0*zval/hmid) ) ) * dlval
+               IQU_integrant_LoSay(i_los) =  Bperp_los_sq**splus1by4 * ncrmid * dlval  
+               if (CR_B_equipartition) then 
+                 RM_tmp       =  RM_tmp +  nemid * Bpar_los * (1.0 - exp(-abs(3.0*zval/hmid) ) ) * dlval
+               else 
+                 RM_tmp       =  RM_tmp +  nemid * Bpar_los * (1.0 - exp(-abs(2.0*zval/hmid) ) ) * dlval
+               end if 
              end if
 
              Stokes_I_tmp      = Stokes_I_tmp + IQU_integrant_LoSay(i_los)  
              RM_LoSay(i_los)   = RM_tmp
              Psi0_LoSay(i_los) =  pi/2d0 + atan2(By,Bxp)
+             i_los             = i_los + 1
 
           end if !end of if the point along LoS is inside the galaxy statement
           xval = xval + dxvalby2  
           zval = zval + dzvalby2
-          i_los = i_los + 1
           lval = lval + dlval
-          dlval = dlval
          end do  !end of integration along LoS array
-              !dividing by ionisation fraction to obtain ne = ncr/ionisation_fraction
-         RM_ay(i_xp, i_yp)       = 812.0 * RM_tmp / ionisation_fraction  
-         RM_LoSay                = 812.0 * RM_LoSay /ionisation_fraction  
-         IQU_integrant_LoSay      = 0.75 * IQU_integrant_LoSay 
-
+         i_los_max         = i_los-1
+         RM_ay(i_xp, i_yp)       = 812.0 * RM_tmp  * lambdasq_m2 
+         RM_LoSay                = 812.0 * RM_LoSay * lambdasq_m2   
+         IQU_integrant_LoSay     = p0 * IQU_integrant_LoSay !Now this is QU_integrantLoSay. Not used anymore to compute I 
+                                                              !p0 ~ 0.75  
 ! Calculating stokes Q and U parameters. For this We need RM as a function of the path length. 
 ! This is be done by doing another LoS integral as below
          Stokes_Q_tmp = 0.0
          Stokes_U_tmp = 0.0
-         do i_los =1, steps_los, 1
-            psi          = Psi0_LoSay(i_los) + ( RM_ay(i_xp, i_yp) - RM_LoSay(i_los) ) * wavelength_gal_sq
+         do i_los =1, i_los_max, 1
+            psi          = Psi0_LoSay(i_los) + ( RM_ay(i_xp, i_yp) - RM_LoSay(i_los) ) 
             Stokes_Q_tmp =  Stokes_Q_tmp + IQU_integrant_LoSay(i_los) * COS( 2.0 * psi )
             Stokes_U_tmp =  Stokes_U_tmp + IQU_integrant_LoSay(i_los) * SIN( 2.0 * psi )
-             if (MODULO(i_los,1) == 0) then
-             end if
          end do
-        if (i_xp == steps_xp/2 .and. i_yp==steps_yp/2) then
-        end if
 
-!In the end multiplying each quantity by step size along LoS
+!In the end assigning integrated intensities to grid 
          Stokes_I_ay(i_xp, i_yp) = Stokes_I_tmp  
          Stokes_Q_ay(i_xp, i_yp) = Stokes_Q_tmp 
          Stokes_U_ay(i_xp, i_yp) = Stokes_U_tmp 
@@ -1999,18 +2058,18 @@ subroutine Total_Synchrotron_Intensity_LoS_integral(props,data,iz,steps_xp,steps
          deallocate(Psi0_LoSay) 
          deallocate(IQU_integrant_LoSay)
        end if ! if statement to check if given LoS passes through galaxy (int_LoS ==1) 
-     end do !end of i_x loop
-  end do !end of i_y loop
+     end do !end of i_y loop
+  end do !end of i_x loop
 
 !Converting quantities to Physical units 
  if ( CR_B_equipartition ) then
-  const  =  ext_factor_luminosity(props%z(iz)) * emissivity_syn_constant(data%alpha) &
-                      * dxp*dyp *wavelength_gal**((data%alpha-1.0)/2d0)
+  const  =  ext_factor_luminosity(props%z(iz)) * emissivity_syn_constant(s) &
+                      * dxp*dyp *lambda_m** sminus1by2 
   Stokes_I_ay =  const * Stokes_I_ay 
   Stokes_Q_ay =  const * Stokes_Q_ay 
   Stokes_U_ay =  const * Stokes_U_ay 
  else 
-  const  =  ext_factor_luminosity(props%z(iz)) * dxp*dyp *wavelength_gal**((data%alpha-1.0)/2d0)
+  const  =  ext_factor_luminosity(props%z(iz)) * dxp*dyp *lambda_m** sminus1by2
   Stokes_I_ay =  const * Stokes_I_ay 
   Stokes_Q_ay =  const * Stokes_Q_ay 
   Stokes_U_ay =  const * Stokes_U_ay 

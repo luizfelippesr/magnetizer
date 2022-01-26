@@ -695,7 +695,7 @@ module LoSintegrate_aux
 
       !To Compute Total Intensity by 2D and ID integrals using volume integral method (CJ)
       case('IntVol') 
-          vol_int_dimn = '1D'
+          vol_int_dimn = '2D'
           call Total_Synchrotron_Intensity_volume_integral(props_glb, data_glb, iz_glb, vol_int_dimn, res1)
           print "(A,  e12.4, 3x, A, I2)", 'Tot Intensity=', res1, 'Dimn of Volume integral=', vol_int_dimn  
           res = res1
@@ -1349,6 +1349,7 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
     integer, parameter:: steps_rint=150, steps_pint=150
     double precision, dimension(steps_rint) :: rval, B2_rval_muG2, Br_muG,  Bp_muG, Bz_muG,  &
            n_cm3, ncr_cm3, h_kpc
+   double precision, dimension(steps_rint) :: sigBr_muG
     double precision, dimension(steps_pint) :: nr_LoS, np_LoS, pval 
     double precision, dimension(steps_rint, steps_pint) :: Bparal_up, Bparal_low, int_syn_grid  
     double precision, dimension(steps_rint, steps_pint) :: int_syn_full_grid 
@@ -1356,7 +1357,8 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
     double precision :: nz_LoS, Bmag, Bmag2, drval, dpval
     double precision :: sint, cost, splus1by4, splus1by2, sminus1by2, s, factor_z, factor_r, int_syn    
     !temporary variable
-    double precision :: Brmid, Bpmid, Bzmid, ncrmid, Ke_fac, hmid, int_syn1, int_syn2, rmid
+    double precision :: Brmid, Bpmid, Bzmid,pvalmid, ncrmid, Ke_fac, hmid, int_syn1, int_syn2, rmid
+    double precision :: sigBrmid, sigBrmidsq
     real time1, time2, time3
     double precision :: Bmax, Bavg, B2avg, havg
 
@@ -1399,6 +1401,9 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
     call interpolate( props%Rcyl(iz,:), props%n(iz,:), rval, n_cm3)
     call interpolate( props%Rcyl(iz,:), props%h(iz,:), rval, h_kpc)
     ncr_cm3  = n_cm3  * ionisation_fraction
+    if ( data%inc_random_field == 1 ) then
+       sigBr_muG = 0.5 * sqrt(4*pi * n_cm3 * Hmass) *v0_ISM_cms * mkG_G/sqrt(3.0) !mkG_G - gauss to micro gauss
+    end if
 
 
     !To find the maximum and average value of magnetic field
@@ -1444,13 +1449,24 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
      do rint =1, steps_rint-1, 1
        Brmid  =     ( Br_muG(rint+1)+Br_muG(rint) )/2.0 
        Bpmid  =     ( Bp_muG(rint+1)+Bp_muG(rint) )/2.0  
-       Bzmid  =      ( Bz_muG(rint+1)+Bz_muG(rint) )/2.0 
+       Bzmid  =     ( Bz_muG(rint+1)+Bz_muG(rint) )/2.0 
        ncrmid =     ( ncr_cm3(rint+1)+ncr_cm3(rint) )/2.0 
        hmid   =     ( h_kpc(rint+1)+h_kpc(rint) )/2.0 
        rmid   =     ( rval(rint+1)+rval(rint) )/2.0 
-
-       int_syn1 = int_syn1 + rmid * ncrmid * hmid * (Brmid**2.0+Bpmid**2.0) * ( rval(rint+1) - rval(rint) )
-       int_syn2 = int_syn2 + rmid * ncrmid * hmid *  Bzmid**2.0 * ( rval(rint+1) - rval(rint) )
+ 
+       if ( data%inc_random_field == 0 ) then
+         int_syn1 = int_syn1 + rmid * ncrmid * hmid * (Brmid**2.0+Bpmid**2.0) * ( rval(rint+1) - rval(rint) )
+         int_syn2 = int_syn2 + rmid * ncrmid * hmid *  Bzmid**2.0 * ( rval(rint+1) - rval(rint) )
+       else if ( data%inc_random_field == 1 ) then
+         sigBrmidsq = ( ( sigBr_muG(rint+1)+sigBr_muG(rint) )/2.0 )**2.0
+         int_syn1 = int_syn1 + rmid * ncrmid * hmid * (Brmid**2.0+Bpmid**2.0+2.0*sigBrmidsq) &
+                                                               * ( rval(rint+1) - rval(rint) )
+         int_syn2 = int_syn2 + rmid * ncrmid * hmid *  (Bzmid**2.0+sigBrmidsq) &
+                                                        * ( rval(rint+1) - rval(rint) )
+       else
+         print *, 'Set inc_random_field = 0 or 1'
+         stop
+       end if
      end do
      int_syn = (6.2830*factor_z) * ( (2.0-sint*sint)*int_syn1 + 2.0* (1.0-cost*cost)*int_syn2 )!6.2830 accounts for phi integral
      res1  = int_syn*lambda_m** sminus1by2 
@@ -1483,6 +1499,9 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
         rmid  =    ( rval(rint+1)+rval(rint) )/2.0 
         ncrmid  =  ( ncr_cm3(rint+1)+ncr_cm3(rint) )/2.0 
         Bmag2  =   Brmid**2.0 + Bpmid**2.0 + Bzmid**2.0 !B^2
+        if ( data%inc_random_field ==1 ) then
+          sigBrmidsq = ( ( sigBr_muG(rint+1)+sigBr_muG(rint) )/2.0 )**2.0
+        end if
 
         if ( CR_B_equipartition ) then 
            Ke_fac = Ke_equipart( Bmag2, s)  !ncrmid is essentially the factor KE
@@ -1492,14 +1511,24 @@ subroutine Total_Synchrotron_Intensity_volume_integral(props,  data, iz, vol_int
 
         factor_r =  Ke_fac * rmid * (hmid * factor_z)  !hmid*factor_z = int_0^infinity exp(-3z/h(r))  
         do pint =1, steps_pint-1, 1
+           pvalmid = 0.5 *( pval(pint+1) + pval(pint) )
            Bparal_up(rint, pint)    = Brmid*nr_LoS(pint) + Bpmid*np_LoS(pint) + Bzmid*nz_LoS ! B.n 
            Bparal_low(rint, pint)   = Brmid*nr_LoS(pint) + Bpmid*np_LoS(pint) - Bzmid*nz_LoS ! B.n 
-
-           int_syn_grid(rint, pint) = ( 2.0*Bmag2 -  Bparal_up(rint, pint)**splus1by2 - & 
-                                       Bparal_low(rint, pint)**splus1by2 ) *factor_r 
+           if ( data%inc_random_field == 0 ) then
+              int_syn_grid(rint, pint) = ( 2.0*Bmag2 -  Bparal_up(rint, pint)**splus1by2 - & 
+                                       Bparal_low(rint, pint)**splus1by2 ) *factor_r
+           else if ( data%inc_random_field == 1 ) then
+              int_syn_grid(rint, pint) = ( Brmid**2.0 + sigBrmidsq)* (1 - ( sint*cos(pvalmid) )**2.0 )  & 
+                            + (Bpmid**2.0 + sigBrmidsq) * (1 - ( sint*sin(pvalmid) )**2.0 )  &
+                            + (Bzmid**2.0 + sigBrmidsq) * sint**2.0 
+              int_syn_grid(rint, pint) = 2.0 * factor_r * int_syn_grid(rint, pint)      
+           else
+              print *, 'Set inc_random_field = 0 or 1'
+              stop
+           end if
            int_syn_grid(rint, pint) = int_syn_grid(rint, pint) * ( pval(pint+1) -pval(pint) )
         end do
-      int_syn_grid(rint, :) = int_syn_grid(rint, :) * ( rval(rint+1) -rval(rint) )
+        int_syn_grid(rint, :) = int_syn_grid(rint, :) * ( rval(rint+1) -rval(rint) )
       end do
  
       int_syn= 0.0 !to sum over integrant for all (r,phi) grid points
@@ -1583,6 +1612,9 @@ function emissivity_syn_constant(s) result(const)
 end function  emissivity_syn_constant    
 
 !Determines  K_E  (related to cosmic ray particle number density) by assuming equipartition between local magnetic fields and cosmic rays
+
+
+
 function Ke_equipart( Bsq,s) result(Ke)
  double precision, intent(in) :: Bsq, s
  double precision :: Ke
